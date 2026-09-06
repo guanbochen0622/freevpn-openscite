@@ -1,0 +1,26 @@
+services:
+  freevpn:
+    build: .
+    container_name: freevpn
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    ports:
+      - "51820:51820/udp"
+      - "8080:8080/tcp"
+    environment:
+      - VPN_ENDPOINT=${VPN_ENDPOINT:-YOUR_PUBLIC_IP_OR_DOMAIN}
+      - VPN_PORT=${VPN_PORT:-51820}
+      - VPN_SUBNET=${VPN_SUBNET:-10.66.66.0/24}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-change-this-now}
+      - COOKIE_SECURE=${COOKIE_SECURE:-true}
+      - NUU_VPN_URL=${NUU_VPN_URL:-https://sslvpn.nuu.edu.tw/sslvpn/Login/Login}
+      - NUU_HELP_URL=${NUU_HELP_URL:-https://ccenter.nuu.edu.tw/p/412-1007-295.php}
+      - NUU_LIBRARY_URL=${NUU_LIBRARY_URL:-https://mobilelibrary.nuu.edu.tw/}
+    volumes:
+      - ./data:/data
+      - /lib/modules:/lib/modules:ro
