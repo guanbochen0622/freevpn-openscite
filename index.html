@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v12 — Citation Evidence Explorer</title>
+<title>OpenScite Web v13 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -47,7 +47,9 @@ h1{font-size:clamp(46px,6.6vw,84px);line-height:.96;letter-spacing:-.06em;margin
 .tabs{display:flex;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line);overflow:auto}.tab{border:0;background:transparent;color:var(--muted);padding:8px 10px;border-radius:9px;white-space:nowrap}.tab.active{background:#152a23;color:var(--text)}
 .content{padding:14px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}.stat-card{border:1px solid var(--line);border-radius:14px;padding:13px;background:#0a1713}.stat-card .value{font-size:24px;font-weight:900;letter-spacing:-.04em}.stat-card .label{font-size:11px;color:var(--muted)}
 .paper-list{display:grid;gap:10px}.paper{border:1px solid var(--line);border-radius:16px;background:#0a1713;overflow:hidden}.paper-main{padding:15px}.paper-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.paper-title{font-size:15px;font-weight:800;line-height:1.35}
-.keyword-hit{background:rgba(239,68,68,.12);color:#d92d20;border-radius:4px;padding:0 2px;font-weight:850;box-shadow:inset 0 -1px 0 rgba(217,45,32,.24)}
+.keyword-hit{background:#ffe4e6;color:#b42318;border:1px solid #fda4af;border-radius:4px;padding:0 2px;font-weight:900;box-shadow:none}
+.keyword-match{display:inline-flex;align-items:center;padding:4px 7px;border-radius:8px;background:#fff1f2;color:#b42318;border:1px solid #fecdd3;font:800 10px ui-monospace,monospace}
+.keyword-status{grid-column:1/-1;font-size:11px;color:var(--muted);padding:2px 3px 0}.keyword-status b{color:#b42318}
 .keyword-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px;padding:0 3px}.keyword-hint b{color:#d92d20}
 .paper-meta{font-size:11px;color:var(--muted);margin-top:5px}.rank{font:800 11px ui-monospace,monospace;color:#9ac4b3;background:#10241d;border:1px solid #27473b;padding:5px 7px;border-radius:9px;white-space:nowrap}.abstract{font-size:12px;color:#aec3ba;margin:11px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.paper-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.stance{display:inline-flex;padding:5px 8px;border-radius:999px;font:800 11px ui-monospace,monospace;border:1px solid}.supporting{color:#9effd2;background:rgba(103,245,189,.07);border-color:rgba(103,245,189,.25)}.contrasting{color:#ffb2bc;background:rgba(255,137,150,.07);border-color:rgba(255,137,150,.25)}.mentioning{color:#bed0ff;background:rgba(147,182,255,.07);border-color:rgba(147,182,255,.25)}.unknown{color:#ffe4a6;background:rgba(255,212,122,.07);border-color:rgba(255,212,122,.25)}
 .passages{border-top:1px solid var(--line);padding:12px 15px;background:#08130f}.passages h4{margin:0 0 8px;font-size:12px}.passage{padding:10px;border-left:2px solid #3a6354;background:#0c1b16;margin-top:8px;border-radius:0 9px 9px 0}.passage q{font-size:12px;color:#c8ddd4}.passage-foot{display:flex;justify-content:space-between;gap:10px;margin-top:7px;color:var(--muted);font-size:10px}
@@ -626,15 +628,16 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
         <button class="tab" data-tab="log">執行紀錄</button>
       </div>
       <div class="result-toolbar">
-        <div class="searchbox"><input id="paperSearch" class="control" placeholder="輸入關鍵字，例如 biosensor evanescent wave"></div>
+        <div class="searchbox"><input id="paperSearch" class="control" placeholder="結果關鍵字（會紅字標示），例如 biosensor evanescent wave"></div>
         <select id="stanceFilter" class="control filter-select">
           <option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option>
         </select>
         <select id="sortView" class="control filter-select">
-          <option value="rank">依目前排名</option><option value="journal">期刊層級：高 → 低</option><option value="citations">依引用次數</option><option value="year">依年份</option><option value="evidence">依證據數</option>
+          <option value="rank">依目前排名</option><option value="keyword">依關鍵字重疊度</option><option value="journal">期刊層級：高 → 低</option><option value="citations">依引用次數</option><option value="year">依年份</option><option value="evidence">依證據數</option>
         </select>
         <div class="view-toggle"><button id="viewComfort" class="active" title="舒適模式">▤</button><button id="viewCompact" title="緊湊模式">☷</button></div>
-        <div class="keyword-hint">關鍵字命中會以 <b>紅色</b> 標示於標題、作者／期刊資訊、摘要與引用段落；多個關鍵字以空格分隔。</div>
+        <div class="keyword-hint">像 Google Scholar：只要與關鍵字有重疊就會以 <b>紅色</b> 標示；不再要求所有詞都同時出現。</div>
+        <div id="keywordStatus" class="keyword-status">尚未輸入結果關鍵字。</div>
       </div>
       <div class="content">
         <div id="papersTab">
@@ -773,7 +776,7 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 let pdfjs = null;
 let state = {
-  target:null, targetText:"", sourceFileName:"", papers:[], log:[], mode:"stance_first", limit:20
+  target:null, targetText:"", sourceFileName:"", papers:[], log:[], mode:"stance_first", limit:20, queryKeywords:[]
 };
 
 const OA = "https://api.openalex.org";
@@ -897,7 +900,8 @@ function chooseCandidate(results){
     for(const w of results){
       const div=document.createElement("button");
       div.className="candidate";div.style.width="100%";div.style.textAlign="left";div.style.color="inherit";
-      div.innerHTML=`<div class="candidate-title">${escapeHtml(w.display_name||w.title||"Untitled")}</div><div class="candidate-meta">${escapeHtml(targetDisplay(w))} · cited by ${w.cited_by_count||0}</div>`;
+      const qTerms=parseKeywordTerms($("#manualQuery").value.trim() || $("#heroQuery").value.trim());
+      div.innerHTML=`<div class="candidate-title">${highlightWithTerms(w.display_name||w.title||"Untitled",qTerms)}</div><div class="candidate-meta">${highlightWithTerms(targetDisplay(w),qTerms)} · cited by ${w.cited_by_count||0}</div>`;
       div.onclick=()=>{$("#resolveModal").classList.remove("show");resolve(w)};
       box.appendChild(div);
     }
@@ -1328,7 +1332,8 @@ async function tryOpenAccess(i){
 function stanceBadge(x){return `<span class="stance ${x}">${x}</span>`}
 function paperMeta(p){
   const a=(p.authorships||[]).slice(0,3).map(x=>x.author?.display_name).filter(Boolean).join(", ");
-  return `${a}${(p.authorships||[]).length>3?" et al.":""} · ${p.publication_year||"n.d."} · cited by ${p.cited_by_count||0}`;
+  const venue=p?.primary_location?.source?.display_name || p?.best_oa_location?.source?.display_name || "Unknown venue";
+  return `${a}${(p.authorships||[]).length>3?" et al.":""} · ${p.publication_year||"n.d."} · ${venue} · cited by ${p.cited_by_count||0}`;
 }
 
 let viewMode="comfortable";
@@ -1521,7 +1526,7 @@ function saveSessionData(){
   if(!state.target)return toast("目前沒有可儲存的分析");
   const safe={
     target:state.target,targetText:"",sourceFileName:state.sourceFileName,papers:state.papers.map(p=>({...p,_passages:p._passages||[]})),
-    log:state.log,mode:state.mode,limit:state.limit,savedAt:new Date().toISOString()
+    log:state.log,mode:state.mode,limit:state.limit,queryKeywords:state.queryKeywords||[],resultKeywordQuery:$("#paperSearch")?.value||"",savedAt:new Date().toISOString()
   };
   localStorage.setItem("openscite-web-session",JSON.stringify(safe));
   $("#sessionStatus").textContent=`已儲存 ${new Date().toLocaleTimeString()}`;toast("工作階段已儲存在這台瀏覽器");
@@ -1530,11 +1535,11 @@ function loadSessionData(){
   const raw=localStorage.getItem("openscite-web-session"); if(!raw)return toast("找不到已儲存工作階段");
   try{
     state=JSON.parse(raw);
-    state.targetText="";state.papers=(state.papers||[]).map(p=>({...p,_passages:p._passages||[]}));
+    state.targetText="";state.papers=(state.papers||[]).map(p=>({...p,_passages:p._passages||[]}));state.queryKeywords=state.queryKeywords||[];
     $("#targetTitle").textContent=state.target.display_name||state.target.title||"Untitled";
     $("#targetMeta").textContent=targetDisplay(state.target);
     $("#target").classList.add("show");$("#empty").classList.add("hidden");$("#results").classList.remove("hidden");
-    $("#mode").value=state.mode||"stance_first";$("#limit").value=String(state.limit||20);
+    $("#mode").value=state.mode||"stance_first";$("#limit").value=String(state.limit||20);if($("#paperSearch"))$("#paperSearch").value=state.resultKeywordQuery||"";
     $("#log").textContent=(state.log||[]).join("\n");
     renderAll();$("#sessionStatus").textContent="已載入本機工作階段";toast("工作階段已載入");
   }catch(e){toast("工作階段資料損壞")}
@@ -1577,23 +1582,32 @@ function renderDashboard(){
 }
 
 
-function keywordTerms(){
-  const raw=(document.querySelector("#paperSearch")?.value||"").trim();
+const KEYWORD_STOPWORDS=new Set([
+  "a","an","and","are","as","at","be","been","being","by","for","from","has","have","in","into","is","it","of","on","or","that","the","their","this","to","using","via","was","were","with","we","our","study","paper","research",
+  "與","和","及","的","之","在","以","用","為","是","對","於","中","一個","研究","論文"
+]);
+function parseKeywordTerms(raw=""){
+  raw=String(raw||"").trim();
   if(!raw) return [];
   const quoted=[...raw.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].map(m=>m[1].trim()).filter(Boolean);
   const rest=raw.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g," ");
-  const tokens=rest.split(/[\s,;，；]+/u).map(x=>x.trim()).filter(Boolean);
-  return [...new Set([...quoted,...tokens])].sort((a,b)=>b.length-a.length).slice(0,24);
+  const tokens=rest.split(/[\s,;，；、]+/u).map(x=>x.trim().replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu,"")).filter(Boolean);
+  const all=[...quoted,...tokens].filter(t=>t.length>=2 && !KEYWORD_STOPWORDS.has(t.toLowerCase()));
+  return [...new Map(all.map(t=>[t.toLowerCase(),t])).values()].sort((a,b)=>b.length-a.length).slice(0,32);
+}
+function keywordTerms(){
+  const raw=(document.querySelector("#paperSearch")?.value||"").trim();
+  return raw ? parseKeywordTerms(raw) : (state.queryKeywords||[]);
 }
 function escapeRegExp(s=""){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
-function highlightKeywords(value=""){
+function highlightWithTerms(value="", terms=[]){
   const s=String(value??"");
-  const terms=keywordTerms();
+  terms=(terms||[]).filter(Boolean);
   if(!terms.length) return escapeHtml(s);
   let re;
-  try{ re=new RegExp(terms.map(escapeRegExp).filter(Boolean).join("|"),"giu") }
+  try{ re=new RegExp(terms.map(escapeRegExp).join("|"),"giu") }
   catch(_){ return escapeHtml(s) }
-  let html="", last=0;
+  let html="",last=0;
   for(const m of s.matchAll(re)){
     const i=m.index??0;
     html+=escapeHtml(s.slice(last,i));
@@ -1603,6 +1617,7 @@ function highlightKeywords(value=""){
   }
   return html+escapeHtml(s.slice(last));
 }
+function highlightKeywords(value=""){ return highlightWithTerms(value,keywordTerms()) }
 function keywordHaystack(p){
   const venue=p?.primary_location?.source?.display_name || p?.best_oa_location?.source?.display_name || "";
   return [
@@ -1614,17 +1629,26 @@ function keywordHaystack(p){
     ...(p._passages||[]).map(x=>x.text||"")
   ].join(" ");
 }
-
+function keywordMatchInfo(p,terms=keywordTerms()){
+  const hay=norm(keywordHaystack(p));
+  const matched=terms.filter(t=>hay.includes(norm(t)));
+  return {count:matched.length,total:terms.length,matched};
+}
+function updateKeywordStatus(visibleCount){
+  const el=document.querySelector("#keywordStatus"); if(!el)return;
+  const terms=keywordTerms();
+  if(!terms.length){el.textContent="尚未輸入結果關鍵字。";return}
+  el.innerHTML=`命中 <b>${visibleCount}</b> / ${state.papers.length} 篇 · 關鍵字：${terms.map(t=>`<b>${escapeHtml(t)}</b>`).join("、")}`;
+}
 function currentVisiblePapers(){
-  const terms=keywordTerms().map(norm).filter(Boolean);
+  const terms=keywordTerms();
   const stance=$("#stanceFilter")?.value||"all";
   const sort=$("#sortView")?.value||"rank";
-  let arr=state.papers.map((p,i)=>({p,i}));
-  if(terms.length) arr=arr.filter(({p})=>{
-    const hay=norm(keywordHaystack(p));
-    return terms.every(t=>hay.includes(t));
-  });
+  let arr=state.papers.map((p,i)=>({p,i,km:keywordMatchInfo(p,terms)}));
+  // Google Scholar-style overlap: ANY keyword match is enough.
+  if(terms.length) arr=arr.filter(x=>x.km.count>0);
   if(stance!=="all") arr=arr.filter(({p})=>p._stance===stance);
+  if(sort==="keyword") arr.sort((a,b)=>b.km.count-a.km.count || (b.p.cited_by_count||0)-(a.p.cited_by_count||0));
   if(sort==="journal") arr.sort((a,b)=>{
     const ja=journalPrestige(a.p), jb=journalPrestige(b.p);
     if(ja.hasMetric!==jb.hasMetric) return jb.hasMetric-ja.hasMetric;
@@ -1664,7 +1688,13 @@ function renderCoverage(){
 
 function renderPapers(){
   const box=$("#paperList");box.innerHTML="";
-  currentVisiblePapers().forEach(({p,i})=>{
+  const visible=currentVisiblePapers();
+  updateKeywordStatus(visible.length);
+  if(!visible.length && keywordTerms().length){
+    box.innerHTML=`<div class="dashboard-empty">目前引用文獻中沒有與這些關鍵字重疊的結果。可刪除部分關鍵字再試。</div>`;
+    return;
+  }
+  visible.forEach(({p,i,km})=>{
     const el=document.createElement("article");el.className="paper"+(viewMode==="compact"?" compact":"");
     const oaUrl=p.id||"#";const doi=p.doi||"";
     const abstract=p._abstract||"OpenAlex 無摘要。";
@@ -1676,6 +1706,7 @@ function renderPapers(){
         <div class="evidence-summary">
           <span class="metric-pill">${p._passages.length} passages</span>
           <span class="metric-pill">${p._fulltext ? "fulltext ready" : "metadata only"}</span>
+          ${keywordTerms().length?`<span class="keyword-match">關鍵字 ${km.count}/${km.total}</span>`:""}
           ${p._passages.length ? `<span class="confidence">max confidence <i style="--w:${Math.round(Math.max(...p._passages.map(x=>x.confidence))*100)}%"></i></span>` : ""}
         </div>
         ${p._fulltext?`<div class="binding-box">
@@ -1830,6 +1861,8 @@ async function run(){
   $("#start").disabled=true;
   try{
     state.mode=$("#mode").value;state.limit=+$("#limit").value;state.log=[];$("#log").textContent="";
+    const initialQ=$("#manualQuery").value.trim();
+    state.queryKeywords=(/^10\.\d{4,9}\//i.test(initialQ)||/^W\d+$/i.test(initialQ))?[]:parseKeywordTerms(initialQ);
     progress(3,"辨識目標論文");
     const target=await resolveInput();state.target=target;
     $("#targetTitle").textContent=target.display_name||target.title||"Untitled";
@@ -1840,6 +1873,7 @@ async function run(){
     state.papers=await getCitingWorks(target.id,state.limit,state.mode);
     progress(78,"排序候選文獻");
     $("#empty").classList.add("hidden");$("#results").classList.remove("hidden");
+    if(state.queryKeywords.length && !$("#paperSearch").value.trim()) $("#paperSearch").value=state.queryKeywords.join(" ");
     renderAll();
     progress(100,"分析完成");
     doneProgress();
@@ -1848,8 +1882,8 @@ async function run(){
   }finally{$("#start").disabled=false}
 }
 function reset(){
-  state={target:null,targetText:"",sourceFileName:"",papers:[],log:[],mode:"stance_first",limit:20};
-  $("#targetFile").value="";$("#manualQuery").value="";$("#target").classList.remove("show");$("#results").classList.add("hidden");$("#empty").classList.remove("hidden");$("#exportMdTop").disabled=true;$("#log").textContent="";
+  state={target:null,targetText:"",sourceFileName:"",papers:[],log:[],mode:"stance_first",limit:20,queryKeywords:[]};
+  $("#targetFile").value="";$("#manualQuery").value="";if($("#paperSearch"))$("#paperSearch").value="";$("#target").classList.remove("show");$("#results").classList.add("hidden");$("#empty").classList.remove("hidden");$("#exportMdTop").disabled=true;$("#log").textContent="";
 }
 $("#pickTarget").onclick=()=>$("#targetFile").click();
 $("#start").onclick=run;$("#reset").onclick=reset;$("#changeTarget").onclick=()=>{$("#manualQuery").focus();};
@@ -1880,7 +1914,7 @@ $("#heroAnalyze").onclick=()=>{
   if(q){$("#manualQuery").value=q;document.querySelector(".app").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(run,250)}
 };
 $("#heroQuery").addEventListener("keydown",e=>{if(e.key==="Enter")$("#heroAnalyze").click()});
-$("#paperSearch").addEventListener("input",renderPapers);
+$("#paperSearch").addEventListener("input",()=>{renderPapers()});
 $("#stanceFilter").addEventListener("change",renderPapers);
 $("#sortView").addEventListener("change",renderPapers);
 $("#viewComfort").onclick=()=>{viewMode="comfortable";$("#viewComfort").classList.add("active");$("#viewCompact").classList.remove("active");renderPapers()};
