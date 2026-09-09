@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v20 — Citation Evidence Explorer</title>
+<title>OpenScite Web v21 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -741,7 +741,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
           <h2>學術搜尋 <span style="color:var(--green)">Academic Search</span></h2>
           <p>像 Google Scholar 一樣直接用研究主題、完整句子或論文標題搜尋。輸入的每個詞會沿用 OpenScite v14 的紅色 Highlight（高亮）規則。</p>
         </div>
-        <span id="scholarProvider" class="scholar-provider">OpenAlex · Crossref fallback</span>
+        <span id="scholarProvider" class="scholar-provider">v21 relevance engine · OpenAlex/Crossref</span>
       </div>
       <div class="scholar-search">
         <input id="scholarQuery" class="control" placeholder="例如：Fiber-to-Silicon Edge Coupling Adiabatic mode transfer SiN–Si mode transition">
@@ -754,7 +754,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
       <div class="scholar-filter"><label>結束年份</label><input id="scholarYearTo" class="control" inputmode="numeric" placeholder="例如 2026"></div>
       <div class="scholar-filter"><label>排序</label>
         <select id="scholarSort" class="control">
-          <option value="relevance" selected>相關性：高 → 低</option>
+          <option value="relevance" selected>相關性：高 → 低（全候選池重排）</option>
           <option value="citations">被引用次數：高 → 低</option>
           <option value="newest">最新 → 最舊</option>
           <option value="oldest">最舊 → 最新</option>
@@ -989,7 +989,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v20 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v21 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
@@ -1003,7 +1003,17 @@ let state = {
 
 const OA = "https://api.openalex.org";
 const CROSSREF = "https://api.crossref.org";
-let scholarState={page:1,total:0,results:[],provider:"",lastQuery:"",busy:false};
+let scholarState={
+  page:1,
+  total:0,
+  results:[],
+  pool:[],
+  poolSize:0,
+  provider:"",
+  lastQuery:"",
+  busy:false,
+  signature:""
+};
 let scholarTransferKeywords=[];
 const SUPPORT = [
   "replicat","reproduc","confirm","support","consistent with","in agreement with","validate",
@@ -2185,52 +2195,89 @@ function crossrefToWork(x){
     _oaPdf:pdf,_isOa:!!pdf,_searchProvider:"Crossref"
   };
 }
-function scholarOpenAlexParams(q,page){
+function scholarSearchSignature(q){
+  return JSON.stringify({
+    q:String(q||"").trim(),
+    from:$("#scholarYearFrom").value.trim(),
+    to:$("#scholarYearTo").value.trim(),
+    oa:$("#scholarOa").value,
+    sort:$("#scholarSort").value
+  });
+}
+function scholarOpenAlexParams(q,page,{candidatePool=false}={}){
   const p=new URLSearchParams();
   p.set("search",q);
-  p.set("per-page",String(+$("#scholarPerPage").value||20));
-  p.set("page",String(page));
+
+  const sort=$("#scholarSort").value;
+  if(sort==="relevance"){
+    // Bottom-layer change: OpenAlex itself is explicitly asked for relevance order.
+    p.set("sort","relevance_score:desc");
+    p.set("per-page",candidatePool?"100":String(+$("#scholarPerPage").value||20));
+    p.set("page",String(candidatePool?1:page));
+  }else{
+    p.set("per-page",String(+$("#scholarPerPage").value||20));
+    p.set("page",String(page));
+    if(sort==="citations")p.set("sort","cited_by_count:desc");
+    if(sort==="newest")p.set("sort","publication_date:desc");
+    if(sort==="oldest")p.set("sort","publication_date:asc");
+  }
+
   const filters=[];
   const yf=$("#scholarYearFrom").value.trim(), yt=$("#scholarYearTo").value.trim();
   if(/^\d{4}$/.test(yf)) filters.push(`from_publication_date:${yf}-01-01`);
   if(/^\d{4}$/.test(yt)) filters.push(`to_publication_date:${yt}-12-31`);
   if($("#scholarOa").value==="oa") filters.push("is_oa:true");
   if(filters.length)p.set("filter",filters.join(","));
-  const sort=$("#scholarSort").value;
-  if(sort==="citations")p.set("sort","cited_by_count:desc");
-  if(sort==="newest")p.set("sort","publication_date:desc");
-  if(sort==="oldest")p.set("sort","publication_date:asc");
   return p;
 }
-async function scholarOpenAlex(q,page){
-  const p=scholarOpenAlexParams(q,page);
+async function scholarOpenAlex(q,page,{candidatePool=false}={}){
+  const p=scholarOpenAlexParams(q,page,{candidatePool});
   const j=await oaFetch(`/works?${p.toString()}`);
   return {
-    results:(j.results||[]).map(w=>({...w,_abstract:rebuildAbstract(w.abstract_inverted_index),_searchProvider:"OpenAlex"})),
-    total:Number(j.meta?.count||0),provider:"OpenAlex"
+    results:(j.results||[]).map(w=>({
+      ...w,
+      _abstract:rebuildAbstract(w.abstract_inverted_index),
+      _searchProvider:"OpenAlex",
+      _providerRelevance:Number(w.relevance_score||0)
+    })),
+    total:Number(j.meta?.count||0),
+    provider:"OpenAlex"
   };
 }
-async function scholarCrossref(q,page){
-  const per=+$("#scholarPerPage").value||20;
+async function scholarCrossref(q,page,{candidatePool=false}={}){
+  const rows=candidatePool?100:(+$("#scholarPerPage").value||20);
   const p=new URLSearchParams();
   p.set("query.bibliographic",q);
-  p.set("rows",String(per));
-  p.set("offset",String((page-1)*per));
+  p.set("rows",String(rows));
+  p.set("offset",String(candidatePool?0:(page-1)*rows));
+
   const yf=$("#scholarYearFrom").value.trim(), yt=$("#scholarYearTo").value.trim();
   const filters=[];
   if(/^\d{4}$/.test(yf))filters.push(`from-pub-date:${yf}-01-01`);
   if(/^\d{4}$/.test(yt))filters.push(`until-pub-date:${yt}-12-31`);
   if(filters.length)p.set("filter",filters.join(","));
+
   const r=await fetch(`${CROSSREF}/works?${p.toString()}`,{headers:{"Accept":"application/json"}});
   if(!r.ok)throw new Error(`Crossref ${r.status}`);
   const j=await r.json();
-  let results=(j.message?.items||[]).map(crossrefToWork);
+
+  let results=(j.message?.items||[]).map((x,idx)=>({
+    ...crossrefToWork(x),
+    _providerRelevance:Math.max(0,100-idx)
+  }));
+
   if($("#scholarOa").value==="oa") results=results.filter(scholarIsOa);
+
   const sort=$("#scholarSort").value;
   if(sort==="citations")results.sort((a,b)=>scholarCitationCount(b)-scholarCitationCount(a));
   if(sort==="newest")results.sort((a,b)=>scholarYear(b)-scholarYear(a));
   if(sort==="oldest")results.sort((a,b)=>scholarYear(a)-scholarYear(b));
-  return {results,total:Number(j.message?.["total-results"]||results.length),provider:"Crossref"};
+
+  return {
+    results,
+    total:Number(j.message?.["total-results"]||results.length),
+    provider:"Crossref"
+  };
 }
 function scholarCitationText(w){
   const authors=scholarAuthors(w)||"Unknown author";
@@ -2241,78 +2288,130 @@ function scholarCitationText(w){
   return `${authors} (${year}). ${title}. ${venue}.${doi?` https://doi.org/${doi}`:""}`;
 }
 
-function scholarRelevanceScore(w,q){
-  const terms=parseKeywordTerms(q);
-  if(!terms.length) return 0;
+const SCHOLAR_RANK_STOPWORDS=new Set([
+  "a","an","and","are","as","at","be","by","for","from","in","into","is","it","of","on","or",
+  "that","the","this","to","using","via","was","were","with","we","our","their","study","paper",
+  "research","method","methods","result","results"
+]);
+function scholarRankTerms(q){
+  const words=(String(q||"").match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)||[])
+    .map(x=>x.toLocaleLowerCase())
+    .filter(x=>x.length>=2 && !SCHOLAR_RANK_STOPWORDS.has(x));
+  return [...new Set(words)];
+}
+function scholarConceptPhrases(q){
+  const raw=String(q||"").trim();
+  if(!raw)return [];
+  const chunks=raw
+    .split(/(?:\s{2,}|[\n\r,;，；、]+)/u)
+    .map(s=>s.trim())
+    .filter(Boolean);
+
+  // Also preserve hyphenated technical concepts.
+  const compounds=raw.match(/[\p{L}\p{N}]+(?:[\-‐‑‒–—−][\p{L}\p{N}]+)+/gu)||[];
+  return [...new Set([...chunks,...compounds].map(x=>x.toLocaleLowerCase()).filter(x=>x.length>=3))];
+}
+function scholarPhrasePresent(text,phrase){
+  const t=norm(String(text||""))
+    .replace(/[‐‑‒–—−]/g,"-");
+  const p=norm(String(phrase||""))
+    .replace(/[‐‑‒–—−]/g,"-");
+  return !!p && t.includes(p);
+}
+function scholarRelevanceDetails(w,q){
+  const terms=scholarRankTerms(q);
+  const phrases=scholarConceptPhrases(q);
 
   const title=String(w.display_name||w.title||"");
   const abs=String(scholarAbstract(w)||"");
   const authors=String(scholarAuthors(w)||"");
   const venue=String(scholarVenue(w)||"");
-  const titleNorm=norm(title), absNorm=norm(abs), authorNorm=norm(authors), venueNorm=norm(venue);
 
-  let score=0;
   let titleHits=0, abstractHits=0, metaHits=0;
-
   for(const t of terms){
-    const nt=norm(t);
-    if(!nt) continue;
-
-    // Exact/whole-term matches: title dominates.
     const titleRe=buildTermsRegex([t]);
-    if(titleRe && titleRe.test(title)){
-      titleHits++;
-      score += 18;
-    }
+    if(titleRe && titleRe.test(title)) titleHits++;
+
     const absRe=buildTermsRegex([t]);
-    if(absRe && absRe.test(abs)){
-      abstractHits++;
-      score += 5;
-    }
-    const authorRe=buildTermsRegex([t]);
-    if(authorRe && authorRe.test(authors)){
-      metaHits++;
-      score += 1.5;
-    }
-    const venueRe=buildTermsRegex([t]);
-    if(venueRe && venueRe.test(venue)){
-      metaHits++;
-      score += 1.5;
-    }
+    if(absRe && absRe.test(abs)) abstractHits++;
 
-    // Soft substring fallback for technical compounds.
-    if(titleNorm.includes(nt)) score += 4;
-    else if(absNorm.includes(nt)) score += 1.2;
+    const metaRe=buildTermsRegex([t]);
+    if(metaRe && (metaRe.test(authors) || metaRe.test(venue))) metaHits++;
   }
 
-  // Phrase bonus: preserve the user's multiword concepts where possible.
-  const chunks=String(q||"").trim().split(/(?:\s{2,}|[\n\r,;，；、]+)/u)
-    .map(s=>s.trim()).filter(s=>s.length>=3);
-  for(const c of chunks){
-    const nc=norm(c);
-    if(!nc) continue;
-    if(titleNorm.includes(nc)) score += 28;
-    else if(absNorm.includes(nc)) score += 8;
+  let titlePhraseHits=0, abstractPhraseHits=0;
+  for(const p of phrases){
+    if(scholarPhrasePresent(title,p)) titlePhraseHits++;
+    else if(scholarPhrasePresent(abs,p)) abstractPhraseHits++;
   }
 
-  // Coverage matters more than raw paper popularity.
-  const coverage=(titleHits+abstractHits+metaHits)/Math.max(1,terms.length);
-  score += coverage*12;
+  const denom=Math.max(1,terms.length);
+  const titleCoverage=titleHits/denom;
+  const abstractCoverage=abstractHits/denom;
+  const metaCoverage=metaHits/denom;
 
-  // Very small citation tie-breaker only.
-  score += Math.min(3, Math.log10(1+scholarCitationCount(w)));
+  const phraseDenom=Math.max(1,phrases.length);
+  const phraseCoverage=(titlePhraseHits + 0.35*abstractPhraseHits)/phraseDenom;
 
-  return score;
+  // Provider relevance is only a small tie-strengthener.
+  const providerRaw=Number(w._providerRelevance||w.relevance_score||0);
+  const providerBonus=providerRaw>0 ? Math.min(1,Math.log1p(providerRaw)/8) : 0;
+
+  // 0–100 scale. Query overlap dominates; citations do NOT boost relevance.
+  let score=
+      titleCoverage*58
+    + abstractCoverage*22
+    + metaCoverage*3
+    + phraseCoverage*14
+    + providerBonus*3;
+
+  // Strong exact-title bonus for a full query/title match.
+  const nq=norm(String(q||"")).replace(/[‐‑‒–—−]/g,"-");
+  const nt=norm(title).replace(/[‐‑‒–—−]/g,"-");
+  if(nq && nt){
+    if(nt===nq) score+=18;
+    else if(nt.includes(nq) || nq.includes(nt)) score+=9;
+  }
+
+  score=Math.max(0,Math.min(100,score));
+
+  return {
+    score,
+    titleHits,
+    abstractHits,
+    metaHits,
+    termCount:terms.length,
+    titlePhraseHits,
+    abstractPhraseHits,
+    phraseCount:phrases.length,
+    providerRaw
+  };
+}
+function scholarRelevanceScore(w,q){
+  return scholarRelevanceDetails(w,q).score;
 }
 function rerankScholarByRelevance(results,q){
-  return [...(results||[])].sort((a,b)=>{
-    const sb=scholarRelevanceScore(b,q), sa=scholarRelevanceScore(a,q);
-    return sb-sa
-      || scholarCitationCount(b)-scholarCitationCount(a)
-      || scholarYear(b)-scholarYear(a);
+  return [...(results||[])].map(w=>{
+    const d=scholarRelevanceDetails(w,q);
+    return {...w,_localRelevance:d.score,_relevanceDetails:d};
+  }).sort((a,b)=>{
+    const da=a._relevanceDetails, db=b._relevanceDetails;
+    return (db.score-da.score)
+      || (db.titlePhraseHits-da.titlePhraseHits)
+      || (db.titleHits-da.titleHits)
+      || (db.abstractHits-da.abstractHits)
+      || (Number(b._providerRelevance||0)-Number(a._providerRelevance||0))
+      || (scholarCitationCount(b)-scholarCitationCount(a));
   });
 }
-
+function scholarSetPageFromPool(page){
+  const per=+$("#scholarPerPage").value||20;
+  const maxPage=Math.max(1,Math.ceil(scholarState.pool.length/per));
+  scholarState.page=Math.min(Math.max(1,page),maxPage);
+  const start=(scholarState.page-1)*per;
+  scholarState.results=scholarState.pool.slice(start,start+per);
+  scholarState.poolSize=scholarState.pool.length;
+}
 function renderScholar(){
   const box=$("#scholarResults");
   const terms=parseKeywordTerms($("#scholarQuery").value);
@@ -2320,8 +2419,10 @@ function renderScholar(){
   $("#scholarPageLabel").textContent=`第 ${scholarState.page} 頁`;
   $("#scholarPrev").disabled=scholarState.busy || scholarState.page<=1;
   const per=+$("#scholarPerPage").value||20;
+  const relevanceMode=$("#scholarSort").value==="relevance";
+  const pageLimit=relevanceMode ? scholarState.poolSize : scholarState.total;
   $("#scholarNext").disabled=scholarState.busy || !scholarState.results.length ||
-    (scholarState.total>0 && scholarState.page*per>=scholarState.total);
+    (pageLimit>0 && scholarState.page*per>=pageLimit);
 
   if(!scholarState.results.length){
     box.innerHTML=`<div class="scholar-empty">沒有找到符合條件的論文。可以縮短關鍵字或放寬年份。</div>`;
@@ -2343,7 +2444,8 @@ function renderScholar(){
       ${abs?`<div class="scholar-abstract">${highlightWithTerms(abs,terms)}</div>`:""}
       <div class="scholar-badges">
         ${$("#scholarSort").value==="relevance"
-          ? `<span class="scholar-badge">相關性 ${scholarRelevanceScore(w,$("#scholarQuery").value).toFixed(1)}</span>`
+          ? `<span class="scholar-badge">相關性 ${Number(w._localRelevance ?? scholarRelevanceScore(w,$("#scholarQuery").value)).toFixed(1)}</span>
+             <span class="scholar-badge">標題命中 ${w._relevanceDetails?.titleHits ?? 0}/${w._relevanceDetails?.termCount ?? scholarRankTerms($("#scholarQuery").value).length}</span>`
           : ""}
         <span class="scholar-badge cited">被引用 ${cited}</span>
         ${scholarIsOa(w)?`<span class="scholar-badge oa">Open Access</span>`:""}
@@ -2364,33 +2466,77 @@ function renderScholar(){
 async function runScholarSearch(page=1){
   const q=$("#scholarQuery").value.trim();
   if(!q)return alert("請先輸入學術搜尋關鍵字。");
-  scholarState.busy=true;scholarState.page=page;scholarState.lastQuery=q;
+
+  const mode=$("#scholarSort").value;
+  const signature=scholarSearchSignature(q);
+
+  // Relevance pagination is local after the candidate pool has been ranked.
+  if(mode==="relevance" && page>1 && scholarState.signature===signature && scholarState.pool.length){
+    scholarSetPageFromPool(page);
+    renderScholar();
+    $("#scholarStatus").innerHTML=
+      `<span>搜尋：<b>${escapeHtml(q)}</b> · 相關性候選池 <b>${scholarState.poolSize}</b> 篇</span>`+
+      `<span>排序：<b>全候選池相關性重排</b> · 目前第 ${scholarState.page} 頁</span>`;
+    return;
+  }
+
+  scholarState.busy=true;
+  scholarState.page=page;
+  scholarState.lastQuery=q;
   $("#scholarSearchBtn").disabled=true;
   $("#academicSearch .scholar-card").classList.add("scholar-loading");
-  $("#scholarStatus").innerHTML=`<span>正在搜尋 <b>${escapeHtml(q)}</b>…</span><span>第 ${page} 頁</span>`;
+
+  const loadingText=mode==="relevance"
+    ? "正在抓取候選論文並計算全池相關性…"
+    : `正在搜尋第 ${page} 頁…`;
+  $("#scholarStatus").innerHTML=
+    `<span>${loadingText}</span><span><b>${escapeHtml(q)}</b></span>`;
+
   try{
     let data;
     try{
-      data=await scholarOpenAlex(q,page);
+      data=await scholarOpenAlex(q,page,{candidatePool:mode==="relevance"});
     }catch(oaErr){
       console.warn("OpenAlex search failed, fallback to Crossref",oaErr);
-      data=await scholarCrossref(q,page);
+      data=await scholarCrossref(q,page,{candidatePool:mode==="relevance"});
       data.fallbackReason=oaErr.message;
     }
-    const scholarSortMode=$("#scholarSort").value;
-    scholarState.results=(scholarSortMode==="relevance")
-      ? rerankScholarByRelevance(data.results,q)
-      : data.results;
-    scholarState.total=data.total;scholarState.provider=data.provider;
+
+    scholarState.signature=signature;
+    scholarState.total=data.total;
+    scholarState.provider=data.provider;
+
+    if(mode==="relevance"){
+      // Critical bottom-layer behavior:
+      // fetch up to 100 candidate works -> score every candidate -> sort -> then paginate.
+      scholarState.pool=rerankScholarByRelevance(data.results,q);
+      scholarSetPageFromPool(1);
+    }else{
+      scholarState.pool=[];
+      scholarState.poolSize=0;
+      scholarState.results=data.results;
+      scholarState.page=page;
+    }
+
     renderScholar();
-    const shown=data.results.length;
+
+    const shown=scholarState.results.length;
+    const candidateText=mode==="relevance"
+      ? ` · 從 ${scholarState.poolSize} 篇候選中重排`
+      : "";
+
     $("#scholarStatus").innerHTML=
-      `<span>搜尋：<b>${escapeHtml(q)}</b> · 顯示 ${shown} 篇${data.total?` · 約 ${Number(data.total).toLocaleString()} 筆結果`:""}</span>`+
-      `<span>排序：<b>${$("#scholarSort").value==="relevance"?"相關性優先":"使用者指定"}</b> · 來源：<b>${data.provider}</b>${data.fallbackReason?"（OpenAlex 暫不可用，已自動切換備援）":""}</span>`;
+      `<span>搜尋：<b>${escapeHtml(q)}</b> · 顯示 ${shown} 篇${candidateText}${data.total?` · 資料庫約 ${Number(data.total).toLocaleString()} 筆`:""}</span>`+
+      `<span>排序：<b>${mode==="relevance"?"全候選池相關性：高 → 低":"使用者指定"}</b> · 來源：<b>${data.provider}</b>${data.fallbackReason?"（OpenAlex 暫不可用，已切換 Crossref）":""}</span>`;
   }catch(e){
-    scholarState.results=[];scholarState.total=0;scholarState.provider="";
+    scholarState.results=[];
+    scholarState.pool=[];
+    scholarState.poolSize=0;
+    scholarState.total=0;
+    scholarState.provider="";
     renderScholar();
-    $("#scholarStatus").innerHTML=`<span>搜尋失敗：<b>${escapeHtml(e.message)}</b></span><span>請稍後重試</span>`;
+    $("#scholarStatus").innerHTML=
+      `<span>搜尋失敗：<b>${escapeHtml(e.message)}</b></span><span>請稍後重試</span>`;
   }finally{
     scholarState.busy=false;
     $("#scholarSearchBtn").disabled=false;
@@ -2457,8 +2603,17 @@ $("#scholarSearchBtn").onclick=()=>runScholarSearch(1);
 $("#scholarQuery").addEventListener("keydown",e=>{if(e.key==="Enter")runScholarSearch(1)});
 ["scholarYearFrom","scholarYearTo"].forEach(id=>$("#"+id).addEventListener("keydown",e=>{if(e.key==="Enter"&&$("#scholarQuery").value.trim())runScholarSearch(1)}));
 ["scholarSort","scholarOa","scholarPerPage"].forEach(id=>$("#"+id).addEventListener("change",()=>{if($("#scholarQuery").value.trim())runScholarSearch(1)}));
-$("#scholarPrev").onclick=()=>{if(scholarState.page>1)runScholarSearch(scholarState.page-1)};
-$("#scholarNext").onclick=()=>runScholarSearch(scholarState.page+1);
+$("#scholarPrev").onclick=()=>{
+  if(scholarState.page<=1)return;
+  if($("#scholarSort").value==="relevance" && scholarState.pool.length){
+    scholarSetPageFromPool(scholarState.page-1);renderScholar();
+  }else runScholarSearch(scholarState.page-1);
+};
+$("#scholarNext").onclick=()=>{
+  if($("#scholarSort").value==="relevance" && scholarState.pool.length){
+    scholarSetPageFromPool(scholarState.page+1);renderScholar();
+  }else runScholarSearch(scholarState.page+1);
+};
 $("#scholarResults").addEventListener("click",e=>{
   const btn=e.target.closest("button[data-i]");if(!btn)return;
   const i=Number(btn.dataset.i);
@@ -2529,6 +2684,6 @@ bdrop.addEventListener("drop",e=>{
   if(fs.length)bulkAttach(fs);
 });
 </script>
-<div class="v19-badge">OpenScite v20</div>
+<div class="v19-badge">OpenScite v21</div>
 </body>
 </html>
