@@ -232,7 +232,7 @@ async function openPdfUrl(url,meta){
 async function loadPdfBuffer(buffer,meta,fileName='',url=''){
   if(!window.pdfjsLib){ toast('PDF.js 載入失敗'); return; }
   const token=++state.reader.renderToken; state.reader.buffer=buffer.slice(0); state.reader.meta=meta||{}; state.reader.fileName=fileName; state.reader.url=url; state.reader.fullText=''; state.reader.pageTexts=[]; state.reader.selectedText=''; state.reader.currentPage=1;
-  state.reader.highlights=loadJSON(STORE.highlights,[]).filter(x=>x.paperKey===readerKey()); state.reader.notes=loadJSON(STORE.notes,[]).filter(x=>x.paperKey===readerKey());
+  state.reader.highlights=loadJSON(STORE.highlights,[]).filter(x=>x.paperKey===readerKey()); state.reader.notes=loadJSON(STORE.notes,[]).filter(x=>x.paperKey===readerKey()); hideSelectionUi(true); $('selectionBox').classList.add('hidden');
   $('readerEmpty').classList.add('hidden'); $('pdfViewport').classList.remove('hidden'); $('pdfPages').innerHTML='<div class="empty-card">正在解析 PDF…</div>';
   try{
     const pdf=await pdfjsLib.getDocument({data:buffer.slice(0)}).promise; if(token!==state.reader.renderToken) return; state.reader.pdf=pdf; state.reader.pages=pdf.numPages; $('pdfPageCount').textContent=`/ ${pdf.numPages}`; $('pageJump').value='1';
@@ -243,7 +243,7 @@ async function renderPdfPages(token=state.reader.renderToken){
   const pdf=state.reader.pdf; if(!pdf) return; const container=$('pdfPages'); container.innerHTML=''; state.reader.fullText=''; state.reader.pageTexts=[];
   for(let n=1;n<=pdf.numPages;n++){
     if(token!==state.reader.renderToken) return;
-    const page=await pdf.getPage(n), viewport=page.getViewport({scale:state.reader.scale}), wrap=document.createElement('div'); wrap.className='pdf-page'; wrap.dataset.page=n; wrap.style.width=`${viewport.width}px`; wrap.style.height=`${viewport.height}px`;
+    const page=await pdf.getPage(n), viewport=page.getViewport({scale:state.reader.scale}), wrap=document.createElement('div'); wrap.className='pdf-page'; wrap.dataset.page=n; wrap.setAttribute('role','document'); wrap.setAttribute('aria-label',`PDF page ${n}`); wrap.style.width=`${viewport.width}px`; wrap.style.height=`${viewport.height}px`;
     const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d',{alpha:false}); const outputScale=window.devicePixelRatio||1; canvas.width=Math.floor(viewport.width*outputScale); canvas.height=Math.floor(viewport.height*outputScale); canvas.style.width=`${viewport.width}px`; canvas.style.height=`${viewport.height}px`; wrap.appendChild(canvas);
     const textLayer=document.createElement('div'); textLayer.className='textLayer'; textLayer.style.width=`${viewport.width}px`; textLayer.style.height=`${viewport.height}px`; wrap.appendChild(textLayer); container.appendChild(wrap);
     await page.render({canvasContext:ctx,viewport,transform:outputScale!==1?[outputScale,0,0,outputScale,0,0]:null}).promise;
@@ -281,13 +281,93 @@ $('zoomIn').addEventListener('click',async()=>{state.reader.scale=Math.min(2.4,s
 $('fitWidth').addEventListener('click',async()=>{if(!state.reader.pdf)return; const p=await state.reader.pdf.getPage(1), base=p.getViewport({scale:1}), width=$('pdfViewport').clientWidth-36; state.reader.scale=Math.max(.65,Math.min(2.2,width/base.width)); $('zoomLabel').textContent=`${Math.round(state.reader.scale*100)}%`; await renderPdfPages();});
 $('autoHighlight').addEventListener('change',async e=>{state.reader.autoHighlight=e.target.checked;if(state.reader.pdf) await renderPdfPages();});
 
-function captureSelection(ev){
-  const sel=window.getSelection(); const text=sel?.toString().replace(/\s+/g,' ').trim()||''; if(text.length<2 || !$('pdfViewport').contains(sel.anchorNode)){ $('selectionToolbar').classList.add('hidden'); return; }
-  state.reader.selectedText=text; $('selectedText').textContent=text; $('selectionBox').classList.remove('hidden'); const bar=$('selectionToolbar'); bar.style.left=`${Math.min(window.innerWidth-280,Math.max(8,ev.clientX-80))}px`; bar.style.top=`${Math.max(75,ev.clientY-48)}px`; bar.classList.remove('hidden');
+let selectionTimer=null;
+function selectionIsInsidePdf(sel){
+  if(!sel || sel.rangeCount===0 || sel.isCollapsed) return false;
+  const range=sel.getRangeAt(0), node=range.commonAncestorContainer;
+  const el=node.nodeType===1?node:node.parentElement;
+  return !!(el && $('pdfViewport').contains(el) && el.closest('.textLayer'));
 }
-$('pdfViewport').addEventListener('mouseup',captureSelection); document.addEventListener('mousedown',e=>{if(!e.target.closest('#selectionToolbar')&&!e.target.closest('.textLayer')) $('selectionToolbar').classList.add('hidden')});
-$('selectionToolbar').addEventListener('click',async e=>{const a=e.target.dataset.action;if(!a)return;if(a==='translate')await translateSelection();if(a==='explain')await explainSelection();if(a==='highlight')addHighlight();if(a==='note')addNote();$('selectionToolbar').classList.add('hidden')});
+function selectionRect(sel){
+  if(!sel || !sel.rangeCount) return null;
+  const range=sel.getRangeAt(0), rects=[...range.getClientRects()].filter(r=>r.width>0 && r.height>0);
+  if(!rects.length){ const r=range.getBoundingClientRect(); return r.width||r.height?r:null; }
+  const left=Math.min(...rects.map(r=>r.left)), right=Math.max(...rects.map(r=>r.right));
+  const top=Math.min(...rects.map(r=>r.top)), bottom=Math.max(...rects.map(r=>r.bottom));
+  return {left,right,top,bottom,width:right-left,height:bottom-top};
+}
+function hideSelectionUi(clear=false){
+  $('selectionToolbar').classList.add('hidden');
+  $('selectionComment').classList.add('hidden');
+  if(clear){ state.reader.selectedText=''; state.reader.selectionPage=null; }
+}
+function positionFloating(el,rect,preferAbove=true){
+  if(!rect || !el) return;
+  el.classList.remove('hidden');
+  el.style.visibility='hidden';
+  const box=el.getBoundingClientRect(), margin=10;
+  let left=rect.left + rect.width/2 - box.width/2;
+  left=Math.max(margin,Math.min(window.innerWidth-box.width-margin,left));
+  let top=preferAbove ? rect.top-box.height-10 : rect.bottom+10;
+  if(top<74) top=rect.bottom+10;
+  if(top+box.height>window.innerHeight-margin) top=Math.max(74,rect.top-box.height-10);
+  el.style.left=`${Math.round(left)}px`; el.style.top=`${Math.round(top)}px`; el.style.visibility='visible';
+}
+function syncPdfSelection(){
+  const sel=window.getSelection();
+  if(!selectionIsInsidePdf(sel)){ hideSelectionUi(false); return; }
+  const raw=sel.toString().replace(/\u00ad/g,'').replace(/-\s*\n\s*/g,'').replace(/\s+/g,' ').trim();
+  if(raw.length<1){ hideSelectionUi(false); return; }
+  const text=raw.slice(0,12000), range=sel.getRangeAt(0), rect=selectionRect(sel);
+  state.reader.selectedText=text;
+  const node=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement;
+  state.reader.selectionPage=Number(node?.closest('.pdf-page')?.dataset.page||state.reader.currentPage||1);
+  state.reader.selectionRect=rect;
+  $('selectedText').textContent=text;
+  $('selectionBox').classList.remove('hidden');
+  positionFloating($('selectionToolbar'),rect,true);
+}
+function scheduleSelectionSync(delay=20){ clearTimeout(selectionTimer); selectionTimer=setTimeout(syncPdfSelection,delay); }
+$('pdfViewport').addEventListener('pointerup',()=>scheduleSelectionSync(0));
+$('pdfViewport').addEventListener('keyup',()=>scheduleSelectionSync(0));
+$('pdfViewport').addEventListener('touchend',()=>scheduleSelectionSync(40),{passive:true});
+document.addEventListener('selectionchange',()=>{
+  const sel=window.getSelection();
+  if(sel && !sel.isCollapsed && selectionIsInsidePdf(sel)) scheduleSelectionSync(45);
+});
+$('selectionToolbar').addEventListener('pointerdown',e=>e.preventDefault());
+$('selectionComment').addEventListener('pointerdown',e=>e.stopPropagation());
+document.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#selectionToolbar')||e.target.closest('#selectionComment')) return;
+  if(e.target.closest('.textLayer')) return;
+  hideSelectionUi(false);
+});
+$('selectionToolbar').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-action]'); if(!b)return; const a=b.dataset.action;
+  if(a==='explain') await explainSelection();
+  if(a==='highlight') addHighlight();
+  if(a==='translate') await translateSelection();
+  if(a==='comment'){ $('selectionCommentInput').value=''; positionFloating($('selectionComment'),state.reader.selectionRect,false); setTimeout(()=>$('selectionCommentInput').focus(),0); return; }
+  if(a==='chat') startSelectionChat();
+  $('selectionToolbar').classList.add('hidden');
+});
 $('translateBtn').addEventListener('click',translateSelection); $('explainBtn').addEventListener('click',explainSelection); $('supportBtn').addEventListener('click',researchFitSelection);
+$('cancelSelectionComment').addEventListener('click',()=>{ $('selectionComment').classList.add('hidden'); positionFloating($('selectionToolbar'),state.reader.selectionRect,true); });
+$('saveSelectionComment').addEventListener('click',()=>saveSelectionComment());
+$('selectionCommentInput').addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter') saveSelectionComment(); if(e.key==='Escape') $('cancelSelectionComment').click(); });
+function saveSelectionComment(){
+  const t=state.reader.selectedText, note=$('selectionCommentInput').value.trim(); if(!t)return;
+  const all=loadJSON(STORE.notes,[]); all.push({id:Date.now(),paperKey:readerKey(),quote:t,note,created:new Date().toISOString(),page:state.reader.selectionPage||null});
+  saveJSON(STORE.notes,all); state.reader.notes=all.filter(x=>x.paperKey===readerKey()); renderNotes(); $('selectionComment').classList.add('hidden'); toast('Comment（註記）已儲存');
+}
+function startSelectionChat(){
+  const t=state.reader.selectedText;if(!t)return;
+  $$('.reader-tab').forEach(b=>b.classList.toggle('active',b.dataset.readerTab==='assistant'));
+  $$('.reader-tabpane').forEach(p=>p.classList.toggle('active',p.id==='readerTab-assistant'));
+  $('askInput').value=`請根據整篇論文上下文解釋這段內容，並回答我接下來的問題：\n\n「${t.slice(0,1600)}」\n\n`;
+  $('askInput').focus(); $('askInput').setSelectionRange($('askInput').value.length,$('askInput').value.length);
+  $('askInput').scrollIntoView({behavior:'smooth',block:'center'});
+}
 
 function aiSettings(){
   const remember=!!localStorage.getItem(STORE.aiKey); return {key:localStorage.getItem(STORE.aiKey)||sessionStorage.getItem(STORE.aiKey)||'',model:localStorage.getItem(STORE.aiModel)||'gpt-5-mini',endpoint:localStorage.getItem(STORE.aiEndpoint)||'https://api.openai.com/v1/responses',remember};
@@ -308,7 +388,7 @@ async function explainSelection(){ const t=state.reader.selectedText;if(!t){toas
 async function researchFitSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取文字');return;} setAssistant('Research Fit（與我的研究關係）','處理中…'); try{const out=await askAI('Analyze the selected academic passage for research usefulness. Answer in Traditional Chinese with four headings: 支持什麼, 不支持/不能證明什麼, 可引用的證據, 下一個驗證實驗. Do not overclaim. For English technical terms, add Traditional Chinese meaning in parentheses).',t);setAssistant('Research Fit（與我的研究關係）',out);}catch(e){setAssistant('Research Fit（本機）',`支持：這段內容可直接支持其中明確陳述的機制 / 現象。\n\n不能證明：不要把作者沒有測量的因果關係延伸成結論。\n\n建議：把這段的量測條件、樣品、濃度 / 波長 / 時間尺度與你的實驗逐項對照後再引用。\n\n原文：${t}`);} }
 function addHighlight(){ const t=state.reader.selectedText;if(!t)return; const all=loadJSON(STORE.highlights,[]); if(!all.some(x=>x.paperKey===readerKey()&&x.text===t)) all.push({paperKey:readerKey(),text:t,created:new Date().toISOString()}); saveJSON(STORE.highlights,all); state.reader.highlights=all.filter(x=>x.paperKey===readerKey()); $$('.textLayer',$('pdfPages')).forEach(applyTextMarks); toast('已加入 Highlight（高亮）'); }
 function addNote(){ const t=state.reader.selectedText;if(!t)return; const note=window.prompt('這段要記什麼？',''); if(note===null)return; const all=loadJSON(STORE.notes,[]); all.push({id:Date.now(),paperKey:readerKey(),quote:t,note:note.trim(),created:new Date().toISOString()}); saveJSON(STORE.notes,all); state.reader.notes=all.filter(x=>x.paperKey===readerKey()); renderNotes(); toast('筆記已儲存'); }
-function renderNotes(){ const list=state.reader.notes||[]; $('notesList').innerHTML=list.length?list.slice().reverse().map(n=>`<div class="note-card"><q>${esc(n.quote)}</q><p>${esc(n.note||'（無文字註記）')}</p><small>${new Date(n.created).toLocaleString()}</small></div>`).join(''):'<div class="placeholder">尚無筆記。</div>'; }
+function renderNotes(){ const list=state.reader.notes||[]; $('notesList').innerHTML=list.length?list.slice().reverse().map(n=>`<div class="note-card"><q>${esc(n.quote)}</q><p>${esc(n.note||'（無文字註記）')}</p><small>${n.page?`Page ${n.page} · `:''}${new Date(n.created).toLocaleString()}</small></div>`).join(''):'<div class="placeholder">尚無筆記。</div>'; }
 $('exportNotes').addEventListener('click',()=>{const m=state.reader.meta||{};const txt=`# ${m.title||'OpenScite Notes'}\n\n`+(state.reader.notes||[]).map((n,i)=>`## ${i+1}\n> ${n.quote}\n\n${n.note}\n`).join('\n');downloadText(`${safeFile(m.title||'notes')}.md`,txt,'text/markdown')}); $('clearNotes').addEventListener('click',()=>{if(!confirm('清空這篇論文的所有筆記？'))return;const key=readerKey();const all=loadJSON(STORE.notes,[]).filter(x=>x.paperKey!==key);saveJSON(STORE.notes,all);state.reader.notes=[];renderNotes()});
 
 $$('.reader-tab').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.readerTab;$$('.reader-tab').forEach(x=>x.classList.toggle('active',x===b));$$('.reader-tabpane').forEach(p=>p.classList.toggle('active',p.id===`readerTab-${t}`));}));
