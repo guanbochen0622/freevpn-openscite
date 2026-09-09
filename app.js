@@ -19,7 +19,7 @@ const STORE = {
 const state = {
   currentView: 'search',
   search: { query: '', page: 1, works: [], total: 0, sourceMap: new Map(), provider: 'OpenAlex' },
-  reader: { pdf: null, buffer: null, fileName: '', url: '', meta: null, scale: 1.25, pages: 0, fullText: '', pageTexts: [], selectedText: '', highlights: [], notes: [], currentPage: 1, autoHighlight: false, renderToken: 0 },
+  reader: { pdf: null, buffer: null, fileName: '', url: '', meta: null, scale: 1.25, pages: 0, fullText: '', pageTexts: [], selectedText: '', highlights: [], notes: [], currentPage: 1, autoHighlight: false, renderToken: 0, figureRegions: new Map(), activeFigure: null },
   evidence: { target: null, works: [], sourceMap: new Map() },
   library: loadJSON(STORE.library, [])
 };
@@ -231,7 +231,7 @@ async function openPdfUrl(url,meta){
 }
 async function loadPdfBuffer(buffer,meta,fileName='',url=''){
   if(!window.pdfjsLib){ toast('PDF.js 載入失敗'); return; }
-  const token=++state.reader.renderToken; state.reader.buffer=buffer.slice(0); state.reader.meta=meta||{}; state.reader.fileName=fileName; state.reader.url=url; state.reader.fullText=''; state.reader.pageTexts=[]; state.reader.selectedText=''; state.reader.currentPage=1;
+  const token=++state.reader.renderToken; state.reader.buffer=buffer.slice(0); state.reader.meta=meta||{}; state.reader.fileName=fileName; state.reader.url=url; state.reader.fullText=''; state.reader.pageTexts=[]; state.reader.selectedText=''; state.reader.currentPage=1; state.reader.figureRegions=new Map(); state.reader.activeFigure=null; $('figureExplainBox')?.classList.add('hidden');
   state.reader.highlights=loadJSON(STORE.highlights,[]).filter(x=>x.paperKey===readerKey()); state.reader.notes=loadJSON(STORE.notes,[]).filter(x=>x.paperKey===readerKey()); hideSelectionUi(true); $('selectionBox').classList.add('hidden');
   $('readerEmpty').classList.add('hidden'); $('pdfViewport').classList.remove('hidden'); $('pdfPages').innerHTML='<div class="empty-card">正在解析 PDF…</div>';
   try{
@@ -273,7 +273,9 @@ async function renderPdfPages(token=state.reader.renderToken){
     const textLayer=document.createElement('div');
     textLayer.className='textLayer'; textLayer.dataset.page=n; textLayer.style.width=`${viewport.width}px`; textLayer.style.height=`${viewport.height}px`;
     textLayer.style.setProperty('--scale-factor',String(state.reader.scale));
-    wrap.appendChild(textLayer); container.appendChild(wrap);
+    const figureLayer=document.createElement('div'); figureLayer.className='figureLayer'; figureLayer.dataset.page=n;
+    figureLayer.style.width=`${viewport.width}px`; figureLayer.style.height=`${viewport.height}px`;
+    wrap.appendChild(textLayer); wrap.appendChild(figureLayer); container.appendChild(wrap);
 
     await page.render({canvasContext:ctx,viewport,transform:outputScale!==1?[outputScale,0,0,outputScale,0,0]:null}).promise;
     const tc=await page.getTextContent({includeMarkedContent:true});
@@ -294,11 +296,129 @@ async function renderPdfPages(token=state.reader.renderToken){
     }
     $$('span',textLayer).forEach((span,i)=>{ span.dataset.textIndex=String(i); });
     applyTextMarks(textLayer);
+    try{
+      const regions=await detectPdfVisualRegions(page,viewport,textLayer);
+      state.reader.figureRegions.set(n,regions);
+      renderFigureHotspots(wrap,figureLayer,regions,n);
+    }catch(e){ console.warn('visual region detection failed',e); }
+    installFigureFallbackClick(wrap,n);
     if(n%3===0) await new Promise(r=>requestAnimationFrame(r));
   }
   await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   restorePdfScrollAnchor(anchor);
 }
+
+function matrixApply(m,p){ return [m[0]*p[0]+m[2]*p[1]+m[4],m[1]*p[0]+m[3]*p[1]+m[5]]; }
+function matrixMultiply(a,b){
+  return [a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];
+}
+function rectArea(r){ return Math.max(0,r.width)*Math.max(0,r.height); }
+function rectUnion(a,b){ const left=Math.min(a.left,b.left),top=Math.min(a.top,b.top),right=Math.max(a.right,b.right),bottom=Math.max(a.bottom,b.bottom);return{left,top,right,bottom,width:right-left,height:bottom-top}; }
+function rectsNear(a,b,gap=10){ return !(a.right+gap<b.left||b.right+gap<a.left||a.bottom+gap<b.top||b.bottom+gap<a.top); }
+function mergeVisualRegions(regions,pageW,pageH){
+  let list=regions.filter(r=>r.width>=44&&r.height>=36&&rectArea(r)>=2200).map(r=>({...r}));
+  let changed=true;
+  while(changed){ changed=false; outer:for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+    if(rectsNear(list[i],list[j],14)){ const u=rectUnion(list[i],list[j]); if(rectArea(u)<pageW*pageH*.92){ list[i]={...u,source:'merged'};list.splice(j,1);changed=true;break outer; } }
+  }}
+  return list.filter(r=>{
+    const frac=rectArea(r)/(pageW*pageH); if(frac<.006)return false;
+    if(frac>.94)return false;
+    return true;
+  }).sort((a,b)=>a.top-b.top||a.left-b.left).slice(0,24);
+}
+async function detectPdfVisualRegions(page,viewport,textLayer){
+  const OPS=pdfjsLib.OPS||{}, opList=await page.getOperatorList(), stack=[]; let ctm=[1,0,0,1,0,0], raw=[];
+  const imageOps=new Set([OPS.paintImageXObject,OPS.paintJpegXObject,OPS.paintInlineImageXObject,OPS.paintImageMaskXObject].filter(x=>x!==undefined));
+  for(let i=0;i<opList.fnArray.length;i++){
+    const fn=opList.fnArray[i],args=opList.argsArray[i]||[];
+    if(fn===OPS.save){stack.push(ctm.slice());continue;}
+    if(fn===OPS.restore){ctm=stack.pop()||[1,0,0,1,0,0];continue;}
+    if(fn===OPS.transform && args.length>=6){ctm=matrixMultiply(ctm,args.slice(0,6));continue;}
+    if(!imageOps.has(fn))continue;
+    const pts=[[0,0],[1,0],[0,1],[1,1]].map(p=>matrixApply(viewport.transform,matrixApply(ctm,p)));
+    const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]); let left=Math.min(...xs),right=Math.max(...xs),top=Math.min(...ys),bottom=Math.max(...ys);
+    left=Math.max(0,left);top=Math.max(0,top);right=Math.min(viewport.width,right);bottom=Math.min(viewport.height,bottom);
+    if(right>left&&bottom>top)raw.push({left,top,right,bottom,width:right-left,height:bottom-top,source:'image'});
+  }
+  let merged=mergeVisualRegions(raw,viewport.width,viewport.height);
+  // Caption fallback catches many vector figures/tables that have no image XObject.
+  const pageRect=textLayer.getBoundingClientRect(), spans=$$('span',textLayer); const captions=[];
+  for(const span of spans){
+    const text=(span.textContent||'').trim(); if(!/^(fig(?:ure)?\.?\s*\d+|table\s*\d+)/i.test(text))continue;
+    const r=span.getBoundingClientRect(); captions.push({text,left:r.left-pageRect.left,top:r.top-pageRect.top,right:r.right-pageRect.left,bottom:r.bottom-pageRect.top});
+  }
+  for(const c of captions){
+    const isTable=/^table/i.test(c.text), h=Math.min(viewport.height*.42,330*state.reader.scale), padX=viewport.width*.045;
+    const top=isTable?Math.max(0,c.bottom+5):Math.max(0,c.top-h), bottom=isTable?Math.min(viewport.height,c.bottom+h):Math.max(0,c.top-5);
+    if(bottom-top>55){ const r={left:padX,top,right:viewport.width-padX,bottom,width:viewport.width-2*padX,height:bottom-top,source:isTable?'table-caption':'figure-caption',caption:c.text};
+      if(!merged.some(x=>rectsNear(x,r,28)&&rectArea(rectUnion(x,r))<viewport.width*viewport.height*.75)) merged.push(r);
+    }
+  }
+  return mergeVisualRegions(merged,viewport.width,viewport.height);
+}
+function renderFigureHotspots(wrap,layer,regions,pageNo){
+  layer.innerHTML='';
+  regions.forEach((r,i)=>{
+    const hit=document.createElement('button'); hit.type='button'; hit.className='figure-hotspot'; hit.dataset.figureIndex=i; hit.dataset.page=pageNo;
+    hit.style.left=`${r.left}px`; hit.style.top=`${r.top}px`; hit.style.width=`${r.width}px`; hit.style.height=`${r.height}px`;
+    hit.innerHTML='<span class="figure-explain-pill">✦ Explain image</span>'; hit.setAttribute('aria-label',`Explain visual on page ${pageNo}`);
+    hit.addEventListener('pointerdown',e=>{e.stopPropagation();});
+    hit.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();explainPdfFigure(pageNo,r,i);});
+    layer.appendChild(hit);
+  });
+}
+function installFigureFallbackClick(wrap,pageNo){
+  if(wrap.dataset.figureFallback==='1')return; wrap.dataset.figureFallback='1';
+  wrap.addEventListener('dblclick',e=>{
+    if(e.target.closest('.figure-hotspot')||e.target.closest('.textLayer span'))return;
+    const wr=wrap.getBoundingClientRect(),x=e.clientX-wr.left,y=e.clientY-wr.top;
+    const regions=state.reader.figureRegions.get(pageNo)||[]; const found=regions.find(r=>x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom);
+    if(found){explainPdfFigure(pageNo,found,regions.indexOf(found));return;}
+    const w=Math.min(wr.width*.7,560*state.reader.scale),h=Math.min(wr.height*.42,400*state.reader.scale);
+    const left=Math.max(0,Math.min(wr.width-w,x-w/2)),top=Math.max(0,Math.min(wr.height-h,y-h/2));
+    explainPdfFigure(pageNo,{left,top,right:left+w,bottom:top+h,width:w,height:h,source:'smart-crop'},-1);
+  });
+}
+function nearbyFigureCaption(pageNo,region){
+  const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`), layer=page?.querySelector('.textLayer'); if(!layer)return'';
+  const lr=layer.getBoundingClientRect(), candidates=[];
+  for(const span of $$('span',layer)){
+    const text=(span.textContent||'').trim(); if(!text)continue; const r=span.getBoundingClientRect(),y=(r.top+r.bottom)/2-lr.top;
+    const dist=Math.min(Math.abs(y-region.bottom),Math.abs(y-region.top));
+    if(dist<150*state.reader.scale && (/^(fig(?:ure)?\.?\s*\d+|table\s*\d+)/i.test(text)||dist<55*state.reader.scale))candidates.push({text,dist,y});
+  }
+  return candidates.sort((a,b)=>a.dist-b.dist).slice(0,12).map(x=>x.text).join(' ').replace(/\s+/g,' ').slice(0,1500);
+}
+function cropFigureDataUrl(pageNo,region){
+  const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`),canvas=page?.querySelector('canvas'); if(!canvas)throw new Error('找不到 PDF page canvas');
+  const cssW=parseFloat(canvas.style.width)||page.clientWidth,cssH=parseFloat(canvas.style.height)||page.clientHeight,sx=canvas.width/cssW,sy=canvas.height/cssH,pad=10;
+  const x=Math.max(0,region.left-pad),y=Math.max(0,region.top-pad),right=Math.min(cssW,region.right+pad),bottom=Math.min(cssH,region.bottom+pad);
+  const sw=Math.max(1,(right-x)*sx),sh=Math.max(1,(bottom-y)*sy),maxDim=1600,down=Math.min(1,maxDim/Math.max(sw,sh));
+  const out=document.createElement('canvas'); out.width=Math.max(1,Math.round(sw*down));out.height=Math.max(1,Math.round(sh*down));
+  const ctx=out.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,out.width,out.height);ctx.drawImage(canvas,x*sx,y*sy,sw,sh,0,0,out.width,out.height);
+  return out.toDataURL('image/jpeg',.9);
+}
+function activateAssistantTab(){
+  $$('.reader-tab').forEach(b=>b.classList.toggle('active',b.dataset.readerTab==='assistant'));
+  $$('.reader-tabpane').forEach(p=>p.classList.toggle('active',p.id==='readerTab-assistant'));
+}
+async function explainPdfFigure(pageNo,region,index=-1){
+  try{
+    clearNativePdfSelection(); hideSelectionUi(false); const image=cropFigureDataUrl(pageNo,region),caption=nearbyFigureCaption(pageNo,region);
+    state.reader.activeFigure={pageNo,region,index,image,caption}; activateAssistantTab();
+    $('figurePreview').src=image;$('figureExplainLabel').textContent=`Page ${pageNo} · ${region.source||'visual'}`;$('figureExplainCaption').textContent=caption||'未自動辨識到 caption；AI 仍會依圖片與本頁脈絡分析。';$('figureExplainBox').classList.remove('hidden');
+    setAssistant('Image Explanation（圖片解釋）','正在分析圖片、圖表元素與論文脈絡…');
+    const pageContext=(state.reader.pageTexts[pageNo-1]||'').slice(0,6500),paper=state.reader.meta?.title||state.reader.fileName||'current paper';
+    const prompt=`論文：${paper}\n頁碼：${pageNo}\n附近 caption：${caption||'未辨識'}\n本頁文字脈絡：${pageContext}\n\n請精準解釋圖片本身，不要猜看不清楚的數值。`;
+    const out=await askAIWithImage('You are an academic figure explainer. Explain the supplied figure/chart/table in Traditional Chinese and use the paper context to interpret it. Structure: 1) 圖在做什麼 2) 圖例/座標/各 panel 3) 主要趨勢與結果 4) 作者想用它證明什麼 5) 可引用的結論 6) 不能從圖中證明什麼. Keep English technical terms followed by Traditional Chinese meaning in parentheses). Never invent unreadable labels or numerical values.',prompt,image);
+    setAssistant('Image Explanation（圖片解釋）',out);
+  }catch(e){
+    activateAssistantTab(); const msg=e.message==='NO_AI_KEY'?'圖片已精準截取，但 Image Explanation 需要 AI Vision API。請按右上「AI 設定」加入 API key；同一個 Responses API 可傳圖片輸入。':`圖片分析失敗：${e.message}`;
+    setAssistant('Image Explanation（圖片解釋）',msg);
+  }
+}
+
 function manualTextLayer(tc,container,viewport){
   const created=[];
   for(const item of tc.items){
@@ -537,6 +657,13 @@ async function askAI(system,user){
   const d=await res.json(); if(!res.ok) throw new Error(d.error?.message||`AI API ${res.status}`);
   if(d.output_text) return d.output_text; for(const o of d.output||[]) for(const c of o.content||[]) if(c.type==='output_text'&&c.text) return c.text; return JSON.stringify(d,null,2);
 }
+async function askAIWithImage(system,user,imageDataUrl){
+  const s=aiSettings(); if(!s.key) throw new Error('NO_AI_KEY');
+  const input=[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:user},{type:'input_image',image_url:imageDataUrl,detail:'high'}]}];
+  const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.key}`},body:JSON.stringify({model:s.model,input})});
+  const d=await res.json(); if(!res.ok) throw new Error(d.error?.message||`AI Vision API ${res.status}`);
+  if(d.output_text) return d.output_text; for(const o of d.output||[]) for(const c of o.content||[]) if(c.type==='output_text'&&c.text) return c.text; return JSON.stringify(d,null,2);
+}
 async function freeTranslate(text){
   const clipped=text.slice(0,480); const url=new URL('https://api.mymemory.translated.net/get'); url.searchParams.set('q',clipped); url.searchParams.set('langpair','en|zh-TW'); const res=await fetch(url); if(!res.ok) throw new Error('Free translation unavailable'); const d=await res.json(); return d.responseData?.translatedText||'';
 }
@@ -597,6 +724,8 @@ function citationContexts(text,target){const a=targetAnchors(target),clean=text.
 async function analyzeCitingPdf(index,file){const w=state.evidence.works[index];if(!w)return;toast('正在從 citing PDF 尋找引用上下文…');try{const text=await pdfTextFromFile(file),ctx=citationContexts(text,state.evidence.target);w.contexts=ctx;if(ctx.length){const cls=classifyStance(ctx.join(' '));w.stance=cls.stance;w.confidence=Math.max(.7,cls.confidence);toast(`找到 ${ctx.length} 個 citation contexts`);}else{toast('PDF 已解析，但沒有可靠綁定到目標論文的引用段落');}renderEvidence();}catch(e){toast(`PDF 解析失敗：${e.message}`);} }
 $('exportJson').addEventListener('click',()=>{downloadText(`openscite-${safeFile(state.evidence.target?.title||'report')}.json`,JSON.stringify({target:state.evidence.target,works:state.evidence.works,exportedAt:new Date().toISOString()},null,2),'application/json')});
 $('exportMd').addEventListener('click',()=>{const t=state.evidence.target;let md=`# OpenScite Citation Evidence Report\n\n## Target\n${t?`**${t.title}**\n\n${t.authors||''} · ${t.source||''} · ${t.year||''}\n\n`:''}`;for(const w of state.evidence.works){md+=`## ${w.stance.toUpperCase()} — ${w.title}\n\n- Year: ${w.year||''}\n- Venue: ${w.source||''}\n- Citations: ${w.citations||0}\n- Estimated quartile: ${w.q||'Q?'}\n- DOI: ${w.doi||''}\n\n${w.abstract||''}\n\n`;if(w.contexts?.length)md+=w.contexts.map(c=>`> ${c}`).join('\n\n')+'\n\n';}downloadText(`openscite-${safeFile(t?.title||'report')}.md`,md,'text/markdown')});
+
+$('reanalyzeFigure').addEventListener('click',()=>{ const f=state.reader.activeFigure; if(f) explainPdfFigure(f.pageNo,f.region,f.index); });
 
 // ---------------- AI modal ----------------
 $('settingsBtn').addEventListener('click',()=>{const s=aiSettings();$('aiKey').value=s.key;$('aiModel').value=s.model;$('aiEndpoint').value=s.endpoint;$('rememberAi').checked=s.remember;$('aiModal').classList.remove('hidden')}); $('closeModal').addEventListener('click',()=>$('aiModal').classList.add('hidden')); $('aiModal').addEventListener('click',e=>{if(e.target===$('aiModal'))$('aiModal').classList.add('hidden')});
