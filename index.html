@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v13 — Citation Evidence Explorer</title>
+<title>OpenScite Web v14 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -636,7 +636,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
           <option value="rank">依目前排名</option><option value="keyword">依關鍵字重疊度</option><option value="journal">期刊層級：高 → 低</option><option value="citations">依引用次數</option><option value="year">依年份</option><option value="evidence">依證據數</option>
         </select>
         <div class="view-toggle"><button id="viewComfort" class="active" title="舒適模式">▤</button><button id="viewCompact" title="緊湊模式">☷</button></div>
-        <div class="keyword-hint">像 Google Scholar：只要與關鍵字有重疊就會以 <b>紅色</b> 標示；不再要求所有詞都同時出現。</div>
+        <div class="keyword-hint">像 Google Scholar：會把你輸入內容拆成<b>每一個詞</b>；結果中只要出現該詞就以 <b>紅色</b> 標示。連 Fiber-to-Silicon、SiN–Si 也會拆詞比對。</div>
         <div id="keywordStatus" class="keyword-status">尚未輸入結果關鍵字。</div>
       </div>
       <div class="content">
@@ -1582,31 +1582,64 @@ function renderDashboard(){
 }
 
 
-const KEYWORD_STOPWORDS=new Set([
-  "a","an","and","are","as","at","be","been","being","by","for","from","has","have","in","into","is","it","of","on","or","that","the","their","this","to","using","via","was","were","with","we","our","study","paper","research",
-  "與","和","及","的","之","在","以","用","為","是","對","於","中","一個","研究","論文"
-]);
+const DASH_CHARS="\\-‐‑‒–—−";
 function parseKeywordTerms(raw=""){
-  raw=String(raw||"").trim();
+  raw=String(raw||"").replace(/\u00a0/g," ").trim();
   if(!raw) return [];
-  const quoted=[...raw.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].map(m=>m[1].trim()).filter(Boolean);
-  const rest=raw.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g," ");
-  const tokens=rest.split(/[\s,;，；、]+/u).map(x=>x.trim().replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu,"")).filter(Boolean);
-  const all=[...quoted,...tokens].filter(t=>t.length>=2 && !KEYWORD_STOPWORDS.has(t.toLowerCase()));
-  return [...new Map(all.map(t=>[t.toLowerCase(),t])).values()].sort((a,b)=>b.length-a.length).slice(0,32);
+
+  const found=[];
+  const add=t=>{
+    t=String(t||"").trim().replace(/^[\s"'“”‘’()[\]{}<>.,;:!?，。；：！？、]+|[\s"'“”‘’()[\]{}<>.,;:!?，。；：！？、]+$/gu,"");
+    if(!t) return;
+    // 使用者要求「打進去有出現的字全部 highlight」：不移除 to / of / mode 等 stop words。
+    if([...t].length>=1) found.push(t);
+  };
+
+  // 1. 保留以多個空白、換行、逗號分隔的概念片語。
+  raw.split(/(?:\s{2,}|[\n\r,;，；、]+)/u).forEach(add);
+
+  // 2. 保留帶連字號的複合詞，例如 Fiber-to-Silicon、SiN–Si。
+  const compounds=raw.match(/[\p{L}\p{N}]+(?:[\-‐‑‒–—−][\p{L}\p{N}]+)+/gu)||[];
+  compounds.forEach(add);
+
+  // 3. 最重要：拆成每一個單字。Fiber-to-Silicon -> Fiber / to / Silicon。
+  const words=raw.match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)||[];
+  words.forEach(add);
+
+  // 去重；長詞優先，避免 Si 先吃掉 Silicon、mode 先吃掉 mode transition。
+  const seen=new Map();
+  for(const t of found){
+    const key=t.toLocaleLowerCase().replace(/[‐‑‒–—−]/g,"-").replace(/\s+/g," ");
+    if(!seen.has(key)) seen.set(key,t);
+  }
+  return [...seen.values()].sort((a,b)=>b.length-a.length).slice(0,96);
 }
 function keywordTerms(){
   const raw=(document.querySelector("#paperSearch")?.value||"").trim();
   return raw ? parseKeywordTerms(raw) : (state.queryKeywords||[]);
 }
 function escapeRegExp(s=""){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function termPattern(term=""){
+  // 讓 -, –, — 等不同 dash 視為同一種連字號；片語中的空白允許一個以上。
+  return escapeRegExp(String(term))
+    .replace(/[\-‐‑‒–—−]/g,"[\\-‐‑‒–—−]")
+    .replace(/\s+/g,"\\s+");
+}
+function buildTermsRegex(terms=[]){
+  const pats=(terms||[]).filter(Boolean).map(termPattern).filter(Boolean);
+  if(!pats.length) return null;
+  try{
+    // 限制在完整英數詞邊界，避免 "to" 把 transition 中的 "to" 染紅，
+    // 但仍可命中 "Fiber-to-Silicon" 裡獨立的 to。
+    return new RegExp(`(?<![\\p{L}\\p{N}])(?:${pats.join("|")})(?![\\p{L}\\p{N}])`,"giu");
+  }catch(_){
+    try{return new RegExp(pats.join("|"),"giu")}catch(__){return null}
+  }
+}
 function highlightWithTerms(value="", terms=[]){
   const s=String(value??"");
-  terms=(terms||[]).filter(Boolean);
-  if(!terms.length) return escapeHtml(s);
-  let re;
-  try{ re=new RegExp(terms.map(escapeRegExp).join("|"),"giu") }
-  catch(_){ return escapeHtml(s) }
+  const re=buildTermsRegex(terms);
+  if(!re) return escapeHtml(s);
   let html="",last=0;
   for(const m of s.matchAll(re)){
     const i=m.index??0;
@@ -1630,8 +1663,11 @@ function keywordHaystack(p){
   ].join(" ");
 }
 function keywordMatchInfo(p,terms=keywordTerms()){
-  const hay=norm(keywordHaystack(p));
-  const matched=terms.filter(t=>hay.includes(norm(t)));
+  const hay=String(keywordHaystack(p)||"");
+  const matched=terms.filter(t=>{
+    const re=buildTermsRegex([t]);
+    return re ? re.test(hay) : false;
+  });
   return {count:matched.length,total:terms.length,matched};
 }
 function updateKeywordStatus(visibleCount){
@@ -1645,8 +1681,8 @@ function currentVisiblePapers(){
   const stance=$("#stanceFilter")?.value||"all";
   const sort=$("#sortView")?.value||"rank";
   let arr=state.papers.map((p,i)=>({p,i,km:keywordMatchInfo(p,terms)}));
-  // Google Scholar-style overlap: ANY keyword match is enough.
-  if(terms.length) arr=arr.filter(x=>x.km.count>0);
+  // Google Scholar-style highlighting：保留所有引用 paper，只將重疊詞標紅。
+  // 若依關鍵字排序，命中較多的 paper 自動排前面。
   if(stance!=="all") arr=arr.filter(({p})=>p._stance===stance);
   if(sort==="keyword") arr.sort((a,b)=>b.km.count-a.km.count || (b.p.cited_by_count||0)-(a.p.cited_by_count||0));
   if(sort==="journal") arr.sort((a,b)=>{
@@ -1689,9 +1725,10 @@ function renderCoverage(){
 function renderPapers(){
   const box=$("#paperList");box.innerHTML="";
   const visible=currentVisiblePapers();
-  updateKeywordStatus(visible.length);
-  if(!visible.length && keywordTerms().length){
-    box.innerHTML=`<div class="dashboard-empty">目前引用文獻中沒有與這些關鍵字重疊的結果。可刪除部分關鍵字再試。</div>`;
+  const matchedCount=visible.filter(x=>x.km.count>0).length;
+  updateKeywordStatus(matchedCount);
+  if(!visible.length){
+    box.innerHTML=`<div class="dashboard-empty">目前沒有可顯示的引用文獻。</div>`;
     return;
   }
   visible.forEach(({p,i,km})=>{
