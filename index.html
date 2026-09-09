@@ -4,15 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="OpenScite Web v24.1 — Academic Search, Citation Evidence Explorer and Moonlight-style PDF Reader.">
-<title>OpenScite Web v24.1 — Search · Evidence · Reader</title>
+<meta name="description" content="OpenScite Web v24.2 — Academic Search, Citation Evidence Explorer and precision PDF Reader.">
+<title>OpenScite Web v24.2 — Search · Evidence · Reader</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
 <nav class="topbar">
   <div class="shell nav-inner">
-    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v24.1</span></button>
+    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v24.2</span></button>
     <div class="nav-tabs" role="navigation">
       <button class="nav-tab active" data-view="search">學術搜尋</button>
       <button class="nav-tab" data-view="reader">PDF Reader</button>
@@ -102,7 +103,7 @@
         <div class="reader-tabs"><button class="reader-tab active" data-reader-tab="assistant">Assistant</button><button class="reader-tab" data-reader-tab="summary">Summary</button><button class="reader-tab" data-reader-tab="citations">Citation</button><button class="reader-tab" data-reader-tab="notes">Notes</button></div>
         <div class="reader-side-body">
           <div id="readerTab-assistant" class="reader-tabpane active">
-            <div class="assistant-intro"><b>像 Moonlight 一樣直接選取</b><span>拖曳選取單字、片語或整段後，工具列會貼著選取範圍出現：Explain（解釋）→ Highlight（高亮）→ Translate（翻譯）→ Comment（註記）→ Chat（提問）。</span></div>
+            <div class="assistant-intro"><b>像 Moonlight 一樣直接選取</b><span>拖曳選取單字、片語或整段後，工具列只會在你放開滑鼠後穩定出現，並精準貼著選取終點：Explain（解釋）→ Highlight（高亮）→ Translate（翻譯）→ Comment（註記）→ Chat（提問）。</span></div>
             <div id="selectionBox" class="selection-box hidden"><span>目前選取</span><blockquote id="selectedText"></blockquote><div class="mini-actions"><button id="translateBtn" class="btn small primary">翻譯</button><button id="explainBtn" class="btn small">解釋</button><button id="supportBtn" class="btn small">對我的研究</button></div></div>
             <div id="assistantOutput" class="assistant-output"><div class="placeholder">AI / 本機分析結果會顯示在這裡。</div></div>
             <div class="ask-row"><textarea id="askInput" class="control" rows="3" placeholder="針對這篇論文提問，例如：作者為什麼認為低濃度的擾動更大？"></textarea><button id="askBtn" class="btn primary full">Ask about this paper</button></div>
@@ -166,7 +167,7 @@
 </div>
 
 <div id="toast" class="toast hidden"></div>
-<footer><div class="shell">OpenScite Web v24.1 · Search + Moonlight-style Reader + Citation Evidence · Local-first PDF processing</div></footer>
+<footer><div class="shell">OpenScite Web v24.2 · Search + Precision Reader + Citation Evidence · Local-first PDF processing</div></footer>
 <script src="app.js"></script>
 </body>
 </html>

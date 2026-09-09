@@ -51,3 +51,87 @@
   .selection-toolbar{max-width:calc(100vw - 12px);overflow-x:auto;gap:0;padding:4px}
   .selection-toolbar button{padding:7px 8px}.selection-toolbar button span:last-child{display:none}
 }
+
+/* =========================================================
+   v24.2 — precision PDF text layer + stable Moonlight selection
+   ========================================================= */
+.pdf-page{
+  isolation:isolate;
+  overflow:hidden;
+  contain:layout paint style;
+}
+.pdf-page canvas{
+  position:absolute;
+  inset:0;
+  z-index:1;
+}
+.textLayer{
+  position:absolute!important;
+  inset:0!important;
+  z-index:4!important;
+  overflow:hidden!important;
+  opacity:1!important;
+  line-height:1!important;
+  text-align:initial!important;
+  -webkit-text-size-adjust:none!important;
+  text-size-adjust:none!important;
+  forced-color-adjust:none!important;
+  transform-origin:0 0!important;
+  user-select:text!important;
+  -webkit-user-select:text!important;
+  touch-action:pan-x pan-y!important;
+  caret-color:transparent;
+}
+.textLayer :is(span,br){
+  position:absolute!important;
+  color:transparent!important;
+  white-space:pre!important;
+  cursor:text!important;
+  transform-origin:0% 0%!important;
+  user-select:text!important;
+  -webkit-user-select:text!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+}
+.textLayer span.markedContent{
+  top:0!important;
+  height:0!important;
+}
+.textLayer .endOfContent{
+  display:block;
+  position:absolute;
+  inset:100% 0 0;
+  z-index:-1;
+  cursor:default;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.textLayer.selecting .endOfContent{top:0}
+.textLayer ::selection{background:rgba(66,133,244,.46)!important}
+.textLayer br::selection{background:transparent!important}
+.textLayer.selection-debug ::selection{background:rgba(66,133,244,.58)!important}
+.selection-toolbar{
+  transition:opacity .08s ease,transform .08s ease;
+  will-change:left,top,transform;
+  transform:translateZ(0);
+  max-width:min(680px,calc(100vw - 18px));
+}
+.selection-toolbar.is-below::after{
+  top:-6px;
+  bottom:auto;
+  border:0;
+  border-left:1px solid rgba(255,255,255,.14);
+  border-top:1px solid rgba(255,255,255,.14);
+}
+.selection-toolbar.selection-moving{
+  opacity:0;
+  pointer-events:none;
+}
+.selection-comment{will-change:left,top;transform:translateZ(0)}
+.pdf-viewport.is-selecting{cursor:text}
+.pdf-viewport.is-selecting .selection-toolbar{opacity:0;pointer-events:none}
+@media(max-width:680px){
+  .textLayer{touch-action:pan-x pan-y!important}
+  .selection-toolbar{max-width:calc(100vw - 10px)}
+}

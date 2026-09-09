@@ -239,22 +239,87 @@ async function loadPdfBuffer(buffer,meta,fileName='',url=''){
     updateReaderMeta(); renderNotes(); await renderPdfPages(token); updateCitationInfo(); toast(`PDF 已載入：${pdf.numPages} 頁`);
   }catch(e){ $('pdfPages').innerHTML=`<div class="empty-card">PDF 解析失敗：${esc(e.message)}</div>`; toast('PDF 解析失敗'); }
 }
+function capturePdfScrollAnchor(){
+  const vp=$('pdfViewport'), page=currentPageElement();
+  if(!vp || !page) return {page:state.reader.currentPage||1,ratio:0};
+  const ratio=Math.max(0,Math.min(1,(vp.scrollTop-page.offsetTop)/Math.max(1,page.offsetHeight)));
+  return {page:Number(page.dataset.page||state.reader.currentPage||1),ratio};
+}
+function restorePdfScrollAnchor(anchor){
+  const vp=$('pdfViewport'); if(!vp || !anchor) return;
+  const page=$('pdfPages').querySelector(`.pdf-page[data-page="${anchor.page}"]`);
+  if(page) vp.scrollTop=Math.max(0,page.offsetTop + page.offsetHeight*anchor.ratio);
+}
+function clearNativePdfSelection(){
+  const sel=window.getSelection(); if(!sel || sel.rangeCount===0) return;
+  const a=nodeElement(sel.anchorNode), f=nodeElement(sel.focusNode);
+  if((a&&$('pdfViewport').contains(a)) || (f&&$('pdfViewport').contains(f))) sel.removeAllRanges();
+}
 async function renderPdfPages(token=state.reader.renderToken){
-  const pdf=state.reader.pdf; if(!pdf) return; const container=$('pdfPages'); container.innerHTML=''; state.reader.fullText=''; state.reader.pageTexts=[];
+  const pdf=state.reader.pdf; if(!pdf) return;
+  const anchor=capturePdfScrollAnchor();
+  hideSelectionUi(true); clearNativePdfSelection();
+  const container=$('pdfPages'); container.innerHTML=''; state.reader.fullText=''; state.reader.pageTexts=[];
   for(let n=1;n<=pdf.numPages;n++){
     if(token!==state.reader.renderToken) return;
-    const page=await pdf.getPage(n), viewport=page.getViewport({scale:state.reader.scale}), wrap=document.createElement('div'); wrap.className='pdf-page'; wrap.dataset.page=n; wrap.setAttribute('role','document'); wrap.setAttribute('aria-label',`PDF page ${n}`); wrap.style.width=`${viewport.width}px`; wrap.style.height=`${viewport.height}px`;
-    const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d',{alpha:false}); const outputScale=window.devicePixelRatio||1; canvas.width=Math.floor(viewport.width*outputScale); canvas.height=Math.floor(viewport.height*outputScale); canvas.style.width=`${viewport.width}px`; canvas.style.height=`${viewport.height}px`; wrap.appendChild(canvas);
-    const textLayer=document.createElement('div'); textLayer.className='textLayer'; textLayer.style.width=`${viewport.width}px`; textLayer.style.height=`${viewport.height}px`; wrap.appendChild(textLayer); container.appendChild(wrap);
+    const page=await pdf.getPage(n), viewport=page.getViewport({scale:state.reader.scale}), wrap=document.createElement('div');
+    wrap.className='pdf-page'; wrap.dataset.page=n; wrap.setAttribute('role','document'); wrap.setAttribute('aria-label',`PDF page ${n}`);
+    wrap.style.width=`${viewport.width}px`; wrap.style.height=`${viewport.height}px`; wrap.style.setProperty('--scale-factor',String(state.reader.scale));
+
+    const canvas=document.createElement('canvas'), ctx=canvas.getContext('2d',{alpha:false}), outputScale=window.devicePixelRatio||1;
+    canvas.width=Math.floor(viewport.width*outputScale); canvas.height=Math.floor(viewport.height*outputScale);
+    canvas.style.width=`${viewport.width}px`; canvas.style.height=`${viewport.height}px`; wrap.appendChild(canvas);
+
+    const textLayer=document.createElement('div');
+    textLayer.className='textLayer'; textLayer.dataset.page=n; textLayer.style.width=`${viewport.width}px`; textLayer.style.height=`${viewport.height}px`;
+    textLayer.style.setProperty('--scale-factor',String(state.reader.scale));
+    wrap.appendChild(textLayer); container.appendChild(wrap);
+
     await page.render({canvasContext:ctx,viewport,transform:outputScale!==1?[outputScale,0,0,outputScale,0,0]:null}).promise;
-    const tc=await page.getTextContent(); const pageText=tc.items.map(i=>i.str).join(' '); state.reader.pageTexts[n-1]=pageText; state.reader.fullText += `\n\n[Page ${n}]\n${pageText}`;
-    try{ await pdfjsLib.renderTextLayer({textContentSource:tc,container:textLayer,viewport,textDivs:[]}).promise; }catch(e){ manualTextLayer(tc,textLayer,viewport); }
+    const tc=await page.getTextContent({includeMarkedContent:true});
+    const pageText=tc.items.filter(i=>typeof i.str==='string').map(i=>i.str).join(' ');
+    state.reader.pageTexts[n-1]=pageText; state.reader.fullText += `\n\n[Page ${n}]\n${pageText}`;
+
+    let rendered=false;
+    try{
+      const textDivs=[];
+      const task=pdfjsLib.renderTextLayer({textContentSource:tc,container:textLayer,viewport,textDivs,enhanceTextSelection:true});
+      if(task?.promise) await task.promise; else await task;
+      rendered=true;
+    }catch(e){ console.warn('PDF.js text layer fallback',e); }
+    if(!rendered) manualTextLayer(tc,textLayer,viewport);
+
+    if(!textLayer.querySelector('.endOfContent')){
+      const end=document.createElement('div'); end.className='endOfContent'; end.setAttribute('aria-hidden','true'); textLayer.appendChild(end);
+    }
+    $$('span',textLayer).forEach((span,i)=>{ span.dataset.textIndex=String(i); });
     applyTextMarks(textLayer);
     if(n%3===0) await new Promise(r=>requestAnimationFrame(r));
   }
+  await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  restorePdfScrollAnchor(anchor);
 }
 function manualTextLayer(tc,container,viewport){
-  for(const item of tc.items){ const tx=pdfjsLib.Util.transform(viewport.transform,item.transform), span=document.createElement('span'); span.textContent=item.str; span.style.left=`${tx[4]}px`; span.style.top=`${tx[5]-Math.hypot(tx[2],tx[3])}px`; span.style.fontSize=`${Math.hypot(tx[2],tx[3])}px`; container.appendChild(span); }
+  const created=[];
+  for(const item of tc.items){
+    if(typeof item.str!=='string') continue;
+    const tx=pdfjsLib.Util.transform(viewport.transform,item.transform), style=tc.styles?.[item.fontName]||{};
+    let angle=Math.atan2(tx[1],tx[0]); if(style.vertical) angle+=Math.PI/2;
+    const fontHeight=Math.hypot(tx[2],tx[3]);
+    const fontAscent=style.ascent?style.ascent*fontHeight:style.descent?(1+style.descent)*fontHeight:fontHeight;
+    const left=tx[4]+fontAscent*Math.sin(angle), top=tx[5]-fontAscent*Math.cos(angle);
+    const span=document.createElement('span'); span.textContent=item.str; span.style.left=`${left}px`; span.style.top=`${top}px`;
+    span.style.fontSize=`${fontHeight}px`; if(style.fontFamily) span.style.fontFamily=style.fontFamily;
+    span.dataset.angle=String(angle); span.dataset.targetWidth=String(Math.abs((item.width||0)*viewport.scale));
+    span.style.transform=angle?`rotate(${angle}rad)`:''; container.appendChild(span); created.push(span);
+  }
+  for(const span of created){
+    const target=Number(span.dataset.targetWidth||0), measured=span.getBoundingClientRect().width;
+    if(target>0 && measured>0){
+      const sx=Math.max(.25,Math.min(4,target/measured)), angle=Number(span.dataset.angle||0);
+      span.style.transform=`${angle?`rotate(${angle}rad) `:''}scaleX(${sx})`;
+    }
+  }
 }
 function applyTextMarks(layer){
   const auto=state.reader.autoHighlight; const manual=state.reader.highlights.map(x=>x.text.toLowerCase()).filter(Boolean);
@@ -274,76 +339,170 @@ function extractReferences(text=''){
   if(!text) return []; const lower=text.toLowerCase(); let idx=Math.max(lower.lastIndexOf('\nreferences'),lower.lastIndexOf('\nbibliography')); if(idx<0) return [];
   const tail=text.slice(idx).replace(/^.*?(references|bibliography)/i,'').trim(); const lines=tail.split(/\n|(?=\[\d+\])|(?=\d+\.\s+[A-Z])/).map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x.length>35); return [...new Set(lines)].slice(0,80);
 }
-function currentPageElement(){ return $(`.pdf-page[data-page="${state.reader.currentPage}"]`,$('pdfPages')); }
+function currentPageElement(){ return $('pdfPages').querySelector(`.pdf-page[data-page="${state.reader.currentPage}"]`); }
 function goPdfPage(n){ n=Math.max(1,Math.min(state.reader.pages||1,Number(n)||1)); state.reader.currentPage=n; $('pageJump').value=n; currentPageElement()?.scrollIntoView({behavior:'smooth',block:'start'}); }
 $('prevPdfPage').addEventListener('click',()=>goPdfPage(state.reader.currentPage-1)); $('nextPdfPage').addEventListener('click',()=>goPdfPage(state.reader.currentPage+1)); $('pageJump').addEventListener('change',()=>goPdfPage($('pageJump').value));
 $('zoomIn').addEventListener('click',async()=>{state.reader.scale=Math.min(2.4,state.reader.scale+.15);$('zoomLabel').textContent=`${Math.round(state.reader.scale*100)}%`; if(state.reader.pdf)await renderPdfPages()}); $('zoomOut').addEventListener('click',async()=>{state.reader.scale=Math.max(.65,state.reader.scale-.15);$('zoomLabel').textContent=`${Math.round(state.reader.scale*100)}%`;if(state.reader.pdf)await renderPdfPages()});
 $('fitWidth').addEventListener('click',async()=>{if(!state.reader.pdf)return; const p=await state.reader.pdf.getPage(1), base=p.getViewport({scale:1}), width=$('pdfViewport').clientWidth-36; state.reader.scale=Math.max(.65,Math.min(2.2,width/base.width)); $('zoomLabel').textContent=`${Math.round(state.reader.scale*100)}%`; await renderPdfPages();});
 $('autoHighlight').addEventListener('change',async e=>{state.reader.autoHighlight=e.target.checked;if(state.reader.pdf) await renderPdfPages();});
 
-let selectionTimer=null;
+let selectionTimer=null, selectionPointerActive=false, selectionRaf=0, lastSelectionPointer=null;
+function nodeElement(node){
+  if(!node) return null;
+  return node.nodeType===1?node:node.parentElement;
+}
+function nodeTextLayer(node){ return nodeElement(node)?.closest?.('.textLayer')||null; }
 function selectionIsInsidePdf(sel){
   if(!sel || sel.rangeCount===0 || sel.isCollapsed) return false;
-  const range=sel.getRangeAt(0), node=range.commonAncestorContainer;
-  const el=node.nodeType===1?node:node.parentElement;
-  return !!(el && $('pdfViewport').contains(el) && el.closest('.textLayer'));
+  const a=nodeTextLayer(sel.anchorNode), f=nodeTextLayer(sel.focusNode), vp=$('pdfViewport');
+  return !!(a && f && vp.contains(a) && vp.contains(f));
 }
-function selectionRect(sel){
-  if(!sel || !sel.rangeCount) return null;
-  const range=sel.getRangeAt(0), rects=[...range.getClientRects()].filter(r=>r.width>0 && r.height>0);
-  if(!rects.length){ const r=range.getBoundingClientRect(); return r.width||r.height?r:null; }
+function selectionDirection(sel,range){
+  if(!sel || !range) return 'forward';
+  return sel.anchorNode===range.startContainer && sel.anchorOffset===range.startOffset ? 'forward' : 'backward';
+}
+function cleanRects(rectList){
+  let rects=[...rectList].filter(r=>Number.isFinite(r.left)&&Number.isFinite(r.top)&&r.width>.35&&r.height>.35)
+    .map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height,x:r.x,y:r.y}));
+  if(rects.length>1){
+    const hs=rects.map(r=>r.height).sort((a,b)=>a-b), median=hs[Math.floor(hs.length/2)]||16;
+    const maxH=Math.max(72,median*4.5), maxW=Math.max(900,$('pdfViewport')?.clientWidth*1.35||900);
+    const filtered=rects.filter(r=>r.height<=maxH && r.width<=maxW);
+    if(filtered.length) rects=filtered;
+  }
+  return rects;
+}
+function visibleRect(rect){
+  const vp=$('pdfViewport')?.getBoundingClientRect(); if(!vp) return true;
+  return rect.right>Math.max(0,vp.left) && rect.left<Math.min(window.innerWidth,vp.right) && rect.bottom>Math.max(0,vp.top) && rect.top<Math.min(window.innerHeight,vp.bottom);
+}
+function pointRectDistance2(p,r){
+  const dx=p.x<r.left?r.left-p.x:p.x>r.right?p.x-r.right:0;
+  const dy=p.y<r.top?r.top-p.y:p.y>r.bottom?p.y-r.bottom:0;
+  return dx*dx+dy*dy;
+}
+function selectionGeometry(range,direction='forward',pointerHint=null){
+  if(!range) return null;
+  let rects=cleanRects(range.getClientRects());
+  if(!rects.length){ const r=range.getBoundingClientRect(); if(r.width||r.height) rects=cleanRects([r]); }
+  if(!rects.length) return null;
+  const visible=rects.filter(visibleRect), pool=visible.length?visible:rects;
+  let edge=direction==='backward'?pool[0]:pool[pool.length-1];
+  if(pointerHint && Date.now()-pointerHint.t<900){
+    edge=pool.reduce((best,r)=>pointRectDistance2(pointerHint,r)<pointRectDistance2(pointerHint,best)?r:best,edge);
+  }
   const left=Math.min(...rects.map(r=>r.left)), right=Math.max(...rects.map(r=>r.right));
   const top=Math.min(...rects.map(r=>r.top)), bottom=Math.max(...rects.map(r=>r.bottom));
-  return {left,right,top,bottom,width:right-left,height:bottom-top};
+  return {rects,edge,union:{left,right,top,bottom,width:right-left,height:bottom-top},direction};
+}
+function selectionPageFromEndpoint(sel,direction){
+  const node=direction==='backward'?sel.focusNode:sel.focusNode;
+  return Number(nodeElement(node)?.closest?.('.pdf-page')?.dataset.page||state.reader.currentPage||1);
+}
+function sanitizeSelectionText(text=''){
+  return String(text).replace(/\u00ad/g,'').replace(/-\s*\n\s*/g,'').replace(/[\t\r\n ]+/g,' ').trim();
 }
 function hideSelectionUi(clear=false){
-  $('selectionToolbar').classList.add('hidden');
+  $('selectionToolbar').classList.add('hidden'); $('selectionToolbar').classList.remove('is-below','selection-moving');
   $('selectionComment').classList.add('hidden');
-  if(clear){ state.reader.selectedText=''; state.reader.selectionPage=null; }
+  if(clear){
+    state.reader.selectedText=''; state.reader.selectionPage=null; state.reader.selectionRect=null;
+    state.reader.selectionRange=null; state.reader.selectionDirection='forward';
+  }
 }
 function positionFloating(el,rect,preferAbove=true){
-  if(!rect || !el) return;
-  el.classList.remove('hidden');
-  el.style.visibility='hidden';
-  const box=el.getBoundingClientRect(), margin=10;
+  if(!rect || !el) return false;
+  if(el===$('selectionToolbar')) el.classList.remove('selection-moving');
+  const vp=$('pdfViewport')?.getBoundingClientRect();
+  if(vp && (rect.bottom<vp.top || rect.top>vp.bottom || rect.right<vp.left || rect.left>vp.right)){ el.classList.add('hidden'); return false; }
+  el.classList.remove('hidden'); el.style.visibility='hidden';
+  const box=el.getBoundingClientRect(), margin=10, navBottom=Math.max(10,document.querySelector('.topbar')?.getBoundingClientRect().bottom||0);
   let left=rect.left + rect.width/2 - box.width/2;
   left=Math.max(margin,Math.min(window.innerWidth-box.width-margin,left));
-  let top=preferAbove ? rect.top-box.height-10 : rect.bottom+10;
-  if(top<74) top=rect.bottom+10;
-  if(top+box.height>window.innerHeight-margin) top=Math.max(74,rect.top-box.height-10);
+  let above=preferAbove, top=rect.top-box.height-10;
+  if(!above || top<navBottom+6){ top=rect.bottom+10; above=false; }
+  if(top+box.height>window.innerHeight-margin){ top=Math.max(navBottom+6,rect.top-box.height-10); above=true; }
   el.style.left=`${Math.round(left)}px`; el.style.top=`${Math.round(top)}px`; el.style.visibility='visible';
+  el.classList.toggle('is-below',!above);
+  return true;
+}
+function refreshStoredSelectionPosition(){
+  const range=state.reader.selectionRange; if(!range || selectionPointerActive) return;
+  try{
+    const g=selectionGeometry(range,state.reader.selectionDirection||'forward');
+    if(!g){ hideSelectionUi(false); return; }
+    state.reader.selectionRect=g.edge;
+    if(!$('selectionComment').classList.contains('hidden')) positionFloating($('selectionComment'),g.edge,false);
+    else positionFloating($('selectionToolbar'),g.edge,true);
+  }catch{ hideSelectionUi(false); }
 }
 function syncPdfSelection(){
+  selectionRaf=0;
+  if(selectionPointerActive) return;
   const sel=window.getSelection();
   if(!selectionIsInsidePdf(sel)){ hideSelectionUi(false); return; }
-  const raw=sel.toString().replace(/\u00ad/g,'').replace(/-\s*\n\s*/g,'').replace(/\s+/g,' ').trim();
-  if(raw.length<1){ hideSelectionUi(false); return; }
-  const text=raw.slice(0,12000), range=sel.getRangeAt(0), rect=selectionRect(sel);
-  state.reader.selectedText=text;
-  const node=range.commonAncestorContainer.nodeType===1?range.commonAncestorContainer:range.commonAncestorContainer.parentElement;
-  state.reader.selectionPage=Number(node?.closest('.pdf-page')?.dataset.page||state.reader.currentPage||1);
-  state.reader.selectionRect=rect;
-  $('selectedText').textContent=text;
-  $('selectionBox').classList.remove('hidden');
-  positionFloating($('selectionToolbar'),rect,true);
+  const raw=sanitizeSelectionText(sel.toString()); if(!raw){ hideSelectionUi(false); return; }
+  const range=sel.getRangeAt(0), direction=selectionDirection(sel,range), geometry=selectionGeometry(range,direction,lastSelectionPointer);
+  if(!geometry){ hideSelectionUi(false); return; }
+  state.reader.selectedText=raw.slice(0,12000); state.reader.selectionPage=selectionPageFromEndpoint(sel,direction);
+  state.reader.selectionRange=range.cloneRange(); state.reader.selectionDirection=direction; state.reader.selectionRect=geometry.edge;
+  $('selectedText').textContent=state.reader.selectedText; $('selectionBox').classList.remove('hidden');
+  positionFloating($('selectionToolbar'),geometry.edge,true);
 }
-function scheduleSelectionSync(delay=20){ clearTimeout(selectionTimer); selectionTimer=setTimeout(syncPdfSelection,delay); }
-$('pdfViewport').addEventListener('pointerup',()=>scheduleSelectionSync(0));
-$('pdfViewport').addEventListener('keyup',()=>scheduleSelectionSync(0));
-$('pdfViewport').addEventListener('touchend',()=>scheduleSelectionSync(40),{passive:true});
+function scheduleSelectionSync(delay=0){
+  clearTimeout(selectionTimer); cancelAnimationFrame(selectionRaf);
+  selectionTimer=setTimeout(()=>{
+    selectionRaf=requestAnimationFrame(()=>requestAnimationFrame(syncPdfSelection));
+  },delay);
+}
+function beginPdfSelection(e){
+  if(!e.target.closest('.textLayer')) return;
+  selectionPointerActive=true; $('pdfViewport').classList.add('is-selecting');
+  $$('.textLayer.selecting',$('pdfPages')).forEach(x=>x.classList.remove('selecting'));
+  e.target.closest('.textLayer')?.classList.add('selecting');
+  $('selectionToolbar').classList.add('selection-moving','hidden'); $('selectionComment').classList.add('hidden');
+}
+function endPdfSelection(e){
+  if(e && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) lastSelectionPointer={x:e.clientX,y:e.clientY,t:Date.now()};
+  if(!selectionPointerActive) return;
+  selectionPointerActive=false; $('pdfViewport').classList.remove('is-selecting');
+  $$('.textLayer.selecting',$('pdfPages')).forEach(x=>x.classList.remove('selecting'));
+  scheduleSelectionSync(18);
+}
+$('pdfViewport').addEventListener('pointerdown',beginPdfSelection);
+$('pdfViewport').addEventListener('pointerup',endPdfSelection);
+$('pdfViewport').addEventListener('pointercancel',endPdfSelection);
+document.addEventListener('pointerup',e=>{ if(selectionPointerActive) endPdfSelection(e); });
+$('pdfViewport').addEventListener('keyup',()=>scheduleSelectionSync(20));
+$('pdfViewport').addEventListener('touchend',()=>{ selectionPointerActive=false; $('pdfViewport').classList.remove('is-selecting'); $$('.textLayer.selecting',$('pdfPages')).forEach(x=>x.classList.remove('selecting')); scheduleSelectionSync(70); },{passive:true});
+window.addEventListener('blur',()=>{ selectionPointerActive=false; $('pdfViewport').classList.remove('is-selecting'); $$('.textLayer.selecting',$('pdfPages')).forEach(x=>x.classList.remove('selecting')); });
 document.addEventListener('selectionchange',()=>{
+  if(selectionPointerActive) return;
   const sel=window.getSelection();
-  if(sel && !sel.isCollapsed && selectionIsInsidePdf(sel)) scheduleSelectionSync(45);
+  if(sel && !sel.isCollapsed && selectionIsInsidePdf(sel)) scheduleSelectionSync(90);
 });
-$('selectionToolbar').addEventListener('pointerdown',e=>e.preventDefault());
+$('selectionToolbar').addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation(); });
 $('selectionComment').addEventListener('pointerdown',e=>e.stopPropagation());
+let selectionPositionRaf=0;
+function queueSelectionPositionRefresh(){
+  if(selectionPositionRaf || !state.reader.selectionRange || selectionPointerActive) return;
+  selectionPositionRaf=requestAnimationFrame(()=>{ selectionPositionRaf=0; refreshStoredSelectionPosition(); });
+}
+$('pdfViewport').addEventListener('scroll',queueSelectionPositionRefresh,{passive:true});
+window.addEventListener('scroll',queueSelectionPositionRefresh,{passive:true,capture:true});
+window.addEventListener('resize',queueSelectionPositionRefresh,{passive:true});
 document.addEventListener('pointerdown',e=>{
   if(e.target.closest('#selectionToolbar')||e.target.closest('#selectionComment')) return;
   if(e.target.closest('.textLayer')) return;
   hideSelectionUi(false);
 });
+function restoreStoredNativeSelection(){
+  const range=state.reader.selectionRange; if(!range) return;
+  try{ const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range.cloneRange()); }catch{}
+}
 $('selectionToolbar').addEventListener('click',async e=>{
-  const b=e.target.closest('[data-action]'); if(!b)return; const a=b.dataset.action;
+  const b=e.target.closest('[data-action]'); if(!b)return; e.preventDefault(); e.stopPropagation(); restoreStoredNativeSelection();
+  const a=b.dataset.action;
   if(a==='explain') await explainSelection();
   if(a==='highlight') addHighlight();
   if(a==='translate') await translateSelection();
@@ -352,7 +511,7 @@ $('selectionToolbar').addEventListener('click',async e=>{
   $('selectionToolbar').classList.add('hidden');
 });
 $('translateBtn').addEventListener('click',translateSelection); $('explainBtn').addEventListener('click',explainSelection); $('supportBtn').addEventListener('click',researchFitSelection);
-$('cancelSelectionComment').addEventListener('click',()=>{ $('selectionComment').classList.add('hidden'); positionFloating($('selectionToolbar'),state.reader.selectionRect,true); });
+$('cancelSelectionComment').addEventListener('click',()=>{ $('selectionComment').classList.add('hidden'); restoreStoredNativeSelection(); refreshStoredSelectionPosition(); });
 $('saveSelectionComment').addEventListener('click',()=>saveSelectionComment());
 $('selectionCommentInput').addEventListener('keydown',e=>{ if((e.ctrlKey||e.metaKey)&&e.key==='Enter') saveSelectionComment(); if(e.key==='Escape') $('cancelSelectionComment').click(); });
 function saveSelectionComment(){
