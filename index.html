@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v14 — Citation Evidence Explorer</title>
+<title>OpenScite Web v15 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -517,6 +517,78 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 .automation-help{
   margin-top:8px;color:#7a8e85;font-size:9.5px
 }
+
+/* =========================================================
+   v15 — Academic Search / Google-Scholar-like discovery
+   ========================================================= */
+.scholar-section{padding:18px 0 8px}
+.scholar-card{
+  border:1px solid var(--line);border-radius:24px;background:rgba(13,26,22,.95);
+  box-shadow:0 18px 52px rgba(0,0,0,.13);overflow:hidden
+}
+.scholar-head{padding:22px 22px 14px;border-bottom:1px solid var(--line)}
+.scholar-head-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.scholar-head h2{margin:0;font-size:22px;letter-spacing:-.035em}
+.scholar-head p{margin:5px 0 0;color:var(--muted);font-size:12px;max-width:760px}
+.scholar-provider{
+  white-space:nowrap;border:1px solid var(--line);background:#091511;border-radius:999px;
+  padding:6px 9px;color:var(--muted);font:800 10px ui-monospace,monospace
+}
+.scholar-search{display:flex;gap:8px;margin-top:16px}
+.scholar-search input{flex:1;min-width:0}
+.scholar-filters{
+  display:grid;grid-template-columns:120px 120px 185px 150px 110px;gap:8px;
+  padding:12px 22px;border-bottom:1px solid var(--line);background:#091511
+}
+.scholar-filter label{display:block;color:var(--muted);font-size:9.5px;margin:0 0 4px 2px}
+.scholar-key-row{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 22px;
+  border-bottom:1px solid var(--line);background:rgba(255,255,255,.012)
+}
+.scholar-key-row span{color:var(--muted);font-size:10px}
+.scholar-key-row input{width:260px;max-width:100%;padding:7px 9px}
+.scholar-key-row a{font-size:10px;color:#557bff}
+.scholar-status{
+  padding:11px 22px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11px;
+  display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap
+}
+.scholar-status b{color:var(--text)}
+.scholar-list{padding:14px;display:grid;gap:10px}
+.scholar-item{
+  border:1px solid var(--line);border-radius:16px;background:#0a1713;padding:15px;
+  transition:.15s ease
+}
+.scholar-item:hover{border-color:#3b6556;transform:translateY(-1px)}
+.scholar-title{font-size:16px;font-weight:850;line-height:1.35}
+.scholar-meta{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.55}
+.scholar-abstract{
+  font-size:12px;color:#aec3ba;margin-top:10px;line-height:1.6;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden
+}
+.scholar-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.scholar-badge{
+  display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;
+  border:1px solid var(--line);font:750 10px ui-monospace,monospace;color:var(--muted)
+}
+.scholar-badge.oa{color:#087c52;border-color:#bce7d4;background:#effbf5}
+.scholar-badge.cited{color:#365bad;border-color:#cfdbff;background:#f1f5ff}
+.scholar-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+.scholar-actions .btn{font-size:11px;padding:7px 9px}
+.scholar-empty{padding:46px 24px;text-align:center;color:var(--muted);font-size:13px}
+.scholar-pager{display:flex;justify-content:center;align-items:center;gap:9px;padding:0 14px 17px}
+.scholar-pager span{font-size:11px;color:var(--muted)}
+.scholar-loading{opacity:.62;pointer-events:none}
+@media(max-width:900px){
+  .scholar-filters{grid-template-columns:1fr 1fr 1fr}
+}
+@media(max-width:620px){
+  .scholar-head-top{display:block}.scholar-provider{display:inline-flex;margin-top:9px}
+  .scholar-search{flex-direction:column}
+  .scholar-filters{grid-template-columns:1fr 1fr;padding:11px 14px}
+  .scholar-head{padding:18px 14px 12px}.scholar-key-row,.scholar-status{padding-left:14px;padding-right:14px}
+  .scholar-list{padding:9px}.scholar-item{padding:13px}
+}
+
 </style>
 </head>
 <body>
@@ -524,6 +596,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 <div class="shell nav">
   <div class="brand"><div class="logo">O</div><span>OpenScite <span style="color:var(--green)">Web</span></span></div>
   <div class="nav-right">
+    <a class="btn ghost hide-mobile" href="#academicSearch">學術搜尋</a>
     <button id="exportMdTop" class="btn ghost hide-mobile" disabled>匯出報告</button>
     <a class="btn" href="https://github.com/MO7YW4NG/openscite" target="_blank" rel="noreferrer">GitHub ↗</a>
   </div>
@@ -567,6 +640,68 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
     <div class="how-card"><span class="tag">01 · IDENTIFY</span><h3>辨識目標論文</h3><p>從 PDF 擷取 DOI／標題，或直接輸入 DOI、OpenAlex ID、標題。</p></div>
     <div class="how-card"><span class="tag">02 · TRIAGE</span><h3>找後續引用並排序</h3><p>OpenAlex 找 citing works，再依證據線索或影響力建立 shortlist。</p></div>
     <div class="how-card"><span class="tag">03 · EVIDENCE</span><h3>全文引用段落判定</h3><p>加入合法全文 PDF 後，找真正引用目標論文的段落，再判定 stance。</p></div>
+  </div>
+</div>
+</section>
+
+
+<section id="academicSearch" class="scholar-section">
+<div class="shell">
+  <div class="scholar-card">
+    <div class="scholar-head">
+      <div class="scholar-head-top">
+        <div>
+          <h2>學術搜尋 <span style="color:var(--green)">Academic Search</span></h2>
+          <p>像 Google Scholar 一樣直接用研究主題、完整句子或論文標題搜尋。輸入的每個詞會沿用 OpenScite v14 的紅色 Highlight（高亮）規則。</p>
+        </div>
+        <span id="scholarProvider" class="scholar-provider">OpenAlex · Crossref fallback</span>
+      </div>
+      <div class="scholar-search">
+        <input id="scholarQuery" class="control" placeholder="例如：Fiber-to-Silicon Edge Coupling Adiabatic mode transfer SiN–Si mode transition">
+        <button id="scholarSearchBtn" class="btn primary">搜尋論文</button>
+      </div>
+    </div>
+
+    <div class="scholar-filters">
+      <div class="scholar-filter"><label>起始年份</label><input id="scholarYearFrom" class="control" inputmode="numeric" placeholder="例如 2020"></div>
+      <div class="scholar-filter"><label>結束年份</label><input id="scholarYearTo" class="control" inputmode="numeric" placeholder="例如 2026"></div>
+      <div class="scholar-filter"><label>排序</label>
+        <select id="scholarSort" class="control">
+          <option value="relevance">相關度</option>
+          <option value="citations">被引用次數：高 → 低</option>
+          <option value="newest">最新 → 最舊</option>
+          <option value="oldest">最舊 → 最新</option>
+        </select>
+      </div>
+      <div class="scholar-filter"><label>Open Access</label>
+        <select id="scholarOa" class="control"><option value="all">全部</option><option value="oa">只看 Open Access</option></select>
+      </div>
+      <div class="scholar-filter"><label>每頁</label>
+        <select id="scholarPerPage" class="control"><option>10</option><option selected>20</option><option>50</option></select>
+      </div>
+    </div>
+
+    <div class="scholar-key-row">
+      <span>OpenAlex API key（選填；只傳給 OpenAlex）：</span>
+      <input id="oaApiKey" class="control" type="password" autocomplete="off" placeholder="沒有也會自動嘗試 Crossref">
+      <button id="saveOaKey" class="btn small">儲存於本機</button>
+      <button id="clearOaKey" class="btn small">清除</button>
+      <a href="https://openalex.org/settings/api" target="_blank" rel="noreferrer">取得 OpenAlex API key ↗</a>
+    </div>
+
+    <div id="scholarStatus" class="scholar-status">
+      <span>輸入關鍵字後開始搜尋。</span><span>尚無結果</span>
+    </div>
+
+    <div id="scholarResults" class="scholar-list">
+      <div class="scholar-empty">⌕<br><br>這裡會顯示學術搜尋結果。</div>
+    </div>
+
+    <div class="scholar-pager">
+      <button id="scholarPrev" class="btn small" disabled>← 上一頁</button>
+      <span id="scholarPageLabel">第 1 頁</span>
+      <button id="scholarNext" class="btn small" disabled>下一頁 →</button>
+    </div>
   </div>
 </div>
 </section>
@@ -767,7 +902,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v10 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v15 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
@@ -780,6 +915,9 @@ let state = {
 };
 
 const OA = "https://api.openalex.org";
+const CROSSREF = "https://api.crossref.org";
+let scholarState={page:1,total:0,results:[],provider:"",lastQuery:"",busy:false};
+let scholarTransferKeywords=[];
 const SUPPORT = [
   "replicat","reproduc","confirm","support","consistent with","in agreement with","validate",
   "corroborat","similar result","accordance with","reinforce","robust","extends the finding"
@@ -845,8 +983,14 @@ async function extractPdf(file, maxPages=Infinity){
   }
   return {text:out.join("\n"),pages:doc.numPages};
 }
+function getOaApiKey(){
+  return (localStorage.getItem("openscite_openalex_api_key")||"").trim();
+}
 async function oaFetch(path){
-  const res=await fetch(OA+path,{headers:{"Accept":"application/json"}});
+  const key=getOaApiKey();
+  let url=OA+path;
+  if(key) url += (url.includes("?")?"&":"?")+"api_key="+encodeURIComponent(key);
+  const res=await fetch(url,{headers:{"Accept":"application/json"}});
   if(!res.ok) throw new Error(`OpenAlex ${res.status}: ${await res.text().catch(()=>res.statusText)}`);
   return res.json();
 }
@@ -1894,12 +2038,230 @@ function renderAll(){renderPapers();updateSummary();renderCoverage();renderDashb
 function download(name,text,type="text/plain"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500)
 }
+
+/* =========================================================
+   v15 — Academic Search
+   ========================================================= */
+function cleanMarkup(s=""){
+  const d=document.createElement("div");
+  d.innerHTML=String(s||"");
+  return (d.textContent||"").replace(/\s+/g," ").trim();
+}
+function scholarAuthors(w){
+  return (w.authorships||[]).slice(0,6).map(a=>a.author?.display_name).filter(Boolean).join(", ") +
+    ((w.authorships||[]).length>6?" et al.":"");
+}
+function scholarVenue(w){
+  return w.primary_location?.source?.display_name ||
+         w.best_oa_location?.source?.display_name ||
+         w._venue || "Unknown venue";
+}
+function scholarDoi(w){
+  return normalizeDoi(w.doi||w._doi||"");
+}
+function scholarOaPdf(w){
+  return w.best_oa_location?.pdf_url ||
+         w.primary_location?.pdf_url ||
+         w._oaPdf || "";
+}
+function scholarAbstract(w){
+  return w._abstract || rebuildAbstract(w.abstract_inverted_index) || "";
+}
+function scholarYear(w){return Number(w.publication_year||w._year||0)}
+function scholarCitationCount(w){return Number(w.cited_by_count||w._cited||0)}
+function scholarIsOa(w){
+  return !!(w.open_access?.is_oa || scholarOaPdf(w) || w._isOa);
+}
+function crossrefToWork(x){
+  const title=Array.isArray(x.title)?(x.title[0]||"Untitled"):(x.title||"Untitled");
+  const authors=(x.author||[]).map(a=>({
+    author:{display_name:[a.given,a.family].filter(Boolean).join(" ") || a.name || ""}
+  }));
+  const parts=x.published?.["date-parts"]?.[0] || x.created?.["date-parts"]?.[0] || [];
+  const year=Number(parts[0]||0);
+  const venue=(x["container-title"]||[])[0] || x.publisher || "Unknown venue";
+  const pdf=(x.link||[]).find(l=>/pdf/i.test(l["content-type"]||"") || /\.pdf(?:$|\?)/i.test(l.URL||""))?.URL || "";
+  const doi=String(x.DOI||"");
+  return {
+    id:doi?`https://doi.org/${doi}`:(x.URL||""),
+    display_name:title,title,
+    authorships:authors,
+    publication_year:year||null,
+    doi:doi?`https://doi.org/${doi}`:"",
+    cited_by_count:Number(x["is-referenced-by-count"]||0),
+    type:x.type||"article",
+    primary_location:{source:{display_name:venue}},
+    best_oa_location:pdf?{pdf_url:pdf,source:{display_name:venue}}:null,
+    open_access:{is_oa:!!pdf},
+    _abstract:cleanMarkup(x.abstract||""),
+    _venue:venue,_doi:doi,_year:year,_cited:Number(x["is-referenced-by-count"]||0),
+    _oaPdf:pdf,_isOa:!!pdf,_searchProvider:"Crossref"
+  };
+}
+function scholarOpenAlexParams(q,page){
+  const p=new URLSearchParams();
+  p.set("search",q);
+  p.set("per-page",String(+$("#scholarPerPage").value||20));
+  p.set("page",String(page));
+  const filters=[];
+  const yf=$("#scholarYearFrom").value.trim(), yt=$("#scholarYearTo").value.trim();
+  if(/^\d{4}$/.test(yf)) filters.push(`from_publication_date:${yf}-01-01`);
+  if(/^\d{4}$/.test(yt)) filters.push(`to_publication_date:${yt}-12-31`);
+  if($("#scholarOa").value==="oa") filters.push("is_oa:true");
+  if(filters.length)p.set("filter",filters.join(","));
+  const sort=$("#scholarSort").value;
+  if(sort==="citations")p.set("sort","cited_by_count:desc");
+  if(sort==="newest")p.set("sort","publication_date:desc");
+  if(sort==="oldest")p.set("sort","publication_date:asc");
+  return p;
+}
+async function scholarOpenAlex(q,page){
+  const p=scholarOpenAlexParams(q,page);
+  const j=await oaFetch(`/works?${p.toString()}`);
+  return {
+    results:(j.results||[]).map(w=>({...w,_abstract:rebuildAbstract(w.abstract_inverted_index),_searchProvider:"OpenAlex"})),
+    total:Number(j.meta?.count||0),provider:"OpenAlex"
+  };
+}
+async function scholarCrossref(q,page){
+  const per=+$("#scholarPerPage").value||20;
+  const p=new URLSearchParams();
+  p.set("query.bibliographic",q);
+  p.set("rows",String(per));
+  p.set("offset",String((page-1)*per));
+  const yf=$("#scholarYearFrom").value.trim(), yt=$("#scholarYearTo").value.trim();
+  const filters=[];
+  if(/^\d{4}$/.test(yf))filters.push(`from-pub-date:${yf}-01-01`);
+  if(/^\d{4}$/.test(yt))filters.push(`until-pub-date:${yt}-12-31`);
+  if(filters.length)p.set("filter",filters.join(","));
+  const r=await fetch(`${CROSSREF}/works?${p.toString()}`,{headers:{"Accept":"application/json"}});
+  if(!r.ok)throw new Error(`Crossref ${r.status}`);
+  const j=await r.json();
+  let results=(j.message?.items||[]).map(crossrefToWork);
+  if($("#scholarOa").value==="oa") results=results.filter(scholarIsOa);
+  const sort=$("#scholarSort").value;
+  if(sort==="citations")results.sort((a,b)=>scholarCitationCount(b)-scholarCitationCount(a));
+  if(sort==="newest")results.sort((a,b)=>scholarYear(b)-scholarYear(a));
+  if(sort==="oldest")results.sort((a,b)=>scholarYear(a)-scholarYear(b));
+  return {results,total:Number(j.message?.["total-results"]||results.length),provider:"Crossref"};
+}
+function scholarCitationText(w){
+  const authors=scholarAuthors(w)||"Unknown author";
+  const year=scholarYear(w)||"n.d.";
+  const title=w.display_name||w.title||"Untitled";
+  const venue=scholarVenue(w);
+  const doi=scholarDoi(w);
+  return `${authors} (${year}). ${title}. ${venue}.${doi?` https://doi.org/${doi}`:""}`;
+}
+function renderScholar(){
+  const box=$("#scholarResults");
+  const terms=parseKeywordTerms($("#scholarQuery").value);
+  $("#scholarProvider").textContent=scholarState.provider ? `${scholarState.provider} · Academic Search` : "OpenAlex · Crossref fallback";
+  $("#scholarPageLabel").textContent=`第 ${scholarState.page} 頁`;
+  $("#scholarPrev").disabled=scholarState.busy || scholarState.page<=1;
+  const per=+$("#scholarPerPage").value||20;
+  $("#scholarNext").disabled=scholarState.busy || !scholarState.results.length ||
+    (scholarState.total>0 && scholarState.page*per>=scholarState.total);
+
+  if(!scholarState.results.length){
+    box.innerHTML=`<div class="scholar-empty">沒有找到符合條件的論文。可以縮短關鍵字或放寬年份。</div>`;
+    return;
+  }
+  box.innerHTML=scholarState.results.map((w,i)=>{
+    const title=w.display_name||w.title||"Untitled";
+    const authors=scholarAuthors(w);
+    const venue=scholarVenue(w);
+    const year=scholarYear(w)||"n.d.";
+    const cited=scholarCitationCount(w);
+    const abs=scholarAbstract(w);
+    const doi=scholarDoi(w);
+    const oa=scholarOaPdf(w);
+    const oaId=(w._searchProvider==="OpenAlex" && /^https:\/\/openalex\.org\/W/i.test(w.id||""))?openAlexId(w.id):"";
+    return `<article class="scholar-item">
+      <div class="scholar-title">${highlightWithTerms(title,terms)}</div>
+      <div class="scholar-meta">${highlightWithTerms(authors||"Unknown author",terms)} · ${year} · ${highlightWithTerms(venue,terms)}</div>
+      ${abs?`<div class="scholar-abstract">${highlightWithTerms(abs,terms)}</div>`:""}
+      <div class="scholar-badges">
+        <span class="scholar-badge cited">被引用 ${cited}</span>
+        ${scholarIsOa(w)?`<span class="scholar-badge oa">Open Access</span>`:""}
+        <span class="scholar-badge">${escapeHtml(w.type||"work")}</span>
+        ${w._searchProvider==="OpenAlex"?journalTierBadge(w):""}
+      </div>
+      <div class="scholar-actions">
+        <button class="btn small scholar-analyze" data-i="${i}">用 OpenScite 分析</button>
+        <button class="btn small scholar-cite" data-i="${i}">引用格式</button>
+        <button class="btn small scholar-related" data-i="${i}">相關論文</button>
+        ${doi?`<a class="btn small" href="https://doi.org/${encodeURIComponent(doi)}" target="_blank" rel="noreferrer">DOI ↗</a>`:""}
+        ${oa?`<a class="btn small" href="${escapeHtml(oa)}" target="_blank" rel="noreferrer">PDF ↗</a>`:""}
+        ${oaId?`<a class="btn small" href="https://openalex.org/works/${escapeHtml(oaId)}" target="_blank" rel="noreferrer">OpenAlex ↗</a>`:""}
+      </div>
+    </article>`;
+  }).join("");
+}
+async function runScholarSearch(page=1){
+  const q=$("#scholarQuery").value.trim();
+  if(!q)return alert("請先輸入學術搜尋關鍵字。");
+  scholarState.busy=true;scholarState.page=page;scholarState.lastQuery=q;
+  $("#scholarSearchBtn").disabled=true;
+  $("#academicSearch .scholar-card").classList.add("scholar-loading");
+  $("#scholarStatus").innerHTML=`<span>正在搜尋 <b>${escapeHtml(q)}</b>…</span><span>第 ${page} 頁</span>`;
+  try{
+    let data;
+    try{
+      data=await scholarOpenAlex(q,page);
+    }catch(oaErr){
+      console.warn("OpenAlex search failed, fallback to Crossref",oaErr);
+      data=await scholarCrossref(q,page);
+      data.fallbackReason=oaErr.message;
+    }
+    scholarState.results=data.results;scholarState.total=data.total;scholarState.provider=data.provider;
+    renderScholar();
+    const shown=data.results.length;
+    $("#scholarStatus").innerHTML=
+      `<span>搜尋：<b>${escapeHtml(q)}</b> · 顯示 ${shown} 篇${data.total?` · 約 ${Number(data.total).toLocaleString()} 筆結果`:""}</span>`+
+      `<span>來源：<b>${data.provider}</b>${data.fallbackReason?"（OpenAlex 暫不可用，已自動切換備援）":""}</span>`;
+  }catch(e){
+    scholarState.results=[];scholarState.total=0;scholarState.provider="";
+    renderScholar();
+    $("#scholarStatus").innerHTML=`<span>搜尋失敗：<b>${escapeHtml(e.message)}</b></span><span>請稍後重試</span>`;
+  }finally{
+    scholarState.busy=false;
+    $("#scholarSearchBtn").disabled=false;
+    $("#academicSearch .scholar-card").classList.remove("scholar-loading");
+    renderScholar();
+  }
+}
+async function scholarAnalyzeIndex(i){
+  const w=scholarState.results[i];if(!w)return;
+  scholarTransferKeywords=parseKeywordTerms($("#scholarQuery").value);
+  const doi=scholarDoi(w);
+  const oaId=(w._searchProvider==="OpenAlex" && /^https:\/\/openalex\.org\/W/i.test(w.id||""))?openAlexId(w.id):"";
+  $("#manualQuery").value=doi || oaId || w.display_name || w.title || "";
+  $("#paperSearch").value=$("#scholarQuery").value.trim();
+  document.querySelector(".app").scrollIntoView({behavior:"smooth",block:"start"});
+  setTimeout(run,280);
+}
+async function scholarCopyCitation(i){
+  const w=scholarState.results[i];if(!w)return;
+  const c=scholarCitationText(w);
+  try{await navigator.clipboard.writeText(c);toast("引用格式已複製")}
+  catch(_){prompt("複製引用格式：",c)}
+}
+function scholarRelatedIndex(i){
+  const w=scholarState.results[i];if(!w)return;
+  $("#scholarQuery").value=w.display_name||w.title||"";
+  runScholarSearch(1);
+}
+
 async function run(){
   $("#start").disabled=true;
   try{
     state.mode=$("#mode").value;state.limit=+$("#limit").value;state.log=[];$("#log").textContent="";
     const initialQ=$("#manualQuery").value.trim();
-    state.queryKeywords=(/^10\.\d{4,9}\//i.test(initialQ)||/^W\d+$/i.test(initialQ))?[]:parseKeywordTerms(initialQ);
+    const transferred=[...scholarTransferKeywords];scholarTransferKeywords=[];
+    state.queryKeywords=transferred.length
+      ? transferred
+      : ((/^10\.\d{4,9}\//i.test(initialQ)||/^W\d+$/i.test(initialQ))?[]:parseKeywordTerms(initialQ));
     progress(3,"辨識目標論文");
     const target=await resolveInput();state.target=target;
     $("#targetTitle").textContent=target.display_name||target.title||"Untitled";
@@ -1922,6 +2284,31 @@ function reset(){
   state={target:null,targetText:"",sourceFileName:"",papers:[],log:[],mode:"stance_first",limit:20,queryKeywords:[]};
   $("#targetFile").value="";$("#manualQuery").value="";if($("#paperSearch"))$("#paperSearch").value="";$("#target").classList.remove("show");$("#results").classList.add("hidden");$("#empty").classList.remove("hidden");$("#exportMdTop").disabled=true;$("#log").textContent="";
 }
+
+// v15 Academic Search events
+$("#scholarSearchBtn").onclick=()=>runScholarSearch(1);
+$("#scholarQuery").addEventListener("keydown",e=>{if(e.key==="Enter")runScholarSearch(1)});
+["scholarYearFrom","scholarYearTo"].forEach(id=>$("#"+id).addEventListener("keydown",e=>{if(e.key==="Enter"&&$("#scholarQuery").value.trim())runScholarSearch(1)}));
+["scholarSort","scholarOa","scholarPerPage"].forEach(id=>$("#"+id).addEventListener("change",()=>{if($("#scholarQuery").value.trim())runScholarSearch(1)}));
+$("#scholarPrev").onclick=()=>{if(scholarState.page>1)runScholarSearch(scholarState.page-1)};
+$("#scholarNext").onclick=()=>runScholarSearch(scholarState.page+1);
+$("#scholarResults").addEventListener("click",e=>{
+  const btn=e.target.closest("button[data-i]");if(!btn)return;
+  const i=Number(btn.dataset.i);
+  if(btn.classList.contains("scholar-analyze"))scholarAnalyzeIndex(i);
+  if(btn.classList.contains("scholar-cite"))scholarCopyCitation(i);
+  if(btn.classList.contains("scholar-related"))scholarRelatedIndex(i);
+});
+$("#saveOaKey").onclick=()=>{
+  const k=$("#oaApiKey").value.trim();
+  if(k){localStorage.setItem("openscite_openalex_api_key",k);toast("OpenAlex API key 已儲存在此瀏覽器")}
+  else toast("請先輸入 API key");
+};
+$("#clearOaKey").onclick=()=>{
+  localStorage.removeItem("openscite_openalex_api_key");$("#oaApiKey").value="";toast("OpenAlex API key 已清除");
+};
+$("#oaApiKey").value=getOaApiKey();
+
 $("#pickTarget").onclick=()=>$("#targetFile").click();
 $("#start").onclick=run;$("#reset").onclick=reset;$("#changeTarget").onclick=()=>{$("#manualQuery").focus();};
 $("#exportMd").onclick=()=>download("report.md",buildReport(),"text/markdown");
