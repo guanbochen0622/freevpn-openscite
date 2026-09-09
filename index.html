@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v25 — Citation Evidence Explorer</title>
+<title>OpenScite Web v23 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -688,7 +688,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
   <div class="brand"><div class="logo">O</div><span>OpenScite <span style="color:var(--green)">Web</span></span></div>
   <div class="nav-right">
     <a class="btn ghost hide-mobile" href="#academicSearch">學術搜尋</a>
-    <button id="exportMdTop" class="btn ghost hide-mobile" disabled>下載原文＋AI繁中</button>
+    <button id="exportMdTop" class="btn ghost hide-mobile" disabled>匯出報告</button>
     <a class="btn" href="https://github.com/MO7YW4NG/openscite" target="_blank" rel="noreferrer">GitHub ↗</a>
   </div>
 </div>
@@ -745,7 +745,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
           <h2>學術搜尋 <span style="color:var(--green)">Academic Search</span></h2>
           <p>像 Google Scholar 一樣直接用研究主題、完整句子或論文標題搜尋。輸入的每個詞會沿用 OpenScite v14 的紅色 Highlight（高亮）規則。</p>
         </div>
-        <span id="scholarProvider" class="scholar-provider">v25 AI-reviewed translation · relevance + journal source · OpenAlex/Crossref</span>
+        <span id="scholarProvider" class="scholar-provider">v23 relevance + journal source engine · OpenAlex/Crossref</span>
       </div>
       <div class="scholar-search">
         <input id="scholarQuery" class="control" placeholder="例如：Fiber-to-Silicon Edge Coupling Adiabatic mode transfer SiN–Si mode transition">
@@ -940,10 +940,9 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
         </div>
         <div id="reportTab" class="hidden">
           <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <button id="exportMd" class="btn primary small">下載原文＋AI繁中</button>
+            <button id="exportMd" class="btn primary small">下載 report.md</button>
             <button id="exportJson" class="btn small">下載 citations.json</button>
           </div>
-          <div class="notice" style="margin-bottom:12px">按一次會直接下載 <b>report-original.md</b> 與 <b>report-zh-TW.md</b>。繁中版會先由 Browser AI（瀏覽器內建 AI）完整閱讀報告、建立術語表與翻譯規則，再逐段翻譯並校對；不使用 Chrome 擴充功能，也不使用一般 Translator API（翻譯 API）。</div>
           <pre id="reportPreview" class="log" style="max-height:none;white-space:pre-wrap"></pre>
         </div>
         <div id="logTab" class="hidden"><div id="log" class="log"></div></div>
@@ -998,7 +997,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v25 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v23 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
@@ -2284,311 +2283,517 @@ function updateSummary(){
   $("#sContrast").textContent=state.papers.flatMap(x=>x._passages).filter(x=>x.label==="contrasting").length;
 }
 function renderReport(){$("#reportPreview").textContent=buildReport()}
-function renderAll(){renderPapers();updateSummary();renderCoverage();renderDashboard();renderReport();$("#exportMdTop").disabled=!state.target;$("#exportBilingualTop").disabled=!state.target}
+function renderAll(){renderPapers();updateSummary();renderCoverage();renderDashboard();renderReport();$("#exportMdTop").disabled=!state.target}
 function download(name,text,type="text/plain"){
   const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500)
 }
 
-function downloadBlob(name,blob){
-  const a=document.createElement("a");
-  const url=URL.createObjectURL(blob);
-  a.href=url;a.download=name;
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1200);
+/* =========================================================
+   v15 — Academic Search
+   ========================================================= */
+function cleanMarkup(s=""){
+  const d=document.createElement("div");
+  d.innerHTML=String(s||"");
+  return (d.textContent||"").replace(/\s+/g," ").trim();
 }
-
-
-const aiTranslationCache=new Map();
-let academicAiSessionPromise=null;
-let aiTranslationBusy=false;
-
-function splitAiChunks(text,maxLen=5200){
-  const s=String(text||"").trim();
-  if(!s)return [];
-  if(s.length<=maxLen)return [s];
-
-  const chunks=[];
-  let rest=s;
-  while(rest.length>maxLen){
-    let cut=Math.max(
-      rest.lastIndexOf("\n\n",maxLen),
-      rest.lastIndexOf("\n",maxLen),
-      rest.lastIndexOf(". ",maxLen),
-      rest.lastIndexOf("; ",maxLen)
-    );
-    if(cut<maxLen*0.55)cut=maxLen;
-    chunks.push(rest.slice(0,cut).trim());
-    rest=rest.slice(cut).trim();
-  }
-  if(rest)chunks.push(rest);
-  return chunks;
+function scholarAuthors(w){
+  return (w.authorships||[]).slice(0,6).map(a=>a.author?.display_name).filter(Boolean).join(", ") +
+    ((w.authorships||[]).length>6?" et al.":"");
 }
-
-async function createAcademicAiSession(){
-  // Newer Chrome Prompt API.
-  if("LanguageModel" in self){
-    try{
-      if(typeof LanguageModel.availability==="function"){
-        const status=await LanguageModel.availability();
-        if(status==="unavailable"){
-          throw new Error("Browser AI 模型目前不可用。");
-        }
-      }
-      return await LanguageModel.create({
-        initialPrompts:[{
-          role:"system",
-          content:
-            "You are an expert academic translator and scientific editor. "+
-            "Your target language is Traditional Chinese (Taiwan). "+
-            "Preserve DOI, URLs, equations, numbers, units, citation markers, Markdown structure, "+
-            "chemical names, model numbers, acronyms, and established technical terminology. "+
-            "Never invent facts or citations."
-        }]
-      });
-    }catch(e){
-      console.warn("LanguageModel API unavailable",e);
-    }
-  }
-
-  // Older Chrome built-in AI API compatibility.
-  if(self.ai?.languageModel){
-    try{
-      const caps=typeof self.ai.languageModel.capabilities==="function"
-        ? await self.ai.languageModel.capabilities()
-        : null;
-      if(caps?.available==="no") throw new Error("Browser AI 模型不可用。");
-      return await self.ai.languageModel.create({
-        systemPrompt:
-          "You are an expert academic translator and scientific editor. "+
-          "Translate into Traditional Chinese (Taiwan), preserve all scientific identifiers, "+
-          "DOIs, equations, units, Markdown and citations, and never invent content."
-      });
-    }catch(e){
-      console.warn("Legacy built-in AI API unavailable",e);
-    }
-  }
-
-  throw new Error(
-    "目前瀏覽器沒有可用的 Browser AI（瀏覽器內建 AI）。"+
-    "這個版本不使用擴充功能，也不會把 API 金鑰放在 GitHub Pages。"+
-    "請使用支援 Browser AI 的桌面版 Chrome。"
-  );
+function scholarVenue(w){
+  return w.primary_location?.source?.display_name ||
+         w.best_oa_location?.source?.display_name ||
+         w._venue || "Unknown venue";
 }
-
-async function getAcademicAiSession(){
-  if(!academicAiSessionPromise){
-    academicAiSessionPromise=createAcademicAiSession();
-  }
-  try{
-    return await academicAiSessionPromise;
-  }catch(e){
-    academicAiSessionPromise=null;
-    throw e;
-  }
+function scholarDoi(w){
+  return normalizeDoi(w.doi||w._doi||"");
 }
-
-async function aiPrompt(prompt){
-  const session=await getAcademicAiSession();
-  if(typeof session.prompt==="function"){
-    return String(await session.prompt(prompt));
-  }
-  if(typeof session.promptStreaming==="function"){
-    let out="";
-    for await (const part of session.promptStreaming(prompt)){
-      out+=String(part);
-    }
-    return out;
-  }
-  throw new Error("Browser AI session 沒有可用的 prompt 方法。");
+function scholarOaPdf(w){
+  return w.best_oa_location?.pdf_url ||
+         w.primary_location?.pdf_url ||
+         w._oaPdf || "";
 }
+function scholarAbstract(w){
+  return w._abstract || rebuildAbstract(w.abstract_inverted_index) || "";
+}
+function scholarYear(w){return Number(w.publication_year||w._year||0)}
+function scholarCitationCount(w){return Number(w.cited_by_count||w._cited||0)}
+function scholarIsOa(w){
+  return !!(w.open_access?.is_oa || scholarOaPdf(w) || w._isOa);
+}
+function crossrefToWork(x){
+  const title=Array.isArray(x.title)?(x.title[0]||"Untitled"):(x.title||"Untitled");
+  const authors=(x.author||[]).map(a=>({
+    author:{display_name:[a.given,a.family].filter(Boolean).join(" ") || a.name || ""}
+  }));
+  const parts=x.published?.["date-parts"]?.[0] || x.created?.["date-parts"]?.[0] || [];
+  const year=Number(parts[0]||0);
+  const venue=(x["container-title"]||[])[0] || x.publisher || "Unknown venue";
+  const pdf=(x.link||[]).find(l=>/pdf/i.test(l["content-type"]||"") || /\.pdf(?:$|\?)/i.test(l.URL||""))?.URL || "";
+  const doi=String(x.DOI||"");
+  return {
+    id:doi?`https://doi.org/${doi}`:(x.URL||""),
+    display_name:title,title,
+    authorships:authors,
+    publication_year:year||null,
+    doi:doi?`https://doi.org/${doi}`:"",
+    cited_by_count:Number(x["is-referenced-by-count"]||0),
+    type:x.type||"article",
+    primary_location:{source:{display_name:venue}},
+    best_oa_location:pdf?{pdf_url:pdf,source:{display_name:venue}}:null,
+    open_access:{is_oa:!!pdf},
+    _abstract:cleanMarkup(x.abstract||""),
+    _venue:venue,_doi:doi,_year:year,_cited:Number(x["is-referenced-by-count"]||0),
+    _issns:Array.isArray(x.ISSN)?x.ISSN:[],
+    _oaPdf:pdf,_isOa:!!pdf,_searchProvider:"Crossref"
+  };
+}
+function scholarSearchSignature(q){
+  return JSON.stringify({
+    q:String(q||"").trim(),
+    from:$("#scholarYearFrom").value.trim(),
+    to:$("#scholarYearTo").value.trim(),
+    oa:$("#scholarOa").value,
+    sort:$("#scholarSort").value
+  });
+}
+function scholarOpenAlexParams(q,page,{candidatePool=false}={}){
+  const p=new URLSearchParams();
+  p.set("search",q);
 
-async function aiReviewWholeReport(original){
-  const chunks=splitAiChunks(original,6000);
-  const notes=[];
-
-  for(let i=0;i<chunks.length;i++){
-    toast(`AI 第一次閱讀報告 ${i+1}/${chunks.length}`);
-    const review=await aiPrompt(
-`Read this academic report excerpt carefully. DO NOT translate it yet.
-
-Your job is to prepare a translation brief for a later Traditional Chinese translation:
-1. Identify the research field and technical context.
-2. Extract technical terms and propose precise zh-TW translations.
-3. List acronyms/proper nouns that should stay in English or keep the original form.
-4. List DOI, URLs, equations, numbers, units, citation identifiers, journal names, and any text that must not be altered.
-5. Note ambiguous terminology where literal translation could be misleading.
-6. Do not add scientific claims not present in the source.
-
-EXCERPT ${i+1}/${chunks.length}:
-<<<
-${chunks[i]}
->>>`
-    );
-    notes.push(review);
+  const sort=$("#scholarSort").value;
+  if(sort==="relevance"){
+    // Bottom-layer change: OpenAlex itself is explicitly asked for relevance order.
+    p.set("sort","relevance_score:desc");
+    p.set("per-page",candidatePool?"100":String(+$("#scholarPerPage").value||20));
+    p.set("page",String(candidatePool?1:page));
+  }else{
+    p.set("per-page",String(+$("#scholarPerPage").value||20));
+    p.set("page",String(page));
+    if(sort==="citations")p.set("sort","cited_by_count:desc");
+    if(sort==="newest")p.set("sort","publication_date:desc");
+    if(sort==="oldest")p.set("sort","publication_date:asc");
   }
 
-  toast("AI 正在整合完整報告術語與翻譯規則");
-  const merged=await aiPrompt(
-`Merge the following academic translation notes into ONE concise translation guide.
-Remove duplicates. Prioritize terminology consistency and correctness.
-The final translation target is Traditional Chinese used in Taiwan.
-Keep technical English in parentheses when it improves precision.
-Do not invent any information.
+  const filters=[];
+  const yf=$("#scholarYearFrom").value.trim(), yt=$("#scholarYearTo").value.trim();
+  if(/^\d{4}$/.test(yf)) filters.push(`from_publication_date:${yf}-01-01`);
+  if(/^\d{4}$/.test(yt)) filters.push(`to_publication_date:${yt}-12-31`);
+  if($("#scholarOa").value==="oa") filters.push("is_oa:true");
+  if(filters.length)p.set("filter",filters.join(","));
+  return p;
+}
+async function scholarOpenAlex(q,page,{candidatePool=false}={}){
+  const p=scholarOpenAlexParams(q,page,{candidatePool});
+  const j=await oaFetch(`/works?${p.toString()}`);
+  return {
+    results:(j.results||[]).map(w=>({
+      ...w,
+      _abstract:rebuildAbstract(w.abstract_inverted_index),
+      _searchProvider:"OpenAlex",
+      _providerRelevance:Number(w.relevance_score||0)
+    })),
+    total:Number(j.meta?.count||0),
+    provider:"OpenAlex"
+  };
+}
+async function scholarCrossref(q,page,{candidatePool=false}={}){
+  const rows=candidatePool?100:(+$("#scholarPerPage").value||20);
+  const p=new URLSearchParams();
+  p.set("query.bibliographic",q);
+  p.set("rows",String(rows));
+  p.set("offset",String(candidatePool?0:(page-1)*rows));
 
-NOTES:
-<<<
-${notes.join("\n\n---\n\n")}
->>>`
-  );
+  const yf=$("#scholarYearFrom").value.trim(), yt=$("#scholarYearTo").value.trim();
+  const filters=[];
+  if(/^\d{4}$/.test(yf))filters.push(`from-pub-date:${yf}-01-01`);
+  if(/^\d{4}$/.test(yt))filters.push(`until-pub-date:${yt}-12-31`);
+  if(filters.length)p.set("filter",filters.join(","));
 
-  return merged.trim();
+  const r=await fetch(`${CROSSREF}/works?${p.toString()}`,{headers:{"Accept":"application/json"}});
+  if(!r.ok)throw new Error(`Crossref ${r.status}`);
+  const j=await r.json();
+
+  let results=(j.message?.items||[]).map((x,idx)=>({
+    ...crossrefToWork(x),
+    _providerRelevance:Math.max(0,100-idx)
+  }));
+
+  if($("#scholarOa").value==="oa") results=results.filter(scholarIsOa);
+
+  const sort=$("#scholarSort").value;
+  if(sort==="citations")results.sort((a,b)=>scholarCitationCount(b)-scholarCitationCount(a));
+  if(sort==="newest")results.sort((a,b)=>scholarYear(b)-scholarYear(a));
+  if(sort==="oldest")results.sort((a,b)=>scholarYear(a)-scholarYear(b));
+
+  return {
+    results,
+    total:Number(j.message?.["total-results"]||results.length),
+    provider:"Crossref"
+  };
+}
+function scholarCitationText(w){
+  const authors=scholarAuthors(w)||"Unknown author";
+  const year=scholarYear(w)||"n.d.";
+  const title=w.display_name||w.title||"Untitled";
+  const venue=scholarVenue(w);
+  const doi=scholarDoi(w);
+  return `${authors} (${year}). ${title}. ${venue}.${doi?` https://doi.org/${doi}`:""}`;
 }
 
-async function aiTranslateChunk(chunk,guide,index,total){
-  const cacheKey=guide+"\n@@\n"+chunk;
-  if(aiTranslationCache.has(cacheKey))return aiTranslationCache.get(cacheKey);
-
-  toast(`AI 精準翻譯 ${index}/${total}`);
-  const translated=await aiPrompt(
-`Translate the academic excerpt below into precise Traditional Chinese (Taiwan).
-
-STRICT REQUIREMENTS:
-- Follow the translation guide exactly.
-- Preserve Markdown layout.
-- Preserve DOI, URL, OpenAlex IDs, equations, citation markers, numbers, units and symbols exactly.
-- Preserve journal titles and proper nouns when translation would reduce precision.
-- For important technical English terminology, use "中文（English）" when appropriate.
-- Do not summarize.
-- Do not omit any sentence.
-- Do not add explanations or scientific claims.
-- Output ONLY the translated excerpt.
-
-TRANSLATION GUIDE:
-<<<
-${guide}
->>>
-
-SOURCE EXCERPT ${index}/${total}:
-<<<
-${chunk}
->>>`
-  );
-
-  aiTranslationCache.set(cacheKey,translated.trim());
-  return translated.trim();
+const SCHOLAR_RANK_STOPWORDS=new Set([
+  "a","an","and","are","as","at","be","by","for","from","in","into","is","it","of","on","or",
+  "that","the","this","to","using","via","was","were","with","we","our","their","study","paper",
+  "research","method","methods","result","results"
+]);
+function scholarRankTerms(q){
+  const words=(String(q||"").match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)||[])
+    .map(x=>x.toLocaleLowerCase())
+    .filter(x=>x.length>=2 && !SCHOLAR_RANK_STOPWORDS.has(x));
+  return [...new Set(words)];
 }
+function scholarConceptPhrases(q){
+  const raw=String(q||"").trim();
+  if(!raw)return [];
+  const chunks=raw
+    .split(/(?:\s{2,}|[\n\r,;，；、]+)/u)
+    .map(s=>s.trim())
+    .filter(Boolean);
 
-async function aiVerifyTranslation(originalChunk,translatedChunk,guide,index,total){
-  toast(`AI 校對翻譯 ${index}/${total}`);
-  const verified=await aiPrompt(
-`Act as a bilingual academic proofreader.
-
-Compare SOURCE and DRAFT.
-Return a corrected Traditional Chinese translation only.
-
-Check:
-- no missing sentences or clauses
-- no invented claims
-- technical terminology follows the guide
-- DOI, URLs, numbers, units, equations, citation IDs and Markdown are unchanged
-- logical relations such as support, contrast, uncertainty, causation and limitation are preserved
-- wording is natural Traditional Chinese used in Taiwan
-- important English technical terms may remain in parentheses
-
-TRANSLATION GUIDE:
-<<<
-${guide}
->>>
-
-SOURCE:
-<<<
-${originalChunk}
->>>
-
-DRAFT:
-<<<
-${translatedChunk}
->>>
-
-Output ONLY the corrected translation.`
-  );
-  return verified.trim();
+  // Also preserve hyphenated technical concepts.
+  const compounds=raw.match(/[\p{L}\p{N}]+(?:[\-‐‑‒–—−][\p{L}\p{N}]+)+/gu)||[];
+  return [...new Set([...chunks,...compounds].map(x=>x.toLocaleLowerCase()).filter(x=>x.length>=3))];
 }
+function scholarPhrasePresent(text,phrase){
+  const t=norm(String(text||""))
+    .replace(/[‐‑‒–—−]/g,"-");
+  const p=norm(String(phrase||""))
+    .replace(/[‐‑‒–—−]/g,"-");
+  return !!p && t.includes(p);
+}
+function scholarRelevanceDetails(w,q){
+  const terms=scholarRankTerms(q);
+  const phrases=scholarConceptPhrases(q);
 
-async function buildAiReviewedZhReport(original){
-  const guide=await aiReviewWholeReport(original);
-  const chunks=splitAiChunks(original,5000);
-  const translated=[];
+  const title=String(w.display_name||w.title||"");
+  const abs=String(scholarAbstract(w)||"");
+  const authors=String(scholarAuthors(w)||"");
+  const venue=String(scholarVenue(w)||"");
 
-  for(let i=0;i<chunks.length;i++){
-    const draft=await aiTranslateChunk(chunks[i],guide,i+1,chunks.length);
-    const checked=await aiVerifyTranslation(chunks[i],draft,guide,i+1,chunks.length);
-    translated.push(checked);
+  let titleHits=0, abstractHits=0, metaHits=0;
+  for(const t of terms){
+    const titleRe=buildTermsRegex([t]);
+    if(titleRe && titleRe.test(title)) titleHits++;
+
+    const absRe=buildTermsRegex([t]);
+    if(absRe && absRe.test(abs)) abstractHits++;
+
+    const metaRe=buildTermsRegex([t]);
+    if(metaRe && (metaRe.test(authors) || metaRe.test(venue))) metaHits++;
   }
 
-  return [
-    "# OpenScite 報告（AI 精準繁體中文版）",
-    "",
-    "> 此版本先由 Browser AI 完整閱讀原始報告、建立學術術語與翻譯規則，再逐段翻譯並做雙語校對。正式引用仍應以原文為準。",
-    "",
-    translated.join("\n\n")
-  ].join("\n");
-}
+  let titlePhraseHits=0, abstractPhraseHits=0;
+  for(const p of phrases){
+    if(scholarPhrasePresent(title,p)) titlePhraseHits++;
+    else if(scholarPhrasePresent(abs,p)) abstractPhraseHits++;
+  }
 
-async function exportOriginalAndAiZh(){
-  if(aiTranslationBusy)return;
-  if(!state.target){
-    alert("請先完成一篇目標論文的分析。");
+  const denom=Math.max(1,terms.length);
+  const titleCoverage=titleHits/denom;
+  const abstractCoverage=abstractHits/denom;
+  const metaCoverage=metaHits/denom;
+
+  const phraseDenom=Math.max(1,phrases.length);
+  const phraseCoverage=(titlePhraseHits + 0.35*abstractPhraseHits)/phraseDenom;
+
+  // Provider relevance is only a small tie-strengthener.
+  const providerRaw=Number(w._providerRelevance||w.relevance_score||0);
+  const providerBonus=providerRaw>0 ? Math.min(1,Math.log1p(providerRaw)/8) : 0;
+
+  // 0–100 scale. Query overlap dominates; citations do NOT boost relevance.
+  let score=
+      titleCoverage*58
+    + abstractCoverage*22
+    + metaCoverage*3
+    + phraseCoverage*14
+    + providerBonus*3;
+
+  // Strong exact-title bonus for a full query/title match.
+  const nq=norm(String(q||"")).replace(/[‐‑‒–—−]/g,"-");
+  const nt=norm(title).replace(/[‐‑‒–—−]/g,"-");
+  if(nq && nt){
+    if(nt===nq) score+=18;
+    else if(nt.includes(nq) || nq.includes(nt)) score+=9;
+  }
+
+  score=Math.max(0,Math.min(100,score));
+
+  return {
+    score,
+    titleHits,
+    abstractHits,
+    metaHits,
+    termCount:terms.length,
+    titlePhraseHits,
+    abstractPhraseHits,
+    phraseCount:phrases.length,
+    providerRaw
+  };
+}
+function scholarRelevanceScore(w,q){
+  return scholarRelevanceDetails(w,q).score;
+}
+function rerankScholarByRelevance(results,q){
+  return [...(results||[])].map(w=>{
+    const d=scholarRelevanceDetails(w,q);
+    return {...w,_localRelevance:d.score,_relevanceDetails:d};
+  }).sort((a,b)=>{
+    const da=a._relevanceDetails, db=b._relevanceDetails;
+    return (db.score-da.score)
+      || (db.titlePhraseHits-da.titlePhraseHits)
+      || (db.titleHits-da.titleHits)
+      || (db.abstractHits-da.abstractHits)
+      || (Number(b._providerRelevance||0)-Number(a._providerRelevance||0))
+      || (scholarCitationCount(b)-scholarCitationCount(a));
+  });
+}
+function scholarSetPageFromPool(page){
+  const per=+$("#scholarPerPage").value||20;
+  const maxPage=Math.max(1,Math.ceil(scholarState.pool.length/per));
+  scholarState.page=Math.min(Math.max(1,page),maxPage);
+  const start=(scholarState.page-1)*per;
+  scholarState.results=scholarState.pool.slice(start,start+per);
+  scholarState.poolSize=scholarState.pool.length;
+}
+function renderScholar(){
+  const box=$("#scholarResults");
+  const terms=parseKeywordTerms($("#scholarQuery").value);
+  $("#scholarProvider").textContent=scholarState.provider ? `${scholarState.provider} · Academic Search` : "OpenAlex · Crossref fallback";
+  $("#scholarPageLabel").textContent=`第 ${scholarState.page} 頁`;
+  $("#scholarPrev").disabled=scholarState.busy || scholarState.page<=1;
+  const per=+$("#scholarPerPage").value||20;
+  const relevanceMode=$("#scholarSort").value==="relevance";
+  const pageLimit=relevanceMode ? scholarState.poolSize : scholarState.total;
+  $("#scholarNext").disabled=scholarState.busy || !scholarState.results.length ||
+    (pageLimit>0 && scholarState.page*per>=pageLimit);
+
+  if(!scholarState.results.length){
+    box.innerHTML=`<div class="scholar-empty">沒有找到符合條件的論文。可以縮短關鍵字或放寬年份。</div>`;
+    return;
+  }
+  box.innerHTML=scholarState.results.map((w,i)=>{
+    const title=w.display_name||w.title||"Untitled";
+    const authors=scholarAuthors(w);
+    const venue=scholarVenue(w);
+    const year=scholarYear(w)||"n.d.";
+    const cited=scholarCitationCount(w);
+    const abs=scholarAbstract(w);
+    const doi=scholarDoi(w);
+    const oa=scholarOaPdf(w);
+    const oaId=(w._searchProvider==="OpenAlex" && /^https:\/\/openalex\.org\/W/i.test(w.id||""))?openAlexId(w.id):"";
+    return `<article class="scholar-item">
+      <div class="scholar-title" style="color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important">${highlightWithTerms(title,terms)}</div>
+      <div class="scholar-meta">${highlightWithTerms(authors||"Unknown author",terms)} · ${year} · ${highlightWithTerms(venue,terms)}</div>
+      ${abs?`<div class="scholar-abstract">${highlightWithTerms(abs,terms)}</div>`:""}
+      <div class="scholar-badges">
+        ${$("#scholarSort").value==="relevance"
+          ? `<span class="scholar-badge">相關性 ${Number(w._localRelevance ?? scholarRelevanceScore(w,$("#scholarQuery").value)).toFixed(1)}</span>
+             <span class="scholar-badge">標題命中 ${w._relevanceDetails?.titleHits ?? 0}/${w._relevanceDetails?.termCount ?? scholarRankTerms($("#scholarQuery").value).length}</span>`
+          : ""}
+        <span class="scholar-badge cited">被引用 ${cited}</span>
+        ${scholarIsOa(w)?`<span class="scholar-badge oa">Open Access</span>`:""}
+        <span class="scholar-badge">${escapeHtml(w.type||"work")}</span>
+        ${w._searchProvider==="OpenAlex"?journalTierBadge(w):""}
+      </div>
+      <div class="scholar-actions">
+        <button class="btn small scholar-analyze" data-i="${i}">用 OpenScite 分析</button>
+        <button class="btn small scholar-cite" data-i="${i}">引用格式</button>
+        <button class="btn small scholar-related" data-i="${i}">相關論文</button>
+        ${doi?`<a class="btn small" href="https://doi.org/${encodeURIComponent(doi)}" target="_blank" rel="noreferrer">DOI ↗</a>`:""}
+        ${oa?`<a class="btn small" href="${escapeHtml(oa)}" target="_blank" rel="noreferrer">PDF ↗</a>`:""}
+        ${oaId?`<a class="btn small" href="https://openalex.org/works/${escapeHtml(oaId)}" target="_blank" rel="noreferrer">OpenAlex ↗</a>`:""}
+      </div>
+    </article>`;
+  }).join("");
+}
+async function runScholarSearch(page=1){
+  const q=$("#scholarQuery").value.trim();
+  if(!q)return alert("請先輸入學術搜尋關鍵字。");
+
+  const mode=$("#scholarSort").value;
+  const signature=scholarSearchSignature(q);
+
+  // Relevance pagination is local after the candidate pool has been ranked.
+  if(mode==="relevance" && page>1 && scholarState.signature===signature && scholarState.pool.length){
+    scholarSetPageFromPool(page);
+    const journalInfo=await enrichJournalSources(scholarState.results);
+    renderScholar();
+    $("#scholarStatus").innerHTML=
+      `<span>搜尋：<b>${escapeHtml(q)}</b> · 相關性候選池 <b>${scholarState.poolSize}</b> 篇</span>`+
+      `<span>排序：<b>全候選池相關性重排</b> · 期刊指標：<b>${journalInfo.found}/${journalInfo.total}</b> · 目前第 ${scholarState.page} 頁</span>`;
     return;
   }
 
-  aiTranslationBusy=true;
-  const buttons=[$("#exportMd"),$("#exportMdTop")].filter(Boolean);
-  buttons.forEach(b=>{
-    b.disabled=true;
-    b.dataset.oldText=b.textContent;
-    b.textContent="AI 閱讀與翻譯中…";
-  });
+  scholarState.busy=true;
+  scholarState.page=page;
+  scholarState.lastQuery=q;
+  $("#scholarSearchBtn").disabled=true;
+  $("#academicSearch .scholar-card").classList.add("scholar-loading");
+
+  const loadingText=mode==="relevance"
+    ? "正在抓取候選論文並計算全池相關性…"
+    : `正在搜尋第 ${page} 頁…`;
+  $("#scholarStatus").innerHTML=
+    `<span>${loadingText}</span><span><b>${escapeHtml(q)}</b></span>`;
 
   try{
-    const original=buildReport();
+    let data;
+    try{
+      data=await scholarOpenAlex(q,page,{candidatePool:mode==="relevance"});
+    }catch(oaErr){
+      console.warn("OpenAlex search failed, fallback to Crossref",oaErr);
+      data=await scholarCrossref(q,page,{candidatePool:mode==="relevance"});
+      data.fallbackReason=oaErr.message;
+    }
 
-    // AI must review first, then translate, then verify.
-    const zh=await buildAiReviewedZhReport(original);
+    scholarState.signature=signature;
+    scholarState.total=data.total;
+    scholarState.provider=data.provider;
 
-    toast("AI 翻譯完成，正在下載兩個版本");
+    if(mode==="relevance"){
+      // Critical bottom-layer behavior:
+      // fetch up to 100 candidate works -> score every candidate -> sort -> then paginate.
+      scholarState.pool=rerankScholarByRelevance(data.results,q);
+      scholarSetPageFromPool(1);
+    }else{
+      scholarState.pool=[];
+      scholarState.poolSize=0;
+      scholarState.results=data.results;
+      scholarState.page=page;
+    }
 
-    // One click, two separate downloads.
-    download("report-original.md",original,"text/markdown");
-    await new Promise(r=>setTimeout(r,450));
-    download("report-zh-TW.md",zh,"text/markdown");
+    const journalInfo=await enrichJournalSources(scholarState.results);
+    renderScholar();
 
-    toast("已下載：原文版 + AI 繁中版");
+    const shown=scholarState.results.length;
+    const candidateText=mode==="relevance"
+      ? ` · 從 ${scholarState.poolSize} 篇候選中重排`
+      : "";
+
+    $("#scholarStatus").innerHTML=
+      `<span>搜尋：<b>${escapeHtml(q)}</b> · 顯示 ${shown} 篇${candidateText}${data.total?` · 資料庫約 ${Number(data.total).toLocaleString()} 筆`:""}</span>`+
+      `<span>排序：<b>${mode==="relevance"?"全候選池相關性：高 → 低":"使用者指定"}</b> · 期刊指標：<b>${journalInfo.found}/${journalInfo.total}</b> · 來源：<b>${data.provider}</b>${data.fallbackReason?"（OpenAlex 暫不可用，已切換 Crossref）":""}</span>`;
   }catch(e){
-    console.error(e);
-    alert(
-      "AI 雙版本下載失敗：\n\n"+
-      (e?.message||e)+
-      "\n\n這個版本不使用 Chrome 擴充功能，也不使用一般 Translator API。"
-    );
+    scholarState.results=[];
+    scholarState.pool=[];
+    scholarState.poolSize=0;
+    scholarState.total=0;
+    scholarState.provider="";
+    renderScholar();
+    $("#scholarStatus").innerHTML=
+      `<span>搜尋失敗：<b>${escapeHtml(e.message)}</b></span><span>請稍後重試</span>`;
   }finally{
-    aiTranslationBusy=false;
-    buttons.forEach(b=>{
-      b.disabled=!state.target;
-      if(b.dataset.oldText)b.textContent=b.dataset.oldText;
-    });
+    scholarState.busy=false;
+    $("#scholarSearchBtn").disabled=false;
+    $("#academicSearch .scholar-card").classList.remove("scholar-loading");
+    renderScholar();
   }
 }
+async function scholarAnalyzeIndex(i){
+  const w=scholarState.results[i];if(!w)return;
+  scholarTransferKeywords=parseKeywordTerms($("#scholarQuery").value);
+  const doi=scholarDoi(w);
+  const oaId=(w._searchProvider==="OpenAlex" && /^https:\/\/openalex\.org\/W/i.test(w.id||""))?openAlexId(w.id):"";
+  $("#manualQuery").value=doi || oaId || w.display_name || w.title || "";
+  $("#paperSearch").value=$("#scholarQuery").value.trim();
+  document.querySelector(".app").scrollIntoView({behavior:"smooth",block:"start"});
+  setTimeout(run,280);
+}
+async function scholarCopyCitation(i){
+  const w=scholarState.results[i];if(!w)return;
+  const c=scholarCitationText(w);
+  try{await navigator.clipboard.writeText(c);toast("引用格式已複製")}
+  catch(_){prompt("複製引用格式：",c)}
+}
+function scholarRelatedIndex(i){
+  const w=scholarState.results[i];if(!w)return;
+  $("#scholarQuery").value=w.display_name||w.title||"";
+  runScholarSearch(1);
+}
 
-// v25 export events: one click -> AI review -> precise translation -> two files.
-$("#exportMd").onclick=exportOriginalAndAiZh;
-$("#exportMdTop").onclick=exportOriginalAndAiZh;
-$("#exportJson").onclick=()=>download("citations.json",JSON.stringify(citationsJson(),null,2),"application/json");
+async function run(){
+  $("#start").disabled=true;
+  try{
+    state.mode=$("#mode").value;state.limit=+$("#limit").value;state.log=[];$("#log").textContent="";
+    const initialQ=$("#manualQuery").value.trim();
+    const transferred=[...scholarTransferKeywords];scholarTransferKeywords=[];
+    state.queryKeywords=transferred.length
+      ? transferred
+      : ((/^10\.\d{4,9}\//i.test(initialQ)||/^W\d+$/i.test(initialQ))?[]:parseKeywordTerms(initialQ));
+    progress(3,"辨識目標論文");
+    const target=await resolveInput();state.target=target;
+    $("#targetTitle").textContent=target.display_name||target.title||"Untitled";
+    $("#targetMeta").textContent=targetDisplay(target);
+    $("#target").classList.add("show");
+    log(`目標論文：${target.display_name||target.title} (${openAlexId(target.id)})`);
+    progress(35,"查詢後續引用");
+    state.papers=await getCitingWorks(target.id,state.limit,state.mode);
+    progress(78,"排序候選文獻");
+    $("#empty").classList.add("hidden");$("#results").classList.remove("hidden");
+    if(state.queryKeywords.length && !$("#paperSearch").value.trim()) $("#paperSearch").value=state.queryKeywords.join(" ");
+    renderAll();
+    progress(100,"分析完成");
+    doneProgress();
+  }catch(e){
+    log(`錯誤：${e.message}`);alert(e.message);doneProgress();
+  }finally{$("#start").disabled=false}
+}
+function reset(){
+  state={target:null,targetText:"",sourceFileName:"",papers:[],log:[],mode:"stance_first",limit:20,queryKeywords:[]};
+  $("#targetFile").value="";$("#manualQuery").value="";if($("#paperSearch"))$("#paperSearch").value="";$("#target").classList.remove("show");$("#results").classList.add("hidden");$("#empty").classList.remove("hidden");$("#exportMdTop").disabled=true;$("#log").textContent="";
+}
+
+// v15 Academic Search events
+$("#scholarSearchBtn").onclick=()=>runScholarSearch(1);
+$("#scholarQuery").addEventListener("keydown",e=>{if(e.key==="Enter")runScholarSearch(1)});
+["scholarYearFrom","scholarYearTo"].forEach(id=>$("#"+id).addEventListener("keydown",e=>{if(e.key==="Enter"&&$("#scholarQuery").value.trim())runScholarSearch(1)}));
+["scholarSort","scholarOa","scholarPerPage"].forEach(id=>$("#"+id).addEventListener("change",()=>{if($("#scholarQuery").value.trim())runScholarSearch(1)}));
+$("#scholarPrev").onclick=async()=>{
+  if(scholarState.page<=1)return;
+  if($("#scholarSort").value==="relevance" && scholarState.pool.length){
+    scholarSetPageFromPool(scholarState.page-1);
+    await enrichJournalSources(scholarState.results);
+    renderScholar();
+  }else runScholarSearch(scholarState.page-1);
+};
+$("#scholarNext").onclick=async()=>{
+  if($("#scholarSort").value==="relevance" && scholarState.pool.length){
+    scholarSetPageFromPool(scholarState.page+1);
+    await enrichJournalSources(scholarState.results);
+    renderScholar();
+  }else runScholarSearch(scholarState.page+1);
+};
+$("#scholarResults").addEventListener("click",e=>{
+  const btn=e.target.closest("button[data-i]");if(!btn)return;
+  const i=Number(btn.dataset.i);
+  if(btn.classList.contains("scholar-analyze"))scholarAnalyzeIndex(i);
+  if(btn.classList.contains("scholar-cite"))scholarCopyCitation(i);
+  if(btn.classList.contains("scholar-related"))scholarRelatedIndex(i);
+});
+$("#saveOaKey").onclick=()=>{
+  const k=$("#oaApiKey").value.trim();
+  if(k){localStorage.setItem("openscite_openalex_api_key",k);toast("OpenAlex API key 已儲存在此瀏覽器")}
+  else toast("請先輸入 API key");
+};
+$("#clearOaKey").onclick=()=>{
+  localStorage.removeItem("openscite_openalex_api_key");$("#oaApiKey").value="";toast("OpenAlex API key 已清除");
+};
+$("#oaApiKey").value=getOaApiKey();
 
 $("#pickTarget").onclick=()=>$("#targetFile").click();
 $("#start").onclick=run;$("#reset").onclick=reset;$("#changeTarget").onclick=()=>{$("#manualQuery").focus();};
-$("#exportMd").onclick=()=>download("report-original.md",buildReport(),"text/markdown");
-$("#exportMdTop").onclick=()=>download("report-original.md",buildReport(),"text/markdown");
+$("#exportMd").onclick=()=>download("report.md",buildReport(),"text/markdown");
+$("#exportMdTop").onclick=()=>download("report.md",buildReport(),"text/markdown");
 $("#exportJson").onclick=()=>download("citations.json",JSON.stringify(citationsJson(),null,2),"application/json");
 $$(".tab").forEach(t=>t.onclick=()=>{
   $$(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");
@@ -2638,6 +2843,6 @@ bdrop.addEventListener("drop",e=>{
   if(fs.length)bulkAttach(fs);
 });
 </script>
-<div class="v19-badge">OpenScite v25</div>
+<div class="v19-badge">OpenScite v23</div>
 </body>
 </html>
