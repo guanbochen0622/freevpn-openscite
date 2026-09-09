@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v11 — Citation Evidence Explorer</title>
+<title>OpenScite Web v12 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -46,7 +46,10 @@ h1{font-size:clamp(46px,6.6vw,84px);line-height:.96;letter-spacing:-.06em;margin
 .progress-wrap{padding:0 18px 16px;display:none}.progress-wrap.show{display:block}.progress-track{height:7px;border-radius:99px;background:#07100e;overflow:hidden;border:1px solid rgba(255,255,255,.04)}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--green2),var(--green));transition:.25s}.progress-text{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:6px}
 .tabs{display:flex;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line);overflow:auto}.tab{border:0;background:transparent;color:var(--muted);padding:8px 10px;border-radius:9px;white-space:nowrap}.tab.active{background:#152a23;color:var(--text)}
 .content{padding:14px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}.stat-card{border:1px solid var(--line);border-radius:14px;padding:13px;background:#0a1713}.stat-card .value{font-size:24px;font-weight:900;letter-spacing:-.04em}.stat-card .label{font-size:11px;color:var(--muted)}
-.paper-list{display:grid;gap:10px}.paper{border:1px solid var(--line);border-radius:16px;background:#0a1713;overflow:hidden}.paper-main{padding:15px}.paper-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.paper-title{font-size:15px;font-weight:800;line-height:1.35}.paper-meta{font-size:11px;color:var(--muted);margin-top:5px}.rank{font:800 11px ui-monospace,monospace;color:#9ac4b3;background:#10241d;border:1px solid #27473b;padding:5px 7px;border-radius:9px;white-space:nowrap}.abstract{font-size:12px;color:#aec3ba;margin:11px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.paper-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.stance{display:inline-flex;padding:5px 8px;border-radius:999px;font:800 11px ui-monospace,monospace;border:1px solid}.supporting{color:#9effd2;background:rgba(103,245,189,.07);border-color:rgba(103,245,189,.25)}.contrasting{color:#ffb2bc;background:rgba(255,137,150,.07);border-color:rgba(255,137,150,.25)}.mentioning{color:#bed0ff;background:rgba(147,182,255,.07);border-color:rgba(147,182,255,.25)}.unknown{color:#ffe4a6;background:rgba(255,212,122,.07);border-color:rgba(255,212,122,.25)}
+.paper-list{display:grid;gap:10px}.paper{border:1px solid var(--line);border-radius:16px;background:#0a1713;overflow:hidden}.paper-main{padding:15px}.paper-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.paper-title{font-size:15px;font-weight:800;line-height:1.35}
+.keyword-hit{background:rgba(239,68,68,.12);color:#d92d20;border-radius:4px;padding:0 2px;font-weight:850;box-shadow:inset 0 -1px 0 rgba(217,45,32,.24)}
+.keyword-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px;padding:0 3px}.keyword-hint b{color:#d92d20}
+.paper-meta{font-size:11px;color:var(--muted);margin-top:5px}.rank{font:800 11px ui-monospace,monospace;color:#9ac4b3;background:#10241d;border:1px solid #27473b;padding:5px 7px;border-radius:9px;white-space:nowrap}.abstract{font-size:12px;color:#aec3ba;margin:11px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.paper-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.stance{display:inline-flex;padding:5px 8px;border-radius:999px;font:800 11px ui-monospace,monospace;border:1px solid}.supporting{color:#9effd2;background:rgba(103,245,189,.07);border-color:rgba(103,245,189,.25)}.contrasting{color:#ffb2bc;background:rgba(255,137,150,.07);border-color:rgba(255,137,150,.25)}.mentioning{color:#bed0ff;background:rgba(147,182,255,.07);border-color:rgba(147,182,255,.25)}.unknown{color:#ffe4a6;background:rgba(255,212,122,.07);border-color:rgba(255,212,122,.25)}
 .passages{border-top:1px solid var(--line);padding:12px 15px;background:#08130f}.passages h4{margin:0 0 8px;font-size:12px}.passage{padding:10px;border-left:2px solid #3a6354;background:#0c1b16;margin-top:8px;border-radius:0 9px 9px 0}.passage q{font-size:12px;color:#c8ddd4}.passage-foot{display:flex;justify-content:space-between;gap:10px;margin-top:7px;color:var(--muted);font-size:10px}
 .notice{padding:12px 13px;border:1px solid #2a4c3f;border-radius:12px;background:#0a1813;color:#b6cbc2;font-size:12px;margin-bottom:12px}.notice.warn{border-color:#5b4928;background:#171309;color:#e9d6ad}
 .log{font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#9db9ae;white-space:pre-wrap;max-height:370px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:12px;background:#06100d}
@@ -623,7 +626,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
         <button class="tab" data-tab="log">執行紀錄</button>
       </div>
       <div class="result-toolbar">
-        <div class="searchbox"><input id="paperSearch" class="control" placeholder="搜尋引用文獻、作者或摘要"></div>
+        <div class="searchbox"><input id="paperSearch" class="control" placeholder="輸入關鍵字，例如 biosensor evanescent wave"></div>
         <select id="stanceFilter" class="control filter-select">
           <option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option>
         </select>
@@ -631,6 +634,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
           <option value="rank">依目前排名</option><option value="journal">期刊層級：高 → 低</option><option value="citations">依引用次數</option><option value="year">依年份</option><option value="evidence">依證據數</option>
         </select>
         <div class="view-toggle"><button id="viewComfort" class="active" title="舒適模式">▤</button><button id="viewCompact" title="緊湊模式">☷</button></div>
+        <div class="keyword-hint">關鍵字命中會以 <b>紅色</b> 標示於標題、作者／期刊資訊、摘要與引用段落；多個關鍵字以空格分隔。</div>
       </div>
       <div class="content">
         <div id="papersTab">
@@ -1573,16 +1577,53 @@ function renderDashboard(){
 }
 
 
+function keywordTerms(){
+  const raw=(document.querySelector("#paperSearch")?.value||"").trim();
+  if(!raw) return [];
+  const quoted=[...raw.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].map(m=>m[1].trim()).filter(Boolean);
+  const rest=raw.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g," ");
+  const tokens=rest.split(/[\s,;，；]+/u).map(x=>x.trim()).filter(Boolean);
+  return [...new Set([...quoted,...tokens])].sort((a,b)=>b.length-a.length).slice(0,24);
+}
+function escapeRegExp(s=""){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function highlightKeywords(value=""){
+  const s=String(value??"");
+  const terms=keywordTerms();
+  if(!terms.length) return escapeHtml(s);
+  let re;
+  try{ re=new RegExp(terms.map(escapeRegExp).filter(Boolean).join("|"),"giu") }
+  catch(_){ return escapeHtml(s) }
+  let html="", last=0;
+  for(const m of s.matchAll(re)){
+    const i=m.index??0;
+    html+=escapeHtml(s.slice(last,i));
+    html+=`<mark class="keyword-hit">${escapeHtml(m[0])}</mark>`;
+    last=i+m[0].length;
+    if(m[0].length===0) break;
+  }
+  return html+escapeHtml(s.slice(last));
+}
+function keywordHaystack(p){
+  const venue=p?.primary_location?.source?.display_name || p?.best_oa_location?.source?.display_name || "";
+  return [
+    p.display_name||p.title||"",
+    p._abstract||"",
+    paperMeta(p)||"",
+    venue,
+    ...(p.authorships||[]).map(x=>x.author?.display_name||""),
+    ...(p._passages||[]).map(x=>x.text||"")
+  ].join(" ");
+}
+
 function currentVisiblePapers(){
-  const q=norm($("#paperSearch")?.value||"");
+  const terms=keywordTerms().map(norm).filter(Boolean);
   const stance=$("#stanceFilter")?.value||"all";
   const sort=$("#sortView")?.value||"rank";
   let arr=state.papers.map((p,i)=>({p,i}));
-  if(q) arr=arr.filter(({p})=>norm([
-    p.display_name||p.title||"",
-    p._abstract||"",
-    ...(p.authorships||[]).map(x=>x.author?.display_name||"")
-  ].join(" ")).includes(q));
+  if(terms.length) arr=arr.filter(({p})=>{
+    const hay=norm(keywordHaystack(p));
+    return terms.every(t=>hay.includes(t));
+  });
   if(stance!=="all") arr=arr.filter(({p})=>p._stance===stance);
   if(sort==="journal") arr.sort((a,b)=>{
     const ja=journalPrestige(a.p), jb=journalPrestige(b.p);
@@ -1630,8 +1671,8 @@ function renderPapers(){
     const oaPdf=p.best_oa_location?.pdf_url || p.primary_location?.pdf_url;
     el.innerHTML=`
       <div class="paper-main">
-        <div class="paper-top"><div><div class="paper-title">${escapeHtml(p.display_name||p.title||"Untitled")}</div><div class="paper-meta">${escapeHtml(paperMeta(p))}</div></div><span class="rank">#${i+1} · ${p._score.toFixed(1)}</span></div>
-        <div class="abstract">${escapeHtml(abstract)}</div>
+        <div class="paper-top"><div><div class="paper-title">${highlightKeywords(p.display_name||p.title||"Untitled")}</div><div class="paper-meta">${highlightKeywords(paperMeta(p))}</div></div><span class="rank">#${i+1} · ${p._score.toFixed(1)}</span></div>
+        <div class="abstract">${highlightKeywords(abstract)}</div>
         <div class="evidence-summary">
           <span class="metric-pill">${p._passages.length} passages</span>
           <span class="metric-pill">${p._fulltext ? "fulltext ready" : "metadata only"}</span>
@@ -1677,7 +1718,7 @@ function renderPapers(){
           <div>Ranking score: <b>${p._score.toFixed(2)}</b></div>
           <div>Abstract evidence cue: <b>${p._cues?.evidence||0}</b></div>
           <div>OpenAlex cited_by_count: <b>${p.cited_by_count||0}</b></div>
-          <div>Journal / venue: <b>${escapeHtml(journalPrestige(p).source)}</b></div>
+          <div>Journal / venue: <b>${highlightKeywords(journalPrestige(p).source)}</b></div>
           <div>Journal tier: <b>${journalPrestige(p).tier}</b> · prestige score <b>${journalPrestige(p).hasMetric?journalPrestige(p).score.toFixed(1):"n/a"}</b></div>
           <div>Venue h-index: <b>${journalPrestige(p).h||"n/a"}</b> · 2yr mean citedness: <b>${journalPrestige(p).mean||"n/a"}</b></div>
           <div>OA PDF: <b>${oaPdf?"available":"not listed"}</b></div>
@@ -1694,7 +1735,7 @@ function renderPapers(){
               <span class="context-pill">scope ${(x.evidenceScope||0).toFixed(2)}</span>
               ${x.citationGroup?`<span class="context-pill">${escapeHtml(x.citationGroup)}</span>`:""}
             </div>
-            <q>${escapeHtml(x.text)}</q>
+            <q>${highlightKeywords(x.text)}</q>
             ${!x.exclusiveCitation&&x.citationGroupSize>1?`<div class="conflict-note">此句同時引用 ${x.citationGroupSize} 篇文獻，因此 stance confidence 已自動降低；請人工確認證據是否真的針對目標論文。</div>`:""}
             <div class="passage-foot"><span>${escapeHtml(x.reason)}</span><span>stance ${x.confidence.toFixed(2)} · binding ${(x.bindingConfidence||0).toFixed(2)}</span></div>
           </div>`}).join("")}
