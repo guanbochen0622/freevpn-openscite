@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v21 — Citation Evidence Explorer</title>
+<title>OpenScite Web v22 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -676,6 +676,10 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
   box-shadow:0 3px 12px rgba(0,0,0,.22);
 }
 
+
+/* v22 — journal quartile badge emphasis */
+.stance.supporting[title*="OpenAlex-based estimate"]{font-weight:900}
+
 </style>
 </head>
 <body>
@@ -776,6 +780,10 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
       <a href="https://openalex.org/settings/api" target="_blank" rel="noreferrer">取得 OpenAlex API key ↗</a>
     </div>
 
+    <div class="scholar-key-row">
+      <span>期刊分區顯示為 <b>推估 Q1–Q4</b>，依 OpenAlex 的 h-index、2-year mean citedness 等指標估算；不是官方 JCR/SJR 分區。</span>
+    </div>
+
     <div id="scholarStatus" class="scholar-status">
       <span>輸入關鍵字後開始搜尋。</span><span>尚無結果</span>
     </div>
@@ -855,7 +863,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
           <option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option>
         </select>
         <select id="sortView" class="control filter-select">
-          <option value="rank">依目前排名</option><option value="keyword">依關鍵字重疊度</option><option value="journal">期刊層級：高 → 低</option><option value="citations">依引用次數</option><option value="year">依年份</option><option value="evidence">依證據數</option>
+          <option value="rank">依目前排名</option><option value="keyword">依關鍵字重疊度</option><option value="journal">期刊分區：Q1 → Q4</option><option value="citations">依引用次數</option><option value="year">依年份</option><option value="evidence">依證據數</option>
         </select>
         <div class="view-toggle"><button id="viewComfort" class="active" title="舒適模式">▤</button><button id="viewCompact" title="緊湊模式">☷</button></div>
         <div class="keyword-hint">像 Google Scholar：會把你輸入內容拆成<b>每一個詞</b>；結果中只要出現該詞就以 <b>紅色</b> 標示。連 Fiber-to-Silicon、SiN–Si 也會拆詞比對。</div>
@@ -989,7 +997,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v21 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v22 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
@@ -1166,23 +1174,42 @@ function journalPrestige(p){
   const i10=Number(stats.i10_index || 0);
   const hasMetric=(h>0 || mean>0 || i10>0);
 
-  // Transparent heuristic: venue-level signals only.
-  // h-index dominates stability; 2-year mean citedness adds recent impact.
+  // OpenAlex-based estimated journal prestige score.
+  // Important: this is NOT an official JCR/SJR quartile.
   let score=0;
   if(hasMetric){
     score = Math.log1p(h)*18 + Math.log1p(mean)*28 + Math.log1p(i10)*5;
   }
 
-  let tier="資料不足", cls="unknown";
+  let quartile="未取得分區";
+  let quartileRank=5;
+  let cls="unknown";
+
   if(hasMetric){
-    if(score>=125){tier="頂尖";cls="supporting"}
-    else if(score>=95){tier="高影響";cls="mentioning"}
-    else if(score>=65){tier="中等";cls="unknown"}
-    else {tier="較低";cls="contrasting"}
+    if(score>=125){
+      quartile="推估 Q1";
+      quartileRank=1;
+      cls="supporting";
+    }else if(score>=95){
+      quartile="推估 Q2";
+      quartileRank=2;
+      cls="mentioning";
+    }else if(score>=65){
+      quartile="推估 Q3";
+      quartileRank=3;
+      cls="unknown";
+    }else{
+      quartile="推估 Q4";
+      quartileRank=4;
+      cls="contrasting";
+    }
   }
+
   return {
     score,
-    tier,
+    quartile,
+    quartileRank,
+    tier:quartile,
     cls,
     source: src.display_name || src.host_organization_name || "Unknown venue",
     h,
@@ -1193,7 +1220,10 @@ function journalPrestige(p){
 }
 function journalTierBadge(p){
   const j=journalPrestige(p);
-  return `<span class="stance ${j.cls}" title="Venue: ${escapeHtml(j.source)} · h-index ${j.h||"n/a"} · 2yr mean citedness ${j.mean||"n/a"}">期刊：${j.tier}</span>`;
+  const tip=j.hasMetric
+    ? `OpenAlex-based estimate · Venue: ${escapeHtml(j.source)} · h-index ${j.h||"n/a"} · 2yr mean citedness ${j.mean||"n/a"}`
+    : `No sufficient journal-level metrics available from OpenAlex`;
+  return `<span class="stance ${j.cls}" title="${tip}">期刊：${j.quartile}</span>`;
 }
 
 function rankWorks(list,mode){
@@ -1928,7 +1958,7 @@ function currentVisiblePapers(){
   if(sort==="keyword") arr.sort((a,b)=>b.km.count-a.km.count || (b.p.cited_by_count||0)-(a.p.cited_by_count||0));
   if(sort==="journal") arr.sort((a,b)=>{
     const ja=journalPrestige(a.p), jb=journalPrestige(b.p);
-    if(ja.hasMetric!==jb.hasMetric) return jb.hasMetric-ja.hasMetric;
+    if(ja.quartileRank!==jb.quartileRank) return ja.quartileRank-jb.quartileRank;
     return jb.score-ja.score || (b.p.cited_by_count||0)-(a.p.cited_by_count||0);
   });
   if(sort==="citations") arr.sort((a,b)=>(b.p.cited_by_count||0)-(a.p.cited_by_count||0));
@@ -2028,7 +2058,7 @@ function renderPapers(){
           <div>Abstract evidence cue: <b>${p._cues?.evidence||0}</b></div>
           <div>OpenAlex cited_by_count: <b>${p.cited_by_count||0}</b></div>
           <div>Journal / venue: <b>${highlightKeywords(journalPrestige(p).source)}</b></div>
-          <div>Journal tier: <b>${journalPrestige(p).tier}</b> · prestige score <b>${journalPrestige(p).hasMetric?journalPrestige(p).score.toFixed(1):"n/a"}</b></div>
+          <div>Journal quartile: <b>${journalPrestige(p).quartile}</b> · estimated prestige score <b>${journalPrestige(p).hasMetric?journalPrestige(p).score.toFixed(1):"n/a"}</b></div>
           <div>Venue h-index: <b>${journalPrestige(p).h||"n/a"}</b> · 2yr mean citedness: <b>${journalPrestige(p).mean||"n/a"}</b></div>
           <div>OA PDF: <b>${oaPdf?"available":"not listed"}</b></div>
         </div>
@@ -2684,6 +2714,6 @@ bdrop.addEventListener("drop",e=>{
   if(fs.length)bulkAttach(fs);
 });
 </script>
-<div class="v19-badge">OpenScite v21</div>
+<div class="v19-badge">OpenScite v22</div>
 </body>
 </html>
