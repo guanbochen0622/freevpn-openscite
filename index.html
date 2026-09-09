@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v18 — Citation Evidence Explorer</title>
+<title>OpenScite Web v19 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -319,7 +319,7 @@ h1{color:#10231d!important}
 }
 .workspace{background:rgba(255,255,255,.96)!important}
 .target{border-color:var(--line)!important}
-.target-title{color:#163029!important}
+.target-title{color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;opacity:1!important}
 .tabs{
   background:#fbfcfd!important;border-color:var(--line)!important;padding:10px 12px!important
 }
@@ -355,7 +355,7 @@ h1{color:#10231d!important}
 .paper:hover{
   transform:translateY(-1px);box-shadow:0 10px 26px rgba(27,56,46,.07)!important;border-color:#c7d8d1!important
 }
-.paper-title{color:#163029!important;font-size:15.5px!important}
+.paper-title{color:#ffffff!important;-webkit-text-fill-color:#ffffff!important;font-size:15.5px!important;opacity:1!important}
 .rank{background:#f1f7f4!important;border-color:#d8e6df!important;color:#5e786d!important}
 .metric-pill{
   background:#f4f8f6!important;border-color:#dce7e2!important;color:#668078!important
@@ -618,6 +618,62 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 .target-title .keyword-hit,
 .candidate-title .keyword-hit{
   color:#ff4d4f !important;
+}
+
+
+/* =========================================================
+   v19 HARD FIX — title color cannot be overridden
+   ========================================================= */
+.workspace{
+  background:#07100e !important;
+}
+.paper,
+.scholar-item,
+.candidate{
+  background:#0a1713 !important;
+}
+.paper-main{
+  background:#0a1713 !important;
+}
+.target{
+  background:#0d1a16 !important;
+}
+.paper-title,
+.paper-title *,
+.scholar-title,
+.scholar-title *,
+.candidate-title,
+.candidate-title *,
+.target-title,
+.target-title *{
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  opacity:1 !important;
+  filter:none !important;
+  mix-blend-mode:normal !important;
+}
+
+/* Keyword hit always wins over the white title rule */
+.keyword-hit,
+.paper-title .keyword-hit,
+.scholar-title .keyword-hit,
+.candidate-title .keyword-hit,
+.target-title .keyword-hit{
+  color:#ff3b30 !important;
+  -webkit-text-fill-color:#ff3b30 !important;
+  background:rgba(255,59,48,.16) !important;
+  border:0 !important;
+  font-weight:900 !important;
+  opacity:1 !important;
+}
+
+
+.v19-badge{
+  position:fixed;right:10px;bottom:10px;z-index:9999;
+  padding:4px 7px;border-radius:7px;
+  background:#ffffff;color:#111827;
+  font:800 10px ui-monospace,monospace;
+  box-shadow:0 3px 12px rgba(0,0,0,.22);
 }
 
 </style>
@@ -933,7 +989,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v18 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v19 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
@@ -2209,7 +2265,7 @@ function renderScholar(){
     const oa=scholarOaPdf(w);
     const oaId=(w._searchProvider==="OpenAlex" && /^https:\/\/openalex\.org\/W/i.test(w.id||""))?openAlexId(w.id):"";
     return `<article class="scholar-item">
-      <div class="scholar-title">${highlightWithTerms(title,terms)}</div>
+      <div class="scholar-title" style="color:#fff!important;-webkit-text-fill-color:#fff!important;opacity:1!important">${highlightWithTerms(title,terms)}</div>
       <div class="scholar-meta">${highlightWithTerms(authors||"Unknown author",terms)} · ${year} · ${highlightWithTerms(venue,terms)}</div>
       ${abs?`<div class="scholar-abstract">${highlightWithTerms(abs,terms)}</div>`:""}
       <div class="scholar-badges">
@@ -2393,5 +2449,6 @@ bdrop.addEventListener("drop",e=>{
   if(fs.length)bulkAttach(fs);
 });
 </script>
+<div class="v19-badge">OpenScite v19</div>
 </body>
 </html>
