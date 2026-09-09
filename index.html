@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v17 — Citation Evidence Explorer</title>
+<title>OpenScite Web v18 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -603,6 +603,23 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
   box-shadow:none !important;
 }
 
+
+/* =========================================================
+   v18 — White titles, normal body text, red highlights
+   ========================================================= */
+.paper-title,
+.scholar-title,
+.target-title,
+.candidate-title{
+  color:#ffffff !important;
+}
+.paper-title .keyword-hit,
+.scholar-title .keyword-hit,
+.target-title .keyword-hit,
+.candidate-title .keyword-hit{
+  color:#ff4d4f !important;
+}
+
 </style>
 </head>
 <body>
@@ -916,7 +933,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v17 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v18 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
