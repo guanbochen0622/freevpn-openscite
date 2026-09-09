@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v19 — Citation Evidence Explorer</title>
+<title>OpenScite Web v20 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -754,7 +754,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
       <div class="scholar-filter"><label>結束年份</label><input id="scholarYearTo" class="control" inputmode="numeric" placeholder="例如 2026"></div>
       <div class="scholar-filter"><label>排序</label>
         <select id="scholarSort" class="control">
-          <option value="relevance">相關度</option>
+          <option value="relevance" selected>相關性：高 → 低</option>
           <option value="citations">被引用次數：高 → 低</option>
           <option value="newest">最新 → 最舊</option>
           <option value="oldest">最舊 → 最新</option>
@@ -989,7 +989,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v19 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v20 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
@@ -2240,6 +2240,79 @@ function scholarCitationText(w){
   const doi=scholarDoi(w);
   return `${authors} (${year}). ${title}. ${venue}.${doi?` https://doi.org/${doi}`:""}`;
 }
+
+function scholarRelevanceScore(w,q){
+  const terms=parseKeywordTerms(q);
+  if(!terms.length) return 0;
+
+  const title=String(w.display_name||w.title||"");
+  const abs=String(scholarAbstract(w)||"");
+  const authors=String(scholarAuthors(w)||"");
+  const venue=String(scholarVenue(w)||"");
+  const titleNorm=norm(title), absNorm=norm(abs), authorNorm=norm(authors), venueNorm=norm(venue);
+
+  let score=0;
+  let titleHits=0, abstractHits=0, metaHits=0;
+
+  for(const t of terms){
+    const nt=norm(t);
+    if(!nt) continue;
+
+    // Exact/whole-term matches: title dominates.
+    const titleRe=buildTermsRegex([t]);
+    if(titleRe && titleRe.test(title)){
+      titleHits++;
+      score += 18;
+    }
+    const absRe=buildTermsRegex([t]);
+    if(absRe && absRe.test(abs)){
+      abstractHits++;
+      score += 5;
+    }
+    const authorRe=buildTermsRegex([t]);
+    if(authorRe && authorRe.test(authors)){
+      metaHits++;
+      score += 1.5;
+    }
+    const venueRe=buildTermsRegex([t]);
+    if(venueRe && venueRe.test(venue)){
+      metaHits++;
+      score += 1.5;
+    }
+
+    // Soft substring fallback for technical compounds.
+    if(titleNorm.includes(nt)) score += 4;
+    else if(absNorm.includes(nt)) score += 1.2;
+  }
+
+  // Phrase bonus: preserve the user's multiword concepts where possible.
+  const chunks=String(q||"").trim().split(/(?:\s{2,}|[\n\r,;，；、]+)/u)
+    .map(s=>s.trim()).filter(s=>s.length>=3);
+  for(const c of chunks){
+    const nc=norm(c);
+    if(!nc) continue;
+    if(titleNorm.includes(nc)) score += 28;
+    else if(absNorm.includes(nc)) score += 8;
+  }
+
+  // Coverage matters more than raw paper popularity.
+  const coverage=(titleHits+abstractHits+metaHits)/Math.max(1,terms.length);
+  score += coverage*12;
+
+  // Very small citation tie-breaker only.
+  score += Math.min(3, Math.log10(1+scholarCitationCount(w)));
+
+  return score;
+}
+function rerankScholarByRelevance(results,q){
+  return [...(results||[])].sort((a,b)=>{
+    const sb=scholarRelevanceScore(b,q), sa=scholarRelevanceScore(a,q);
+    return sb-sa
+      || scholarCitationCount(b)-scholarCitationCount(a)
+      || scholarYear(b)-scholarYear(a);
+  });
+}
+
 function renderScholar(){
   const box=$("#scholarResults");
   const terms=parseKeywordTerms($("#scholarQuery").value);
@@ -2269,6 +2342,9 @@ function renderScholar(){
       <div class="scholar-meta">${highlightWithTerms(authors||"Unknown author",terms)} · ${year} · ${highlightWithTerms(venue,terms)}</div>
       ${abs?`<div class="scholar-abstract">${highlightWithTerms(abs,terms)}</div>`:""}
       <div class="scholar-badges">
+        ${$("#scholarSort").value==="relevance"
+          ? `<span class="scholar-badge">相關性 ${scholarRelevanceScore(w,$("#scholarQuery").value).toFixed(1)}</span>`
+          : ""}
         <span class="scholar-badge cited">被引用 ${cited}</span>
         ${scholarIsOa(w)?`<span class="scholar-badge oa">Open Access</span>`:""}
         <span class="scholar-badge">${escapeHtml(w.type||"work")}</span>
@@ -2301,12 +2377,16 @@ async function runScholarSearch(page=1){
       data=await scholarCrossref(q,page);
       data.fallbackReason=oaErr.message;
     }
-    scholarState.results=data.results;scholarState.total=data.total;scholarState.provider=data.provider;
+    const scholarSortMode=$("#scholarSort").value;
+    scholarState.results=(scholarSortMode==="relevance")
+      ? rerankScholarByRelevance(data.results,q)
+      : data.results;
+    scholarState.total=data.total;scholarState.provider=data.provider;
     renderScholar();
     const shown=data.results.length;
     $("#scholarStatus").innerHTML=
       `<span>搜尋：<b>${escapeHtml(q)}</b> · 顯示 ${shown} 篇${data.total?` · 約 ${Number(data.total).toLocaleString()} 筆結果`:""}</span>`+
-      `<span>來源：<b>${data.provider}</b>${data.fallbackReason?"（OpenAlex 暫不可用，已自動切換備援）":""}</span>`;
+      `<span>排序：<b>${$("#scholarSort").value==="relevance"?"相關性優先":"使用者指定"}</b> · 來源：<b>${data.provider}</b>${data.fallbackReason?"（OpenAlex 暫不可用，已自動切換備援）":""}</span>`;
   }catch(e){
     scholarState.results=[];scholarState.total=0;scholarState.provider="";
     renderScholar();
@@ -2449,6 +2529,6 @@ bdrop.addEventListener("drop",e=>{
   if(fs.length)bulkAttach(fs);
 });
 </script>
-<div class="v19-badge">OpenScite v19</div>
+<div class="v19-badge">OpenScite v20</div>
 </body>
 </html>
