@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="OpenScite Web v24.3 — Academic Search, Citation Evidence Explorer and visual PDF Reader.">
-<title>OpenScite Web v24.3 — Search · Evidence · Reader</title>
+<meta name="description" content="OpenScite Web v24.4 — Academic Search, Citation Evidence Explorer and deep academic figure analysis.">
+<title>OpenScite Web v24.4 — Search · Evidence · Reader</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -13,7 +13,7 @@
 <body>
 <nav class="topbar">
   <div class="shell nav-inner">
-    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v24.3</span></button>
+    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v24.4</span></button>
     <div class="nav-tabs" role="navigation">
       <button class="nav-tab active" data-view="search">學術搜尋</button>
       <button class="nav-tab" data-view="reader">PDF Reader</button>
@@ -33,7 +33,7 @@
       <span class="eyebrow">SEARCH · READ · VERIFY</span>
       <h1>找論文、讀論文，<br><span>再確認它到底支持什麼。</span></h1>
       <p>保留原本的 OpenAlex 學術搜尋、紅色關鍵字 Highlight（高亮）、期刊分區推估、引用排序與 citation stance（引用立場）分析，新增 Moonlight 類型的 PDF 閱讀器工作區。</p>
-      <div class="hero-chips"><span>PDF 本機解析</span><span>點圖片 AI 解釋</span><span>選字翻譯 / 解釋</span><span>Auto Highlight</span><span>筆記與 Library</span><span>Scholar Deep Search</span></div>
+      <div class="hero-chips"><span>PDF 本機解析</span><span>兩階段 Figure AI 解釋</span><span>選字翻譯 / 解釋</span><span>Auto Highlight</span><span>筆記與 Library</span><span>Scholar Deep Search</span></div>
     </div>
     <div class="hero-card">
       <div class="hero-flow"><b>1</b><span>Search：像 Google Scholar 一樣搜尋，所有輸入詞逐字紅色標示。</span></div>
@@ -103,8 +103,13 @@
         <div class="reader-tabs"><button class="reader-tab active" data-reader-tab="assistant">Assistant</button><button class="reader-tab" data-reader-tab="summary">Summary</button><button class="reader-tab" data-reader-tab="citations">Citation</button><button class="reader-tab" data-reader-tab="notes">Notes</button></div>
         <div class="reader-side-body">
           <div id="readerTab-assistant" class="reader-tabpane active">
-            <div class="assistant-intro"><b>Moonlight-style Text + Image Explanation</b><span>文字：放開滑鼠後出現 Explain / Highlight / Translate / Comment / Chat。圖片：滑到偵測到的 Figure / 圖片區會顯示 ✦ Explain image，點一下即擷取該圖並結合本頁與論文脈絡解釋。</span></div>
-            <div id="figureExplainBox" class="figure-explain-box hidden"><div class="figure-preview-wrap"><img id="figurePreview" alt="Selected PDF figure preview"></div><div class="figure-explain-meta"><span id="figureExplainLabel">Figure</span><button id="reanalyzeFigure" class="btn small">重新解釋</button></div><div id="figureExplainCaption" class="figure-caption"></div></div>
+            <div class="assistant-intro"><b>Deep Figure Reader · Two-stage verification</b><span>文字：放開滑鼠後出現 Explain / Highlight / Translate / Comment / Chat。圖片：點 ✦ Explain image 後先做 Visual Extraction（視覺事實抽取），再用 caption、正文引用與全文脈絡做 Paper-grounded Interpretation（論文脈絡解釋），降低看圖補腦。</span></div>
+            <div id="figureExplainBox" class="figure-explain-box hidden">
+              <div class="figure-preview-wrap"><img id="figurePreview" alt="Selected PDF figure preview"></div>
+              <div class="figure-explain-meta"><span id="figureExplainLabel">Figure</span><button id="reanalyzeFigure" class="btn small">高精度重分析</button></div>
+              <div id="figureAnalysisStatus" class="figure-analysis-status"><span class="figure-stage-dot"></span><span>等待分析</span></div>
+              <div id="figureExplainCaption" class="figure-caption"></div>
+            </div>
             <div id="selectionBox" class="selection-box hidden"><span>目前選取</span><blockquote id="selectedText"></blockquote><div class="mini-actions"><button id="translateBtn" class="btn small primary">翻譯</button><button id="explainBtn" class="btn small">解釋</button><button id="supportBtn" class="btn small">對我的研究</button></div></div>
             <div id="assistantOutput" class="assistant-output"><div class="placeholder">AI / 本機分析結果會顯示在這裡。</div></div>
             <div class="ask-row"><textarea id="askInput" class="control" rows="3" placeholder="針對這篇論文提問，例如：作者為什麼認為低濃度的擾動更大？"></textarea><button id="askBtn" class="btn primary full">Ask about this paper</button></div>
@@ -155,10 +160,11 @@
 
 <div id="aiModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-card">
-    <div class="modal-head"><div><h3>AI 設定</h3><p>可選。沒有 API key 時，翻譯 / 摘要 /重點標註仍有本機與免費服務 fallback（備援）。</p></div><button id="closeModal" class="icon-btn">×</button></div>
+    <div class="modal-head"><div><h3>AI 設定</h3><p>可選。Figure Explanation（圖表解釋）使用獨立模型，預設 gpt-5.6-terra，並採兩階段視覺抽取 + 論文脈絡驗證。沒有 API key 時其他本機功能仍可使用。</p></div><button id="closeModal" class="icon-btn">×</button></div>
     <div class="modal-body">
       <label class="stack-label">OpenAI API key<input id="aiKey" class="control" type="password" autocomplete="off" placeholder="sk-..."></label>
-      <label class="stack-label">Model（模型）<input id="aiModel" class="control" value="gpt-5-mini"></label>
+      <label class="stack-label">Text Model（文字模型）<input id="aiModel" class="control" value="gpt-5-mini"></label>
+      <label class="stack-label">Figure Model（圖表解釋模型，建議）<input id="figureModel" class="control" value="gpt-5.6-terra" placeholder="gpt-5.6-terra"></label>
       <label class="stack-label">Responses API endpoint<input id="aiEndpoint" class="control" value="https://api.openai.com/v1/responses"></label>
       <label class="switch-row"><input id="rememberAi" type="checkbox"><span>只在這台瀏覽器儲存 API key（不建議公用電腦勾選）</span></label>
       <div class="modal-note">ChatGPT Plus 與 OpenAI API 計費是分開的；只有你主動按 AI 功能時才會呼叫 API。</div>

@@ -10,6 +10,7 @@ const STORE = {
   oaKey: 'openscite_oa_key',
   aiKey: 'openscite_ai_key',
   aiModel: 'openscite_ai_model',
+  figureModel: 'openscite_figure_model',
   aiEndpoint: 'openscite_ai_endpoint',
   library: 'openscite_library_v24',
   notes: 'openscite_notes_v24',
@@ -380,43 +381,130 @@ function installFigureFallbackClick(wrap,pageNo){
     explainPdfFigure(pageNo,{left,top,right:left+w,bottom:top+h,width:w,height:h,source:'smart-crop'},-1);
   });
 }
-function nearbyFigureCaption(pageNo,region){
-  const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`), layer=page?.querySelector('.textLayer'); if(!layer)return'';
-  const lr=layer.getBoundingClientRect(), candidates=[];
-  for(const span of $$('span',layer)){
-    const text=(span.textContent||'').trim(); if(!text)continue; const r=span.getBoundingClientRect(),y=(r.top+r.bottom)/2-lr.top;
-    const dist=Math.min(Math.abs(y-region.bottom),Math.abs(y-region.top));
-    if(dist<150*state.reader.scale && (/^(fig(?:ure)?\.?\s*\d+|table\s*\d+)/i.test(text)||dist<55*state.reader.scale))candidates.push({text,dist,y});
+function textLayerItems(pageNo){
+  const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`),layer=page?.querySelector('.textLayer');
+  if(!layer)return {layer:null,items:[]};
+  const lr=layer.getBoundingClientRect();
+  const items=$$('span',layer).map((span,i)=>{
+    const text=(span.textContent||'').replace(/\s+/g,' ').trim(),r=span.getBoundingClientRect();
+    return {i,text,left:r.left-lr.left,right:r.right-lr.left,top:r.top-lr.top,bottom:r.bottom-lr.top,width:r.width,height:r.height};
+  }).filter(x=>x.text);
+  return {layer,items};
+}
+function groupTextLines(items){
+  const sorted=[...items].sort((a,b)=>a.top-b.top||a.left-b.left),lines=[];
+  for(const it of sorted){
+    const cy=(it.top+it.bottom)/2;
+    let line=lines.find(l=>Math.abs(l.cy-cy)<=Math.max(3,Math.min(10,(l.h+it.height)*.28)));
+    if(!line){line={items:[],cy,h:it.height,top:it.top,bottom:it.bottom};lines.push(line);}
+    line.items.push(it);line.cy=(line.cy*(line.items.length-1)+cy)/line.items.length;line.h=Math.max(line.h,it.height);line.top=Math.min(line.top,it.top);line.bottom=Math.max(line.bottom,it.bottom);
   }
-  return candidates.sort((a,b)=>a.dist-b.dist).slice(0,12).map(x=>x.text).join(' ').replace(/\s+/g,' ').slice(0,1500);
+  return lines.sort((a,b)=>a.top-b.top).map(l=>{l.items.sort((a,b)=>a.left-b.left);l.text=l.items.map(x=>x.text).join(' ').replace(/\s+/g,' ').trim();l.left=Math.min(...l.items.map(x=>x.left));l.right=Math.max(...l.items.map(x=>x.right));return l;});
 }
-function cropFigureDataUrl(pageNo,region){
+function findFigureCaptionBlock(pageNo,region){
+  const {items}=textLayerItems(pageNo); if(!items.length)return {text:'',label:'',bounds:null};
+  const lines=groupTextLines(items),markers=[];
+  lines.forEach((l,i)=>{const m=l.text.match(/^(fig(?:ure)?\.?\s*([A-Za-z]?\d+|\d+[A-Za-z]?)|table\s*([A-Za-z]?\d+|\d+[A-Za-z]?))\b/i);if(m){const d=Math.min(Math.abs(l.top-region.bottom),Math.abs(l.bottom-region.top));markers.push({i,line:l,m,d});}});
+  if(!markers.length)return {text:'',label:'',bounds:null};
+  markers.sort((a,b)=>a.d-b.d); const hit=markers[0];
+  if(hit.d>Math.max(280*state.reader.scale,region.height*.95))return {text:'',label:'',bounds:null};
+  const selected=[hit.line]; let prevBottom=hit.line.bottom;
+  for(let j=hit.i+1;j<Math.min(lines.length,hit.i+7);j++){
+    const l=lines[j],gap=l.top-prevBottom;
+    if(/^(fig(?:ure)?\.?\s*\d+|table\s*\d+|references|acknowledg|introduction|conclusion)\b/i.test(l.text))break;
+    if(gap>Math.max(18*state.reader.scale,hit.line.h*2.4))break;
+    if(l.text.length<2)continue;
+    selected.push(l);prevBottom=l.bottom;
+    if(selected.map(x=>x.text).join(' ').length>2200)break;
+  }
+  const text=selected.map(x=>x.text).join(' ').replace(/\s+/g,' ').trim().slice(0,2400);
+  const bounds={left:Math.min(...selected.map(x=>x.left)),right:Math.max(...selected.map(x=>x.right)),top:Math.min(...selected.map(x=>x.top)),bottom:Math.max(...selected.map(x=>x.bottom))};
+  bounds.width=bounds.right-bounds.left;bounds.height=bounds.bottom-bounds.top;
+  return {text,label:hit.m[1].replace(/\s+/g,' ').trim(),bounds};
+}
+function nearbyFigureCaption(pageNo,region){ return findFigureCaptionBlock(pageNo,region).text; }
+function textInsideFigureRegion(pageNo,region,pad=16){
+  const {items}=textLayerItems(pageNo); if(!items.length)return '';
+  const x1=region.left-pad,y1=region.top-pad,x2=region.right+pad,y2=region.bottom+pad;
+  return items.filter(x=>x.right>=x1&&x.left<=x2&&x.bottom>=y1&&x.top<=y2).sort((a,b)=>a.top-b.top||a.left-b.left).map(x=>x.text).join(' ').replace(/\s+/g,' ').slice(0,3200);
+}
+function figureContextRegion(pageNo,region,captionBlock){
+  const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`),canvas=page?.querySelector('canvas');
+  const w=parseFloat(canvas?.style.width)||page?.clientWidth||region.right,h=parseFloat(canvas?.style.height)||page?.clientHeight||region.bottom;
+  const mx=Math.max(22,w*.055),my=Math.max(26,h*.035);
+  let r={left:Math.max(0,region.left-mx),top:Math.max(0,region.top-my),right:Math.min(w,region.right+mx),bottom:Math.min(h,region.bottom+my)};
+  if(captionBlock?.bounds){r.left=Math.max(0,Math.min(r.left,captionBlock.bounds.left-mx*.35));r.right=Math.min(w,Math.max(r.right,captionBlock.bounds.right+mx*.35));r.top=Math.max(0,Math.min(r.top,captionBlock.bounds.top-my*.45));r.bottom=Math.min(h,Math.max(r.bottom,captionBlock.bounds.bottom+my*.45));}
+  r.width=r.right-r.left;r.height=r.bottom-r.top;return r;
+}
+function cropPdfRegionDataUrl(pageNo,region,{pad=18,maxDim=2048,type='image/png'}={}){
   const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`),canvas=page?.querySelector('canvas'); if(!canvas)throw new Error('找不到 PDF page canvas');
-  const cssW=parseFloat(canvas.style.width)||page.clientWidth,cssH=parseFloat(canvas.style.height)||page.clientHeight,sx=canvas.width/cssW,sy=canvas.height/cssH,pad=10;
+  const cssW=parseFloat(canvas.style.width)||page.clientWidth,cssH=parseFloat(canvas.style.height)||page.clientHeight,sx=canvas.width/cssW,sy=canvas.height/cssH;
   const x=Math.max(0,region.left-pad),y=Math.max(0,region.top-pad),right=Math.min(cssW,region.right+pad),bottom=Math.min(cssH,region.bottom+pad);
-  const sw=Math.max(1,(right-x)*sx),sh=Math.max(1,(bottom-y)*sy),maxDim=1600,down=Math.min(1,maxDim/Math.max(sw,sh));
+  const sw=Math.max(1,(right-x)*sx),sh=Math.max(1,(bottom-y)*sy),down=Math.min(1,maxDim/Math.max(sw,sh),Math.sqrt(3500000/(sw*sh)));
   const out=document.createElement('canvas'); out.width=Math.max(1,Math.round(sw*down));out.height=Math.max(1,Math.round(sh*down));
-  const ctx=out.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,out.width,out.height);ctx.drawImage(canvas,x*sx,y*sy,sw,sh,0,0,out.width,out.height);
-  return out.toDataURL('image/jpeg',.9);
+  const ctx=out.getContext('2d',{alpha:false});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.fillStyle='#fff';ctx.fillRect(0,0,out.width,out.height);ctx.drawImage(canvas,x*sx,y*sy,sw,sh,0,0,out.width,out.height);
+  return type==='image/jpeg'?out.toDataURL('image/jpeg',.94):out.toDataURL('image/png');
 }
-function activateAssistantTab(){
-  $$('.reader-tab').forEach(b=>b.classList.toggle('active',b.dataset.readerTab==='assistant'));
-  $$('.reader-tabpane').forEach(p=>p.classList.toggle('active',p.id==='readerTab-assistant'));
+function cropFigureBundle(pageNo,region){
+  const captionBlock=findFigureCaptionBlock(pageNo,region),contextRegion=figureContextRegion(pageNo,region,captionBlock);
+  return {core:cropPdfRegionDataUrl(pageNo,region,{pad:24,maxDim:2048}),context:cropPdfRegionDataUrl(pageNo,contextRegion,{pad:8,maxDim:2048}),captionBlock,contextRegion,insideText:textInsideFigureRegion(pageNo,contextRegion,10)};
+}
+function figureReferenceVariants(label=''){
+  const m=String(label).match(/(?:fig(?:ure)?\.?|table)\s*([A-Za-z]?\d+|\d+[A-Za-z]?)/i); if(!m)return [];
+  const n=m[1];return [`Fig. ${n}`,`Fig ${n}`,`Figure ${n}`,`figure ${n}`,`Table ${n}`,`table ${n}`];
+}
+function figureDiscussionContext(pageNo,label=''){
+  const variants=figureReferenceVariants(label).map(x=>x.toLowerCase()),pages=[];
+  for(let p=Math.max(1,pageNo-1);p<=Math.min(state.reader.pageTexts.length,pageNo+1);p++){const txt=state.reader.pageTexts[p-1]||'';if(txt)pages.push(`[Page ${p}] ${txt}`);}
+  const all=pages.join(' ').replace(/\s+/g,' '),sent=all.split(/(?<=[.!?])\s+/),hits=[];
+  for(let i=0;i<sent.length;i++){
+    const low=sent[i].toLowerCase();if(variants.length&&variants.some(v=>low.includes(v))){hits.push([sent[i-1],sent[i],sent[i+1]].filter(Boolean).join(' '));}
+  }
+  const nearby=pages.join('\n').slice(0,9000);
+  return {mentions:[...new Set(hits)].join('\n').slice(0,6000),nearby};
+}
+function corePaperContext(){
+  const t=state.reader.fullText||''; if(!t)return '';
+  const abs=sectionBetween(t,['abstract'],['introduction','keywords'],3500),concl=sectionBetween(t,['conclusion','conclusions'],['acknowledg','references'],4200);
+  return `ABSTRACT:\n${abs||'未辨識'}\n\nCONCLUSION:\n${concl||'未辨識'}`;
+}
+function parseJsonLoose(text){
+  if(!text)return null;try{return JSON.parse(text);}catch{}
+  const m=String(text).match(/\{[\s\S]*\}/);if(m)try{return JSON.parse(m[0]);}catch{}return null;
+}
+function figureExtractionSchema(){return {type:'object',additionalProperties:false,properties:{figure_type:{type:'string'},figure_number:{type:'string'},overall_purpose:{type:'string'},panels:{type:'array',items:{type:'object',additionalProperties:false,properties:{label:{type:'string'},description:{type:'string'},x_axis:{type:'string'},y_axis:{type:'string'},legend:{type:'array',items:{type:'string'}},visible_values:{type:'array',items:{type:'string'}},trend:{type:'string'},confidence:{type:'string',enum:['high','medium','low']}},required:['label','description','x_axis','y_axis','legend','visible_values','trend','confidence']}},observations:{type:'array',items:{type:'object',additionalProperties:false,properties:{claim:{type:'string'},visual_evidence:{type:'string'},confidence:{type:'string',enum:['high','medium','low']}},required:['claim','visual_evidence','confidence']}},unreadable_or_ambiguous:{type:'array',items:{type:'string'}},warnings:{type:'array',items:{type:'string'}}},required:['figure_type','figure_number','overall_purpose','panels','observations','unreadable_or_ambiguous','warnings']};}
+function summarizeExtractionForPrompt(extraction){return typeof extraction==='string'?extraction:JSON.stringify(extraction,null,2);}
+function setFigureStage(text,mode='working'){
+  const el=$('figureAnalysisStatus');if(!el)return;el.dataset.mode=mode;el.innerHTML=`<span class="figure-stage-dot"></span><span>${esc(text)}</span>`;
 }
 async function explainPdfFigure(pageNo,region,index=-1){
+  const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`);page?.classList.add('image-explain-busy');
   try{
-    clearNativePdfSelection(); hideSelectionUi(false); const image=cropFigureDataUrl(pageNo,region),caption=nearbyFigureCaption(pageNo,region);
-    state.reader.activeFigure={pageNo,region,index,image,caption}; activateAssistantTab();
-    $('figurePreview').src=image;$('figureExplainLabel').textContent=`Page ${pageNo} · ${region.source||'visual'}`;$('figureExplainCaption').textContent=caption||'未自動辨識到 caption；AI 仍會依圖片與本頁脈絡分析。';$('figureExplainBox').classList.remove('hidden');
-    setAssistant('Image Explanation（圖片解釋）','正在分析圖片、圖表元素與論文脈絡…');
-    const pageContext=(state.reader.pageTexts[pageNo-1]||'').slice(0,6500),paper=state.reader.meta?.title||state.reader.fileName||'current paper';
-    const prompt=`論文：${paper}\n頁碼：${pageNo}\n附近 caption：${caption||'未辨識'}\n本頁文字脈絡：${pageContext}\n\n請精準解釋圖片本身，不要猜看不清楚的數值。`;
-    const out=await askAIWithImage('You are an academic figure explainer. Explain the supplied figure/chart/table in Traditional Chinese and use the paper context to interpret it. Structure: 1) 圖在做什麼 2) 圖例/座標/各 panel 3) 主要趨勢與結果 4) 作者想用它證明什麼 5) 可引用的結論 6) 不能從圖中證明什麼. Keep English technical terms followed by Traditional Chinese meaning in parentheses). Never invent unreadable labels or numerical values.',prompt,image);
-    setAssistant('Image Explanation（圖片解釋）',out);
+    clearNativePdfSelection();hideSelectionUi(false);const bundle=cropFigureBundle(pageNo,region),caption=bundle.captionBlock.text,label=bundle.captionBlock.label;
+    state.reader.activeFigure={pageNo,region,index,image:bundle.core,caption,label};activateAssistantTab();
+    $('figurePreview').src=bundle.context;$('figureExplainLabel').textContent=`Page ${pageNo} · ${label||region.source||'visual'}`;$('figureExplainCaption').textContent=caption||'未自動辨識到完整 caption；會改用圖內文字與前後頁正文交叉驗證。';$('figureExplainBox').classList.remove('hidden');
+    setAssistant('Image Explanation（高精度圖片解釋）','Stage 1/2：正在抽取圖中的 panel、座標、圖例、趨勢與可讀數值…');setFigureStage('Stage 1/2 · Visual Extraction（視覺事實抽取）','working');
+
+    const discussion=figureDiscussionContext(pageNo,label),paper=state.reader.meta?.title||state.reader.fileName||'current paper';
+    const extractionPrompt=`論文：${paper}\n頁碼：${pageNo}\nFigure label：${label||'未辨識'}\n完整 caption：${caption||'未辨識'}\nPDF 文字層在圖區附近辨識到的文字：${bundle.insideText||'無'}\n\n你現在只做視覺事實抽取，不解釋機制、不替作者補結論。兩張圖片依序是：(1) 圖本體高解析裁切；(2) 含座標、圖例與 caption 的較寬裁切。看不清楚就明確列入 unreadable_or_ambiguous。`;
+    let extractionText;
+    try{
+      extractionText=await askAIWithImages('You are a meticulous scientific figure transcription and visual-evidence extraction engine. Separate what is visibly readable from what would require interpretation. Do not infer mechanisms. Do not invent numbers, labels, colors, symbols, error bars, significance marks, or panel identities. Return the requested JSON only.',extractionPrompt,[bundle.core,bundle.context],{model:figureModel(),reasoning:'medium',schema:figureExtractionSchema(),schemaName:'scientific_figure_extraction',verbosity:'low'});
+    }catch(e){
+      if(e.message==='NO_AI_KEY')throw e;
+      console.warn('structured figure extraction fallback',e);
+      extractionText=await askAIWithImages('You are a meticulous scientific figure transcription engine. Output valid JSON only. Extract panels, axes, legends, visible values, trends, observations with confidence, and unreadable items. Never invent anything unreadable.',extractionPrompt,[bundle.core,bundle.context],{model:figureModel(),reasoning:'medium',verbosity:'low'});
+    }
+    const extraction=parseJsonLoose(extractionText)||extractionText;
+    setFigureStage('Stage 2/2 · Paper-grounded Interpretation（論文脈絡驗證）','working');setAssistant('Image Explanation（高精度圖片解釋）','Stage 2/2：正在把視覺事實與 caption、正文引用、摘要與結論逐項對照…');
+
+    const interpretationPrompt=`PAPER TITLE:\n${paper}\n\nFIGURE:\nPage ${pageNo}; ${label||'label 未辨識'}\n\nFULL CAPTION:\n${caption||'未辨識'}\n\nSTAGE-1 VISUAL EXTRACTION (treat high-confidence visual observations as visual evidence; low-confidence items must remain uncertain):\n${summarizeExtractionForPrompt(extraction)}\n\nBODY SENTENCES THAT EXPLICITLY REFER TO THIS FIGURE:\n${discussion.mentions||'未找到明確 Figure 文字引用'}\n\nNEARBY PAGE CONTEXT:\n${discussion.nearby}\n\nPAPER-LEVEL CONTEXT:\n${corePaperContext()}\n\n請完成最終解釋。每個重要結論都要分清楚來源是【圖中直接看見】、【caption/正文作者明說】或【合理推論】。若三者衝突，以正文/caption 的明確陳述優先，但要指出衝突。不要把相關性寫成因果。不要估讀看不清楚的數字。`;
+    const out=await askAIWithImages(`You are a senior scientific-paper figure reviewer. Answer in Traditional Chinese. English technical terms must be followed by Traditional Chinese meaning in parentheses) when first introduced. Your job is not to merely describe the picture: reconstruct how to read it and how it functions as evidence in the paper.\n\nRequired structure:\n【一句話結論】\n【這張圖怎麼讀】— identify figure type, axes, encodings, groups and panels.\n【各 Panel 逐一解讀】— panel by panel; if no panels, say so.\n【最關鍵的 3–6 個證據】— each item must include evidence source tag: [圖中直接看見] / [作者正文] / [合理推論], plus confidence 高/中/低.\n【數值與比較】— include only values explicitly readable or present in caption/body; never estimate unreadable values.\n【作者用這張圖證明什麼】— grounded in caption/body.\n【它和整篇論文的關係】— connect to hypothesis/method/result/conclusion.\n【可以引用的結論】— conservative wording suitable for academic writing.\n【不能從這張圖證明／仍不確定】— explicitly list limitations and ambiguous labels.\n\nRules: Never fabricate labels or values. Never say a trend exists if Stage-1 confidence is low unless body text explicitly confirms it. Distinguish observation from interpretation and mechanism. If the crop appears incomplete, state that limitation.`,interpretationPrompt,[bundle.core,bundle.context],{model:figureModel(),reasoning:'high',verbosity:'medium'});
+    setAssistant('Image Explanation（高精度圖片解釋）',out);setFigureStage(`完成 · ${figureModel()} · 兩階段交叉驗證`,'done');
   }catch(e){
-    activateAssistantTab(); const msg=e.message==='NO_AI_KEY'?'圖片已精準截取，但 Image Explanation 需要 AI Vision API。請按右上「AI 設定」加入 API key；同一個 Responses API 可傳圖片輸入。':`圖片分析失敗：${e.message}`;
-    setAssistant('Image Explanation（圖片解釋）',msg);
-  }
+    activateAssistantTab();const msg=e.message==='NO_AI_KEY'?'圖片已完成高解析裁切與 caption 擷取，但兩階段 Figure Explanation 需要 AI Vision API。請按右上「AI 設定」加入 API key。建議 Figure Model 使用 gpt-5.6-terra 或更高階模型。':`圖片分析失敗：${e.message}`;
+    setAssistant('Image Explanation（圖片解釋）',msg);setFigureStage('分析失敗','error');
+  }finally{page?.classList.remove('image-explain-busy');}
 }
 
 function manualTextLayer(tc,container,viewport){
@@ -649,21 +737,31 @@ function startSelectionChat(){
 }
 
 function aiSettings(){
-  const remember=!!localStorage.getItem(STORE.aiKey); return {key:localStorage.getItem(STORE.aiKey)||sessionStorage.getItem(STORE.aiKey)||'',model:localStorage.getItem(STORE.aiModel)||'gpt-5-mini',endpoint:localStorage.getItem(STORE.aiEndpoint)||'https://api.openai.com/v1/responses',remember};
+  const remember=!!localStorage.getItem(STORE.aiKey); return {key:localStorage.getItem(STORE.aiKey)||sessionStorage.getItem(STORE.aiKey)||'',model:localStorage.getItem(STORE.aiModel)||'gpt-5-mini',figureModel:localStorage.getItem(STORE.figureModel)||'gpt-5.6-terra',endpoint:localStorage.getItem(STORE.aiEndpoint)||'https://api.openai.com/v1/responses',remember};
+}
+function figureModel(){ return aiSettings().figureModel||'gpt-5.6-terra'; }
+function responseText(d){
+  if(d?.output_text)return d.output_text;
+  for(const o of d?.output||[])for(const c of o.content||[])if(c.type==='output_text'&&c.text)return c.text;
+  return d?JSON.stringify(d,null,2):'';
+}
+async function responseRequest(body){
+  const s=aiSettings();if(!s.key)throw new Error('NO_AI_KEY');
+  const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.key}`},body:JSON.stringify({...body,store:false})});
+  const d=await res.json();if(!res.ok)throw new Error(d.error?.message||`AI API ${res.status}`);return responseText(d);
 }
 async function askAI(system,user){
-  const s=aiSettings(); if(!s.key) throw new Error('NO_AI_KEY');
-  const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.key}`},body:JSON.stringify({model:s.model,input:[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:user}]}]})});
-  const d=await res.json(); if(!res.ok) throw new Error(d.error?.message||`AI API ${res.status}`);
-  if(d.output_text) return d.output_text; for(const o of d.output||[]) for(const c of o.content||[]) if(c.type==='output_text'&&c.text) return c.text; return JSON.stringify(d,null,2);
+  const s=aiSettings();return responseRequest({model:s.model,input:[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:user}]}]});
 }
-async function askAIWithImage(system,user,imageDataUrl){
-  const s=aiSettings(); if(!s.key) throw new Error('NO_AI_KEY');
-  const input=[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content:[{type:'input_text',text:user},{type:'input_image',image_url:imageDataUrl,detail:'high'}]}];
-  const res=await fetch(s.endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.key}`},body:JSON.stringify({model:s.model,input})});
-  const d=await res.json(); if(!res.ok) throw new Error(d.error?.message||`AI Vision API ${res.status}`);
-  if(d.output_text) return d.output_text; for(const o of d.output||[]) for(const c of o.content||[]) if(c.type==='output_text'&&c.text) return c.text; return JSON.stringify(d,null,2);
+async function askAIWithImages(system,user,imageDataUrls,{model=null,reasoning='medium',schema=null,schemaName='structured_result',verbosity='medium'}={}){
+  const s=aiSettings(),imgs=(Array.isArray(imageDataUrls)?imageDataUrls:[imageDataUrls]).filter(Boolean);
+  const content=[{type:'input_text',text:user},...imgs.map(image_url=>({type:'input_image',image_url,detail:'high'}))];
+  const body={model:model||s.figureModel||s.model,input:[{role:'system',content:[{type:'input_text',text:system}]},{role:'user',content}],reasoning:{effort:reasoning},text:{verbosity}};
+  if(schema)body.text.format={type:'json_schema',name:schemaName,strict:true,schema};
+  return responseRequest(body);
 }
+async function askAIWithImage(system,user,imageDataUrl){return askAIWithImages(system,user,[imageDataUrl],{model:figureModel(),reasoning:'medium'});}
+
 async function freeTranslate(text){
   const clipped=text.slice(0,480); const url=new URL('https://api.mymemory.translated.net/get'); url.searchParams.set('q',clipped); url.searchParams.set('langpair','en|zh-TW'); const res=await fetch(url); if(!res.ok) throw new Error('Free translation unavailable'); const d=await res.json(); return d.responseData?.translatedText||'';
 }
@@ -728,8 +826,8 @@ $('exportMd').addEventListener('click',()=>{const t=state.evidence.target;let md
 $('reanalyzeFigure').addEventListener('click',()=>{ const f=state.reader.activeFigure; if(f) explainPdfFigure(f.pageNo,f.region,f.index); });
 
 // ---------------- AI modal ----------------
-$('settingsBtn').addEventListener('click',()=>{const s=aiSettings();$('aiKey').value=s.key;$('aiModel').value=s.model;$('aiEndpoint').value=s.endpoint;$('rememberAi').checked=s.remember;$('aiModal').classList.remove('hidden')}); $('closeModal').addEventListener('click',()=>$('aiModal').classList.add('hidden')); $('aiModal').addEventListener('click',e=>{if(e.target===$('aiModal'))$('aiModal').classList.add('hidden')});
-$('saveAi').addEventListener('click',()=>{const key=$('aiKey').value.trim(),remember=$('rememberAi').checked;if(remember){localStorage.setItem(STORE.aiKey,key);sessionStorage.removeItem(STORE.aiKey)}else{sessionStorage.setItem(STORE.aiKey,key);localStorage.removeItem(STORE.aiKey)}localStorage.setItem(STORE.aiModel,$('aiModel').value.trim()||'gpt-5-mini');localStorage.setItem(STORE.aiEndpoint,$('aiEndpoint').value.trim()||'https://api.openai.com/v1/responses');$('aiModal').classList.add('hidden');toast('AI 設定已更新')}); $('clearAi').addEventListener('click',()=>{[localStorage,sessionStorage].forEach(s=>s.removeItem(STORE.aiKey));localStorage.removeItem(STORE.aiModel);localStorage.removeItem(STORE.aiEndpoint);$('aiKey').value='';toast('AI 設定已清除')});
+$('settingsBtn').addEventListener('click',()=>{const s=aiSettings();$('aiKey').value=s.key;$('aiModel').value=s.model;$('figureModel').value=s.figureModel;$('aiEndpoint').value=s.endpoint;$('rememberAi').checked=s.remember;$('aiModal').classList.remove('hidden')}); $('closeModal').addEventListener('click',()=>$('aiModal').classList.add('hidden')); $('aiModal').addEventListener('click',e=>{if(e.target===$('aiModal'))$('aiModal').classList.add('hidden')});
+$('saveAi').addEventListener('click',()=>{const key=$('aiKey').value.trim(),remember=$('rememberAi').checked;if(remember){localStorage.setItem(STORE.aiKey,key);sessionStorage.removeItem(STORE.aiKey)}else{sessionStorage.setItem(STORE.aiKey,key);localStorage.removeItem(STORE.aiKey)}localStorage.setItem(STORE.aiModel,$('aiModel').value.trim()||'gpt-5-mini');localStorage.setItem(STORE.figureModel,$('figureModel').value.trim()||'gpt-5.6-terra');localStorage.setItem(STORE.aiEndpoint,$('aiEndpoint').value.trim()||'https://api.openai.com/v1/responses');$('aiModal').classList.add('hidden');toast('AI 設定已更新')}); $('clearAi').addEventListener('click',()=>{[localStorage,sessionStorage].forEach(s=>s.removeItem(STORE.aiKey));localStorage.removeItem(STORE.aiModel);localStorage.removeItem(STORE.figureModel);localStorage.removeItem(STORE.aiEndpoint);$('aiKey').value='';toast('AI 設定已清除')});
 
 function safeFile(s='file'){return s.replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,' ').trim().slice(0,80)||'file'}
 function downloadText(name,text,type='text/plain'){const blob=new Blob([text],{type:`${type};charset=utf-8`}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}

@@ -152,3 +152,15 @@
 .figure-caption{padding:0 9px 9px;color:#8ea99e;font-size:10px;line-height:1.45}
 .pdf-page.image-explain-busy .figure-hotspot{pointer-events:none}
 @media(max-width:700px){.figure-explain-pill{opacity:.82;top:6px;right:6px;padding:6px 8px}.figure-hotspot{border-color:rgba(103,245,189,.12)}}
+
+
+/* =========================================================
+   v24.4 — Two-stage academic figure verification
+   ========================================================= */
+.figure-analysis-status{display:flex;align-items:center;gap:7px;margin:0 9px 8px;padding:7px 8px;border-radius:9px;background:#0b1d16;border:1px solid #24473a;color:#9fb9ae;font-size:10px;line-height:1.35}
+.figure-stage-dot{width:7px;height:7px;border-radius:50%;background:#ffd47a;box-shadow:0 0 0 3px rgba(255,212,122,.09);flex:0 0 auto}
+.figure-analysis-status[data-mode="working"] .figure-stage-dot{animation:figurePulse 1.05s ease-in-out infinite}
+.figure-analysis-status[data-mode="done"]{border-color:#285b46;color:#aaf1cf;background:#092118}.figure-analysis-status[data-mode="done"] .figure-stage-dot{background:#67f5bd;box-shadow:0 0 0 3px rgba(103,245,189,.1)}
+.figure-analysis-status[data-mode="error"]{border-color:#66343b;color:#ffbdc4;background:#221014}.figure-analysis-status[data-mode="error"] .figure-stage-dot{background:#ff8996;box-shadow:0 0 0 3px rgba(255,137,150,.1)}
+@keyframes figurePulse{0%,100%{opacity:.45;transform:scale(.82)}50%{opacity:1;transform:scale(1.12)}}
+.figure-explain-box .figure-caption{max-height:120px;overflow:auto;white-space:normal}
