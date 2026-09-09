@@ -1,0 +1,1908 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
+<title>OpenScite Web v12 — Citation Evidence Explorer</title>
+<style>
+:root{
+  --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
+  --text:#edf9f4;--muted:#97b5a9;--green:#67f5bd;--green2:#1bc58a;
+  --blue:#93b6ff;--red:#ff8996;--amber:#ffd47a;--shadow:0 22px 65px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{margin:0;background:
+ radial-gradient(circle at 10% 0%,rgba(74,230,167,.12),transparent 27rem),
+ radial-gradient(circle at 100% 20%,rgba(103,135,255,.09),transparent 30rem),
+ var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;line-height:1.55}
+button,input,select{font:inherit} button{cursor:pointer}
+a{color:inherit}
+.shell{width:min(1260px,calc(100% - 28px));margin:auto}
+nav{position:sticky;top:0;z-index:50;background:rgba(7,16,14,.82);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.07)}
+.nav{height:66px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:850;letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;color:#04110d;font-weight:950;background:linear-gradient(135deg,var(--green),#36d99c);box-shadow:0 6px 24px rgba(103,245,189,.2)}
+.nav-right{display:flex;align-items:center;gap:8px}
+.btn{border:1px solid var(--line);border-radius:12px;padding:10px 14px;color:var(--text);background:#0c1915;transition:.15s ease;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{transform:translateY(-1px);border-color:#315447}.btn.primary{background:var(--green);color:#04110d;border-color:transparent;font-weight:800}.btn.ghost{background:transparent}.btn.small{padding:7px 10px;border-radius:9px;font-size:13px}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.hero{padding:70px 0 36px}.hero-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:28px;align-items:center}
+.eyebrow{display:inline-flex;padding:7px 10px;border:1px solid rgba(103,245,189,.2);background:rgba(103,245,189,.06);border-radius:999px;color:#baffdf;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+h1{font-size:clamp(46px,6.6vw,84px);line-height:.96;letter-spacing:-.06em;margin:18px 0 20px;max-width:760px}
+.grad{background:linear-gradient(90deg,#fff,#9ff7d3 55%,#a9beff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--muted);font-size:18px;max-width:760px;margin:0 0 24px}.hero-notes{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:6px 9px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px;background:rgba(255,255,255,.02)}
+.hero-card{border:1px solid var(--line);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));padding:22px;box-shadow:var(--shadow)}
+.hero-card h3{margin:0 0 10px}.hero-card p{color:var(--muted);font-size:14px;margin:0}.mini-flow{display:grid;gap:8px;margin-top:18px}.flow-row{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:12px;background:#091511;border:1px solid rgba(255,255,255,.055)}.num{width:26px;height:26px;border-radius:8px;background:rgba(103,245,189,.1);display:grid;place-items:center;color:var(--green);font-size:12px;font-weight:900}.flow-row span:last-child{font-size:13px;color:#cfdfd8}
+.app{padding:26px 0 80px}.layout{display:grid;grid-template-columns:350px minmax(0,1fr);gap:18px;align-items:start}
+.panel{border:1px solid var(--line);background:rgba(13,26,22,.94);border-radius:20px;box-shadow:0 14px 40px rgba(0,0,0,.14);overflow:hidden}
+.panel-head{padding:18px 19px;border-bottom:1px solid var(--line)}.panel-head h2,.panel-head h3{margin:0;font-size:17px}.panel-head p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.panel-body{padding:18px}
+.drop{border:1.5px dashed #365d4f;border-radius:16px;padding:24px 16px;text-align:center;background:#091511;transition:.15s}.drop.drag{border-color:var(--green);background:rgba(103,245,189,.06)}.drop .big{font-size:27px;margin-bottom:7px}.drop strong{display:block}.drop p{font-size:12px;color:var(--muted);margin:5px 0 13px}
+.field{margin-top:14px}.field label{display:block;font-size:12px;color:#b9cec5;margin-bottom:6px;font-weight:700}.control{width:100%;border:1px solid #29483d;background:#08130f;color:var(--text);border-radius:11px;padding:10px 11px;outline:none}.control:focus{border-color:#4f9079}.inline{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{width:100%}.sidebar-note{margin-top:14px;padding:12px;border-radius:12px;background:#08130f;border:1px solid rgba(255,255,255,.06);color:var(--muted);font-size:11px}
+.statusbar{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}.status{padding:8px 11px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.02);font-size:12px;color:var(--muted)}.status b{color:var(--text)}
+.workspace{min-height:560px}.empty{padding:80px 30px;text-align:center;color:var(--muted)}.empty-icon{font-size:42px;opacity:.7}.empty h2{color:var(--text);margin:10px 0 6px}.empty p{max-width:600px;margin:0 auto;font-size:14px}
+.target{padding:17px 18px;border-bottom:1px solid var(--line);display:none}.target.show{display:block}.target-top{display:flex;justify-content:space-between;gap:16px}.target-title{font-size:18px;font-weight:800;line-height:1.3}.target-meta{font-size:12px;color:var(--muted);margin-top:5px}.target-actions{flex:0 0 auto}
+.progress-wrap{padding:0 18px 16px;display:none}.progress-wrap.show{display:block}.progress-track{height:7px;border-radius:99px;background:#07100e;overflow:hidden;border:1px solid rgba(255,255,255,.04)}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--green2),var(--green));transition:.25s}.progress-text{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:6px}
+.tabs{display:flex;gap:6px;padding:12px 14px;border-bottom:1px solid var(--line);overflow:auto}.tab{border:0;background:transparent;color:var(--muted);padding:8px 10px;border-radius:9px;white-space:nowrap}.tab.active{background:#152a23;color:var(--text)}
+.content{padding:14px}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}.stat-card{border:1px solid var(--line);border-radius:14px;padding:13px;background:#0a1713}.stat-card .value{font-size:24px;font-weight:900;letter-spacing:-.04em}.stat-card .label{font-size:11px;color:var(--muted)}
+.paper-list{display:grid;gap:10px}.paper{border:1px solid var(--line);border-radius:16px;background:#0a1713;overflow:hidden}.paper-main{padding:15px}.paper-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.paper-title{font-size:15px;font-weight:800;line-height:1.35}
+.keyword-hit{background:rgba(239,68,68,.12);color:#d92d20;border-radius:4px;padding:0 2px;font-weight:850;box-shadow:inset 0 -1px 0 rgba(217,45,32,.24)}
+.keyword-hint{grid-column:1/-1;font-size:11px;color:var(--muted);margin-top:-2px;padding:0 3px}.keyword-hint b{color:#d92d20}
+.paper-meta{font-size:11px;color:var(--muted);margin-top:5px}.rank{font:800 11px ui-monospace,monospace;color:#9ac4b3;background:#10241d;border:1px solid #27473b;padding:5px 7px;border-radius:9px;white-space:nowrap}.abstract{font-size:12px;color:#aec3ba;margin:11px 0 0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.paper-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.stance{display:inline-flex;padding:5px 8px;border-radius:999px;font:800 11px ui-monospace,monospace;border:1px solid}.supporting{color:#9effd2;background:rgba(103,245,189,.07);border-color:rgba(103,245,189,.25)}.contrasting{color:#ffb2bc;background:rgba(255,137,150,.07);border-color:rgba(255,137,150,.25)}.mentioning{color:#bed0ff;background:rgba(147,182,255,.07);border-color:rgba(147,182,255,.25)}.unknown{color:#ffe4a6;background:rgba(255,212,122,.07);border-color:rgba(255,212,122,.25)}
+.passages{border-top:1px solid var(--line);padding:12px 15px;background:#08130f}.passages h4{margin:0 0 8px;font-size:12px}.passage{padding:10px;border-left:2px solid #3a6354;background:#0c1b16;margin-top:8px;border-radius:0 9px 9px 0}.passage q{font-size:12px;color:#c8ddd4}.passage-foot{display:flex;justify-content:space-between;gap:10px;margin-top:7px;color:var(--muted);font-size:10px}
+.notice{padding:12px 13px;border:1px solid #2a4c3f;border-radius:12px;background:#0a1813;color:#b6cbc2;font-size:12px;margin-bottom:12px}.notice.warn{border-color:#5b4928;background:#171309;color:#e9d6ad}
+.log{font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#9db9ae;white-space:pre-wrap;max-height:370px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:12px;background:#06100d}
+.hidden{display:none!important}.modal{position:fixed;inset:0;z-index:100;display:none;place-items:center;background:rgba(0,0,0,.67);padding:20px}.modal.show{display:grid}.modal-card{width:min(760px,100%);max-height:85vh;overflow:auto;background:#0d1a16;border:1px solid #315246;border-radius:20px;box-shadow:var(--shadow)}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}.modal-body{padding:16px}.candidate{border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:9px;background:#091511}.candidate:hover{border-color:#477361}.candidate-title{font-weight:800;font-size:14px}.candidate-meta{font-size:11px;color:var(--muted);margin-top:4px}
+footer{padding:28px 0 45px;color:var(--muted);font-size:11px;border-top:1px solid rgba(255,255,255,.055)}
+@media(max-width:950px){.hero-grid,.layout{grid-template-columns:1fr}.hero{padding-top:48px}.summary{grid-template-columns:1fr 1fr}}
+@media(max-width:590px){.shell{width:min(100% - 18px,1260px)}.nav-right .hide-mobile{display:none}h1{font-size:48px}.hero-card{display:none}.inline{grid-template-columns:1fr}.summary{grid-template-columns:1fr 1fr}.paper-top,.target-top{flex-direction:column}.target-actions{width:100%}.target-actions .btn{width:100%}}
+
+/* === Product-style enhancements === */
+:root{
+  --purple:#b89cff;
+  --cyan:#7de7ff;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;opacity:.025;
+  background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);
+  background-size:36px 36px;mask-image:linear-gradient(to bottom,#000,transparent 72%);
+}
+.kpi-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0 0
+}
+.kpi{
+  border:1px solid rgba(255,255,255,.065);background:rgba(255,255,255,.025);
+  border-radius:14px;padding:12px 13px
+}
+.kpi b{display:block;font-size:17px;letter-spacing:-.03em}
+.kpi span{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.result-toolbar{
+  display:grid;grid-template-columns:minmax(0,1fr) 160px 150px auto;gap:8px;
+  padding:12px 14px;border-bottom:1px solid var(--line);background:#091511
+}
+.searchbox{position:relative}
+.searchbox input{padding-left:34px}
+.searchbox::before{content:"⌕";position:absolute;left:11px;top:8px;color:var(--muted);z-index:2}
+.filter-select{min-width:0}
+.view-toggle{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.view-toggle button{border:0;background:transparent;color:var(--muted);padding:0 10px}
+.view-toggle button.active{background:#163026;color:var(--text)}
+.coverage{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px
+}
+.coverage-card{
+  border:1px solid var(--line);border-radius:15px;padding:14px;background:#0a1713
+}
+.coverage-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+.coverage-head b{font-size:12px}.coverage-head span{font-size:11px;color:var(--muted)}
+.meter{height:9px;background:#06100d;border-radius:99px;overflow:hidden;border:1px solid rgba(255,255,255,.04)}
+.meter > i{display:block;height:100%;background:linear-gradient(90deg,var(--green2),var(--green));border-radius:99px}
+.stance-meter{display:flex;height:9px;border-radius:99px;overflow:hidden;background:#06100d;border:1px solid rgba(255,255,255,.04)}
+.stance-meter i{display:block;height:100%}.stance-meter .sup{background:var(--green)}.stance-meter .con{background:var(--red)}.stance-meter .men{background:var(--blue)}.stance-meter .unk{background:var(--amber)}
+.paper.compact .abstract{display:none}.paper.compact .paper-main{padding:11px 13px}.paper.compact .paper-actions{margin-top:8px}
+.evidence-summary{
+  display:flex;gap:6px;flex-wrap:wrap;margin-top:9px
+}
+.metric-pill{
+  padding:4px 7px;border-radius:8px;background:#0f211b;border:1px solid #27473b;
+  color:#9fc5b5;font:700 10px ui-monospace,monospace
+}
+.confidence{
+  display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--muted)
+}
+.confidence i{width:44px;height:5px;border-radius:99px;background:#183027;overflow:hidden;display:inline-block}
+.confidence i::before{content:"";display:block;height:100%;width:var(--w,50%);background:var(--green)}
+.insight-card{
+  border:1px solid rgba(103,245,189,.16);background:linear-gradient(135deg,rgba(103,245,189,.055),rgba(147,182,255,.03));
+  border-radius:16px;padding:14px;margin-bottom:12px
+}
+.insight-card h4{margin:0 0 6px;font-size:13px}
+.insight-card p{margin:0;color:#b8cdc4;font-size:12px}
+.hero-search{
+  margin-top:18px;display:flex;gap:8px;max-width:720px;padding:7px;border:1px solid #27483d;
+  background:rgba(6,16,13,.8);border-radius:15px;box-shadow:0 10px 35px rgba(0,0,0,.18)
+}
+.hero-search input{flex:1;background:transparent;border:0;outline:0;color:var(--text);padding:8px 9px;min-width:0}
+.hero-search input::placeholder{color:#668278}
+.how{padding:20px 0 8px}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.how-card{border:1px solid var(--line);border-radius:17px;padding:16px;background:rgba(255,255,255,.018)}
+.how-card .tag{font:800 10px ui-monospace,monospace;color:var(--green)}
+.how-card h3{font-size:15px;margin:7px 0 5px}.how-card p{margin:0;color:var(--muted);font-size:12px}
+.mobile-only{display:none}
+@media(max-width:900px){
+  .result-toolbar{grid-template-columns:1fr 1fr}.result-toolbar .searchbox{grid-column:1/-1}
+  .kpi-strip{grid-template-columns:1fr 1fr}.how-grid{grid-template-columns:1fr}
+}
+@media(max-width:590px){
+  .coverage{grid-template-columns:1fr}.result-toolbar{grid-template-columns:1fr}.result-toolbar .searchbox{grid-column:auto}
+  .kpi-strip{grid-template-columns:1fr 1fr}.mobile-only{display:block}.hero-search{flex-direction:column}
+}
+
+/* === v3 research workspace === */
+.dashboard-grid{
+  display:grid;grid-template-columns:1.2fr .8fr;gap:12px;margin-bottom:12px
+}
+.chart-card,.table-card,.bulk-card{
+  border:1px solid var(--line);border-radius:16px;background:#0a1713;padding:14px
+}
+.chart-card h4,.table-card h4,.bulk-card h4{margin:0 0 10px;font-size:13px}
+.chart{height:210px;position:relative}
+.chart svg{width:100%;height:100%;display:block}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font-size:10px}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.matrix{display:grid;gap:6px}
+.matrix-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 90px 90px 90px;gap:6px;align-items:center}
+.matrix-row.head{color:var(--muted);font-size:10px}
+.matrix-name{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.matrix-cell{height:26px;border:1px solid var(--line);border-radius:7px;background:#0c1b16;display:grid;place-items:center;font:800 10px ui-monospace,monospace}
+.matrix-cell.sup{color:#9effd2;background:rgba(103,245,189,.07)}.matrix-cell.con{color:#ffb2bc;background:rgba(255,137,150,.07)}
+.matrix-cell.men{color:#bed0ff;background:rgba(147,182,255,.07)}.matrix-cell.unk{color:#ffe4a6;background:rgba(255,212,122,.07)}
+.bulk-drop{border:1px dashed #3b6656;border-radius:14px;padding:18px;text-align:center;background:#08130f}
+.bulk-drop.drag{border-color:var(--green);background:rgba(103,245,189,.06)}
+.bulk-drop p{margin:5px 0 10px;color:var(--muted);font-size:11px}
+.match-list{display:grid;gap:7px;margin-top:10px;max-height:240px;overflow:auto}
+.match-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#0b1915}
+.match-row b{font-size:11px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.match-row span{font-size:10px;color:var(--muted)}
+.match-ok{color:var(--green)!important}.match-warn{color:var(--amber)!important}
+.workspace-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.badge-dot{display:inline-flex;align-items:center;gap:6px}.badge-dot::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+.session-note{font-size:10px;color:var(--muted);margin-left:auto}
+details.evidence-detail{margin-top:8px;border-top:1px dashed rgba(255,255,255,.08);padding-top:8px}
+details.evidence-detail summary{cursor:pointer;color:#a9c9bc;font-size:11px}
+.raw-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+.raw-meta div{padding:7px 8px;border-radius:8px;background:#07110e;border:1px solid rgba(255,255,255,.05);font-size:10px;color:var(--muted)}
+.dashboard-empty{color:var(--muted);font-size:11px;padding:45px 10px;text-align:center}
+.toast{
+  position:fixed;right:18px;bottom:18px;z-index:120;max-width:360px;padding:11px 13px;border-radius:12px;
+  background:#10231d;border:1px solid #37604f;color:#dff5ec;box-shadow:var(--shadow);font-size:12px;
+  opacity:0;transform:translateY(10px);pointer-events:none;transition:.2s
+}
+.toast.show{opacity:1;transform:none}
+@media(max-width:900px){.dashboard-grid{grid-template-columns:1fr}.matrix-row{grid-template-columns:minmax(0,1fr) repeat(4,52px)}}
+@media(max-width:590px){.matrix-row{grid-template-columns:minmax(0,1fr) repeat(4,38px)}.matrix-row.head div:not(:first-child){font-size:0}.raw-meta{grid-template-columns:1fr}}
+
+/* =========================================================
+   v4 — Polished research-product UI
+   ========================================================= */
+:root{
+  --bg:#f6f8fb;
+  --surface:#ffffff;
+  --surface-2:#f9fbfd;
+  --surface-3:#f1f5f9;
+  --text:#10231d;
+  --muted:#6f817a;
+  --line:#dfe7e3;
+  --line-strong:#cfdad5;
+  --green:#16b87a;
+  --green-dark:#0c8e5d;
+  --green-soft:#eaf8f2;
+  --blue:#5f7df7;
+  --blue-soft:#eef2ff;
+  --red:#e96875;
+  --red-soft:#fff0f2;
+  --amber:#d59a2d;
+  --amber-soft:#fff7e8;
+  --purple:#8f6be8;
+  --cyan:#2fb7c7;
+  --shadow:0 12px 36px rgba(27,56,46,.08);
+  --shadow-soft:0 8px 24px rgba(27,56,46,.05);
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  color:var(--text);
+  background:
+    radial-gradient(circle at 8% 0%,rgba(22,184,122,.09),transparent 30rem),
+    radial-gradient(circle at 95% 15%,rgba(95,125,247,.08),transparent 34rem),
+    linear-gradient(180deg,#f8fbfa 0,#f6f8fb 34rem,#f6f8fb 100%);
+}
+body::before{display:none!important}
+nav{
+  background:rgba(255,255,255,.86)!important;
+  border-bottom:1px solid rgba(205,218,213,.8)!important;
+  backdrop-filter:blur(18px)!important
+}
+.brand{color:#0d211a!important}
+.logo{
+  background:linear-gradient(135deg,#19c786,#0f9f6a)!important;
+  color:#fff!important;
+  box-shadow:0 8px 22px rgba(22,184,122,.22)!important
+}
+.btn{
+  background:#fff!important;
+  border-color:var(--line)!important;
+  color:var(--text)!important;
+  box-shadow:none!important
+}
+.btn:hover{border-color:#b9cbc3!important;background:#fbfdfc!important}
+.btn.primary{
+  background:linear-gradient(135deg,#17bb7c,#0fa36b)!important;
+  color:#fff!important;border-color:transparent!important;
+  box-shadow:0 8px 22px rgba(22,184,122,.20)!important
+}
+.btn.primary:hover{filter:brightness(.98)}
+.btn.ghost{background:transparent!important}
+.hero{padding:78px 0 34px!important}
+.eyebrow{
+  color:#0f8f5f!important;background:var(--green-soft)!important;
+  border-color:#cfeee1!important
+}
+h1{color:#10231d!important}
+.grad{
+  background:linear-gradient(90deg,#0f2a20 0%,#0fa86f 56%,#4e70e8 100%)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important
+}
+.lead{color:#64776f!important}
+.chip{
+  color:#5c7269!important;background:#fff!important;border-color:var(--line)!important;
+  box-shadow:0 3px 10px rgba(27,56,46,.03)!important
+}
+.hero-card,.panel,.chart-card,.table-card,.bulk-card{
+  background:rgba(255,255,255,.94)!important;
+  border-color:var(--line)!important;
+  box-shadow:var(--shadow-soft)!important
+}
+.hero-card{
+  border-radius:26px!important;
+  padding:24px!important;
+  position:relative;overflow:hidden
+}
+.hero-card::after{
+  content:"";position:absolute;right:-70px;top:-70px;width:180px;height:180px;
+  border-radius:50%;background:radial-gradient(circle,rgba(22,184,122,.12),transparent 68%);
+  pointer-events:none
+}
+.hero-card p,.how-card p{color:var(--muted)!important}
+.flow-row{
+  background:#fbfdfc!important;border-color:#e5ece9!important
+}
+.flow-row span:last-child{color:#536b61!important}
+.num{background:var(--green-soft)!important;color:#0f9f6a!important}
+.hero-search{
+  background:#fff!important;border-color:#d9e5e0!important;
+  box-shadow:0 12px 34px rgba(27,56,46,.07)!important
+}
+.hero-search input{color:#173128!important}
+.hero-search input::placeholder{color:#9aaba4!important}
+.kpi{
+  background:rgba(255,255,255,.86)!important;border-color:#e2e9e6!important;
+  box-shadow:0 6px 18px rgba(27,56,46,.035)!important
+}
+.kpi b{color:#173128!important}.kpi span{color:#83968e!important}
+.how-card{
+  background:rgba(255,255,255,.82)!important;border-color:var(--line)!important;
+  box-shadow:0 6px 18px rgba(27,56,46,.035)!important
+}
+.how-card .tag{color:#0f9f6a!important}
+.panel{border-radius:24px!important}
+.panel-head{border-color:var(--line)!important}
+.panel-head p{color:var(--muted)!important}
+.drop,.bulk-drop{
+  background:linear-gradient(180deg,#fbfdfc,#f7fbf9)!important;
+  border-color:#bfd5cc!important
+}
+.drop.drag,.bulk-drop.drag{background:var(--green-soft)!important;border-color:#25b77d!important}
+.control{
+  background:#fff!important;border-color:#d7e2dd!important;color:#163029!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5)
+}
+.control:focus{border-color:#29af79!important;box-shadow:0 0 0 3px rgba(22,184,122,.09)!important}
+.sidebar-note,.notice,.insight-card,.coverage-card,.stat-card,.paper,.passages,.raw-meta div{
+  background:#fbfdfc!important;border-color:var(--line)!important
+}
+.sidebar-note,.notice,.paper-meta,.abstract,.coverage-head span,.session-note,.dashboard-empty,.raw-meta div{
+  color:var(--muted)!important
+}
+.workspace{background:rgba(255,255,255,.96)!important}
+.target{border-color:var(--line)!important}
+.target-title{color:#163029!important}
+.tabs{
+  background:#fbfcfd!important;border-color:var(--line)!important;padding:10px 12px!important
+}
+.tab{color:#7b8c85!important}
+.tab.active{
+  background:#fff!important;color:#153029!important;
+  box-shadow:0 2px 8px rgba(27,56,46,.06)!important;border:1px solid #e1e8e5!important
+}
+.result-toolbar{background:#f8fafb!important;border-color:var(--line)!important}
+.searchbox::before{color:#82958d!important}
+.view-toggle{border-color:var(--line)!important;background:#fff!important}
+.view-toggle button{color:#82958d!important}
+.view-toggle button.active{background:#edf5f1!important;color:#0f8f5f!important}
+.summary{gap:10px!important}
+.stat-card{
+  border-radius:16px!important;padding:14px 15px!important;
+  box-shadow:0 4px 14px rgba(27,56,46,.025)!important
+}
+.stat-card .value{color:#123228!important}
+.stat-card .label{color:#82958d!important}
+.coverage-card{box-shadow:0 4px 14px rgba(27,56,46,.025)!important}
+.meter,.stance-meter{background:#e9efec!important;border:0!important}
+.insight-card{
+  border-color:#cfe9df!important;
+  background:linear-gradient(135deg,#f0fbf6,#f6f8ff)!important
+}
+.insight-card p{color:#5e736a!important}
+.paper{
+  border-radius:18px!important;background:#fff!important;
+  box-shadow:0 6px 18px rgba(27,56,46,.035)!important;
+  transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease
+}
+.paper:hover{
+  transform:translateY(-1px);box-shadow:0 10px 26px rgba(27,56,46,.07)!important;border-color:#c7d8d1!important
+}
+.paper-title{color:#163029!important;font-size:15.5px!important}
+.rank{background:#f1f7f4!important;border-color:#d8e6df!important;color:#5e786d!important}
+.metric-pill{
+  background:#f4f8f6!important;border-color:#dce7e2!important;color:#668078!important
+}
+.supporting{background:var(--green-soft)!important;color:#0f8f5f!important;border-color:#ccecdf!important}
+.contrasting{background:var(--red-soft)!important;color:#c94f5c!important;border-color:#f3ccd1!important}
+.mentioning{background:var(--blue-soft)!important;color:#5471d8!important;border-color:#d9e0ff!important}
+.unknown{background:var(--amber-soft)!important;color:#ae7920!important;border-color:#f0dfbb!important}
+.passages{background:#fbfcfd!important;border-color:#e3eae7!important}
+.passage{
+  background:#fff!important;border-left-color:#a5c8ba!important;
+  box-shadow:inset 0 0 0 1px #eef2f0!important
+}
+.passage q{color:#3e564d!important}
+.passage-foot{color:#7a8d85!important}
+details.evidence-detail{border-color:#edf1ef!important}
+details.evidence-detail summary{color:#688178!important}
+.chart-card,.table-card,.bulk-card{border-radius:18px!important}
+.matrix-cell{background:#f7faf8!important;border-color:#e0e8e4!important}
+.matrix-row.head{color:#7a8c84!important}
+.matrix-cell.sup{background:#eefaf5!important;color:#0c8e5d!important}
+.matrix-cell.con{background:#fff2f3!important;color:#c54f5a!important}
+.matrix-cell.men{background:#f0f3ff!important;color:#526bd0!important}
+.matrix-cell.unk{background:#fff8eb!important;color:#ad7924!important}
+.log{
+  background:#14221d!important;color:#cfe3da!important;border-color:#263c33!important
+}
+.modal{background:rgba(18,32,27,.36)!important;backdrop-filter:blur(7px)}
+.modal-card{background:#fff!important;border-color:#d7e2dd!important}
+.candidate{background:#fbfdfc!important;border-color:var(--line)!important;color:#163029!important}
+.candidate:hover{border-color:#9fc5b6!important;background:#f4faf7!important}
+.toast{background:#163128!important;border-color:#2b4c40!important;color:#eaf7f2!important}
+footer{color:#7b8c85!important;border-color:#e2e9e6!important}
+
+/* New accuracy UI */
+.accuracy-badge{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;
+  border:1px solid #dce7e2;background:#f5f8f7;color:#647970;font:700 10px ui-monospace,monospace
+}
+.accuracy-badge.high{background:#eefaf5;color:#0d8f5f;border-color:#cdeade}
+.accuracy-badge.mid{background:#fff8eb;color:#a97622;border-color:#f0dfbb}
+.accuracy-badge.low{background:#fff2f3;color:#bf5560;border-color:#f0cfd4}
+.binding-box{
+  margin-top:10px;padding:10px 11px;border:1px solid #e3ebe7;border-radius:12px;background:#fbfdfc
+}
+.binding-box b{display:block;font-size:11px;margin-bottom:5px;color:#355047}
+.binding-tags{display:flex;gap:6px;flex-wrap:wrap}
+.binding-tag{
+  padding:4px 7px;border-radius:8px;background:#f2f6f4;border:1px solid #dde7e2;
+  color:#6a8077;font:700 9px ui-monospace,monospace
+}
+.binding-tag.hit{background:#eefaf5;color:#0d8f5f;border-color:#cdeade}
+.reference-hit{
+  margin-top:8px;padding:9px 10px;border-radius:10px;background:#f9fbfa;border:1px solid #e4ece8;
+  font-size:10px;color:#61766d
+}
+.reference-hit strong{color:#29473c}
+.accuracy-note{
+  padding:10px 12px;border-radius:12px;background:#f5f9f7;border:1px solid #dfe9e4;
+  color:#62776e;font-size:11px;margin-bottom:12px
+}
+@media(max-width:950px){
+  .hero-grid{gap:18px!important}.panel{border-radius:20px!important}
+}
+
+/* =========================================================
+   v5 — citation-style robustness + ambiguity UX
+   ========================================================= */
+.paper-main{padding:17px 17px 15px!important}
+.paper-top{gap:12px!important}
+.paper-title{font-size:16px!important;letter-spacing:-.01em}
+.paper-meta{margin-top:6px!important}
+.abstract{font-size:12.5px!important;line-height:1.6!important}
+.paper-actions{margin-top:11px!important}
+.evidence-summary{margin-top:10px!important}
+.binding-box{margin-top:12px!important}
+.binding-box b{font-size:11.5px!important}
+.reference-hit{line-height:1.55!important}
+.passage{padding:12px!important;border-radius:0 12px 12px 0!important}
+.passage q{line-height:1.65!important}
+.passage-foot{align-items:flex-start!important}
+.conflict-note{
+  margin-top:8px;padding:8px 9px;border-radius:9px;
+  background:#fff7e8;border:1px solid #f0dfbb;color:#9a6e23;font-size:10px
+}
+.context-meta{
+  display:flex;gap:6px;flex-wrap:wrap;margin:7px 0 0
+}
+.context-pill{
+  padding:4px 7px;border-radius:8px;background:#f4f7f6;border:1px solid #e0e8e4;
+  color:#6b7f77;font:700 9px ui-monospace,monospace
+}
+.context-pill.good{background:#eefaf5;border-color:#cdeade;color:#0d8f5f}
+.context-pill.warn{background:#fff8eb;border-color:#f0dfbb;color:#a97622}
+.context-pill.bad{background:#fff2f3;border-color:#f0cfd4;color:#bf5560}
+.precision-card{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px
+}
+.precision-item{
+  padding:12px;border-radius:14px;border:1px solid var(--line);background:#fbfdfc
+}
+.precision-item b{display:block;font-size:13px;color:#1a3b30}
+.precision-item span{display:block;font-size:10px;color:var(--muted);margin-top:3px}
+.rule-list{display:grid;gap:7px;margin-top:9px}
+.rule{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  padding:8px 9px;border-radius:10px;background:#f8faf9;border:1px solid #e5ece8
+}
+.rule b{font-size:10px}.rule span{font-size:9px;color:var(--muted)}
+.paper-divider{height:1px;background:#eef2f0;margin:12px 0}
+@media(max-width:700px){.precision-card{grid-template-columns:1fr}}
+
+/* =========================================================
+   v6 — authorized full-text access flow
+   ========================================================= */
+.access-panel{
+  margin-top:10px;padding:12px;border-radius:13px;
+  border:1px solid #dfe8e4;background:linear-gradient(180deg,#fbfdfc,#f7faf8)
+}
+.access-panel h5{margin:0 0 5px;font-size:11.5px;color:#28483c}
+.access-panel p{margin:0;color:#6e8279;font-size:10.5px;line-height:1.55}
+.access-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.access-status{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 7px;border-radius:999px;
+  background:#f1f6f3;border:1px solid #dfe8e4;color:#678078;font:700 9px ui-monospace,monospace
+}
+.access-status::before{content:"";width:6px;height:6px;border-radius:50%;background:#9aaba4}
+.access-status.ready::before{background:#16b87a}
+.access-status.warn::before{background:#d59a2d}
+.permission-modal .modal-card{width:min(620px,100%)}
+.permission-grid{display:grid;gap:9px;margin-top:12px}
+.permission-row{
+  padding:11px 12px;border-radius:12px;border:1px solid #e1e9e5;background:#fafcfb
+}
+.permission-row b{display:block;font-size:11px;color:#315047}
+.permission-row span{display:block;font-size:10px;color:#75877f;margin-top:3px}
+.permission-note{
+  margin-top:12px;padding:10px 11px;border-radius:11px;
+  background:#fff8eb;border:1px solid #f0dfbb;color:#926a25;font-size:10.5px;line-height:1.55
+}
+
+/* =========================================================
+   v7 — Browser Automation Connector
+   ========================================================= */
+.automation-panel{
+  margin-top:10px;padding:12px;border-radius:13px;border:1px solid #d9e6e0;
+  background:linear-gradient(135deg,#f2fbf7,#f5f7ff)
+}
+.automation-panel h5{margin:0 0 5px;font-size:11.5px;color:#27493c}
+.automation-panel p{margin:0;color:#6a8177;font-size:10.5px;line-height:1.55}
+.automation-status{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;
+  background:#fff;border:1px solid #dae6e0;color:#647b71;font:700 9px ui-monospace,monospace
+}
+.automation-status::before{content:"";width:7px;height:7px;border-radius:50%;background:#b5c0bb}
+.automation-status.online::before{background:#16b87a;box-shadow:0 0 0 3px rgba(22,184,122,.10)}
+.automation-status.busy::before{background:#d59a2d}
+.automation-status.error::before{background:#e96875}
+.automation-help{
+  margin-top:8px;color:#7a8e85;font-size:9.5px
+}
+</style>
+</head>
+<body>
+<nav>
+<div class="shell nav">
+  <div class="brand"><div class="logo">O</div><span>OpenScite <span style="color:var(--green)">Web</span></span></div>
+  <div class="nav-right">
+    <button id="exportMdTop" class="btn ghost hide-mobile" disabled>匯出報告</button>
+    <a class="btn" href="https://github.com/MO7YW4NG/openscite" target="_blank" rel="noreferrer">GitHub ↗</a>
+  </div>
+</div>
+</nav>
+
+<header class="hero">
+<div class="shell hero-grid">
+  <div>
+    <span class="eyebrow">No install · Browser first · OpenAlex</span>
+    <h1><span class="grad">從一篇論文開始。</span><br>追蹤後續證據如何回應它。</h1>
+    <p class="lead">不需要安裝任何工具。直接在瀏覽器辨識目標論文、追蹤 incoming citations（後續引用），並在有全文時以實際 citation context（引用上下文）判定 supporting、contrasting、mentioning 或 unknown。</p>
+    <div class="hero-notes"><span class="chip">PDF 留在瀏覽器本機解析</span><span class="chip">OpenAlex metadata</span><span class="chip">Passage-level stance</span><span class="chip">Markdown / JSON 匯出</span></div>
+    <div class="hero-search">
+      <input id="heroQuery" placeholder="貼 DOI、OpenAlex ID 或論文標題，例如 10.1038/..." />
+      <button id="heroAnalyze" class="btn primary">立即分析</button>
+    </div>
+    <div class="kpi-strip">
+      <div class="kpi"><b>0 安裝</b><span>直接瀏覽器使用</span></div>
+      <div class="kpi"><b>Passage-level</b><span>以引用段落為主</span></div>
+      <div class="kpi"><b>OpenAlex</b><span>引用圖譜與 metadata</span></div>
+      <div class="kpi"><b>Local-first</b><span>PDF 不上傳本站</span></div>
+    </div>
+  </div>
+  <aside class="hero-card">
+    <h3>OpenScite 的核心沒有改</h3>
+    <p>摘要只負責候選排序；真正的 supporting / contrasting / mentioning 應建立在能綁定目標論文的引用段落上。</p>
+    <div class="mini-flow">
+      <div class="flow-row"><span class="num">1</span><span>上傳目標 PDF，辨識 DOI / 標題</span></div>
+      <div class="flow-row"><span class="num">2</span><span>OpenAlex 找出 citing works（引用它的研究）</span></div>
+      <div class="flow-row"><span class="num">3</span><span>摘要 evidence cues（證據線索）做 shortlist</span></div>
+      <div class="flow-row"><span class="num">4</span><span>加入 OA / 自有全文 PDF，抽 citation passages（引用段落）</span></div>
+    </div>
+  </aside>
+</div>
+</header>
+
+<section class="how">
+<div class="shell">
+  <div class="how-grid">
+    <div class="how-card"><span class="tag">01 · IDENTIFY</span><h3>辨識目標論文</h3><p>從 PDF 擷取 DOI／標題，或直接輸入 DOI、OpenAlex ID、標題。</p></div>
+    <div class="how-card"><span class="tag">02 · TRIAGE</span><h3>找後續引用並排序</h3><p>OpenAlex 找 citing works，再依證據線索或影響力建立 shortlist。</p></div>
+    <div class="how-card"><span class="tag">03 · EVIDENCE</span><h3>全文引用段落判定</h3><p>加入合法全文 PDF 後，找真正引用目標論文的段落，再判定 stance。</p></div>
+  </div>
+</div>
+</section>
+
+<main class="app">
+<div class="shell layout">
+  <aside class="panel">
+    <div class="panel-head"><h3>分析設定</h3><p>所有 PDF 文字抽取都在你的瀏覽器內進行。</p></div>
+    <div class="panel-body">
+      <div id="drop" class="drop">
+        <div class="big">↥</div><strong>拖入目標論文 PDF</strong>
+        <p>或按下面按鈕選擇檔案</p>
+        <button class="btn primary" id="pickTarget">選擇 PDF</button>
+        <input type="file" id="targetFile" accept="application/pdf,.pdf" class="hidden">
+      </div>
+
+      <div class="field">
+        <label>或直接輸入 DOI / OpenAlex Work ID / 論文標題</label>
+        <input id="manualQuery" class="control" placeholder="10.1234/example 或 W2741809807">
+      </div>
+
+      <div class="inline">
+        <div class="field"><label>分析篇數</label><select id="limit" class="control"><option>10</option><option selected>20</option><option>30</option><option>50</option></select></div>
+        <div class="field"><label>排序模式</label><select id="mode" class="control"><option value="stance_first" selected>stance_first</option><option value="influence_first">influence_first</option></select></div>
+      </div>
+
+      <div class="field"><button id="start" class="btn primary full">開始分析</button></div>
+      <div class="field"><button id="reset" class="btn full">清除目前分析</button></div>
+
+      <div class="sidebar-note">
+        <b style="color:#cfe2da">隱私：</b>目標 PDF 與你手動補上的引用論文 PDF 不會由本站上傳到伺服器；解析在本機瀏覽器完成。只有 DOI／標題等查詢會送至 OpenAlex API。
+      </div>
+    </div>
+  </aside>
+
+  <section class="panel workspace">
+    <div id="target" class="target">
+      <div class="target-top">
+        <div><div id="targetTitle" class="target-title"></div><div id="targetMeta" class="target-meta"></div></div>
+        <div class="target-actions"><button id="changeTarget" class="btn small">重新辨識</button></div>
+      </div>
+    </div>
+
+    <div id="progressWrap" class="progress-wrap">
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      <div class="progress-text"><span id="progressLabel">準備中</span><span id="progressPct">0%</span></div>
+    </div>
+
+    <div id="empty" class="empty">
+      <div class="empty-icon">⌁</div><h2>還沒有分析</h2>
+      <p>上傳一篇學術論文 PDF，或直接貼 DOI / OpenAlex ID / 標題。網站會先辨識目標研究，再找出引用它的後續文獻。</p>
+    </div>
+
+    <div id="results" class="hidden">
+      <div class="tabs">
+        <button class="tab active" data-tab="papers">引用文獻</button>
+        <button class="tab" data-tab="dashboard">Dashboard</button>
+        <button class="tab" data-tab="report">報告預覽</button>
+        <button class="tab" data-tab="log">執行紀錄</button>
+      </div>
+      <div class="result-toolbar">
+        <div class="searchbox"><input id="paperSearch" class="control" placeholder="輸入關鍵字，例如 biosensor evanescent wave"></div>
+        <select id="stanceFilter" class="control filter-select">
+          <option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option>
+        </select>
+        <select id="sortView" class="control filter-select">
+          <option value="rank">依目前排名</option><option value="journal">期刊層級：高 → 低</option><option value="citations">依引用次數</option><option value="year">依年份</option><option value="evidence">依證據數</option>
+        </select>
+        <div class="view-toggle"><button id="viewComfort" class="active" title="舒適模式">▤</button><button id="viewCompact" title="緊湊模式">☷</button></div>
+        <div class="keyword-hint">關鍵字命中會以 <b>紅色</b> 標示於標題、作者／期刊資訊、摘要與引用段落；多個關鍵字以空格分隔。</div>
+      </div>
+      <div class="content">
+        <div id="papersTab">
+          <div class="workspace-actions">
+            <button id="bulkPick" class="btn small">批次加入引用 PDF</button>
+            <input id="bulkFiles" type="file" class="hidden" multiple accept="application/pdf,.pdf">
+            <button id="saveSession" class="btn small">儲存目前工作階段</button>
+            <button id="loadSession" class="btn small">載入工作階段</button>
+            <span id="automationStatus" class="automation-status">Automation extension 未連線</span>
+            <span id="sessionStatus" class="session-note">未儲存</span>
+          </div>
+          <div class="precision-card">
+            <div class="precision-item"><b>Reference matching</b><span>DOI、標題、作者、年份交叉比對</span></div>
+            <div class="precision-item"><b>Citation style aware</b><span>IEEE / Vancouver / APA / author–year</span></div>
+            <div class="precision-item"><b>Ambiguity control</b><span>群組引用與多文獻句子降低信心值</span></div>
+          </div>
+          <div id="insightCard" class="insight-card"><h4>研究概況</h4><p>完成分析後，這裡會根據目前 shortlist 與全文覆蓋率顯示可解讀程度。</p></div>
+          <div class="coverage">
+            <div class="coverage-card">
+              <div class="coverage-head"><b>全文覆蓋率</b><span id="coverageText">0 / 0</span></div>
+              <div class="meter"><i id="coverageBar" style="width:0%"></i></div>
+            </div>
+            <div class="coverage-card">
+              <div class="coverage-head"><b>Passage stance 分布</b><span id="stanceText">尚無全文證據</span></div>
+              <div id="stanceMeter" class="stance-meter"><i class="unk" style="width:100%"></i></div>
+            </div>
+          </div>
+          <div class="summary">
+            <div class="stat-card"><div id="sTotal" class="value">0</div><div class="label">入選引用文獻</div></div>
+            <div class="stat-card"><div id="sFulltext" class="value">0</div><div class="label">已解析全文</div></div>
+            <div class="stat-card"><div id="sSupport" class="value">0</div><div class="label">supporting passages</div></div>
+            <div class="stat-card"><div id="sContrast" class="value">0</div><div class="label">contrasting passages</div></div>
+          </div>
+          <div class="accuracy-note"><strong>準確度策略：</strong>全文分析會先定位 References（參考文獻），再用 DOI、標題、作者、年份交叉比對目標論文；若找到數字型 reference number（例如 [23]），會回到正文追蹤該編號。Author–year（作者年份）格式則以作者＋年份＋上下文聯合判定。只有通過 target binding（目標綁定）的段落才會進入 stance 分類。</div>
+          <div class="notice">候選排序可以使用 abstract cues（摘要線索），但<strong>摘要不直接等於最終 stance</strong>。沒有可靠全文引用段落時維持 <code>unknown</code>。</div>
+          <div id="paperList" class="paper-list"></div>
+        </div>
+
+        <div id="dashboardTab" class="hidden">
+          <div class="dashboard-grid">
+            <div class="chart-card">
+              <h4>引用文獻年份趨勢</h4>
+              <div id="yearChart" class="chart"><div class="dashboard-empty">完成分析後顯示年份分布</div></div>
+              <div class="legend"><span style="--c:var(--green)">citing works</span></div>
+            </div>
+            <div class="chart-card">
+              <h4>Passage stance 分布</h4>
+              <div id="stanceChart" class="chart"><div class="dashboard-empty">加入全文後顯示 evidence 分布</div></div>
+              <div class="legend">
+                <span style="--c:var(--green)">supporting</span>
+                <span style="--c:var(--red)">contrasting</span>
+                <span style="--c:var(--blue)">mentioning</span>
+                <span style="--c:var(--amber)">unknown</span>
+              </div>
+            </div>
+          </div>
+          <div class="table-card">
+            <h4>Evidence matrix（證據矩陣）</h4>
+            <div id="evidenceMatrix" class="matrix"><div class="dashboard-empty">目前沒有 passage-level evidence</div></div>
+          </div>
+          <div class="bulk-card" style="margin-top:12px">
+            <h4>批次全文配對</h4>
+            <div id="bulkDrop" class="bulk-drop">
+              <strong>一次拖入多篇引用論文 PDF</strong>
+              <p>網站會嘗試用 DOI、OpenAlex DOI、標題相似度自動配對目前 shortlist。</p>
+              <button id="bulkPick2" class="btn small">選擇多個 PDF</button>
+            </div>
+            <div id="matchList" class="match-list"></div>
+          </div>
+        </div>
+        <div id="reportTab" class="hidden">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <button id="exportMd" class="btn primary small">下載 report.md</button>
+            <button id="exportJson" class="btn small">下載 citations.json</button>
+          </div>
+          <pre id="reportPreview" class="log" style="max-height:none;white-space:pre-wrap"></pre>
+        </div>
+        <div id="logTab" class="hidden"><div id="log" class="log"></div></div>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+
+
+<div id="accessModal" class="modal permission-modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <strong>需要授權才能取得全文</strong>
+      <button id="closeAccessModal" class="btn small">關閉</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0;color:#64776f;font-size:12px">
+        OpenScite 找不到可直接讀取的 OA PDF。若你目前已連上學校網路、VPN 或校外連線系統，
+        可以讓網站開啟該論文的 DOI／出版社頁面，由你使用既有學校授權下載 PDF。
+      </p>
+      <div class="permission-grid">
+        <div class="permission-row">
+          <b>網站會做的事</b>
+          <span>在新分頁開啟 DOI／出版社頁面，並在你回來後讓你選擇剛下載的 PDF。</span>
+        </div>
+        <div class="permission-row">
+          <b>網站不會做的事</b>
+          <span>不讀取學校帳號密碼、不讀取登入 cookies、不繞過付費牆，也不會未經同意自動下載。</span>
+        </div>
+      </div>
+      <div class="permission-note">
+        瀏覽器安全限制下，單一 HTML 無法直接控制其他網站的登入頁面或替你按「Download PDF」。
+        這個流程只會在你明確同意後開啟授權頁面。
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap">
+        <button id="denyAccess" class="btn">不要開啟</button>
+        <button id="allowAccess" class="btn primary">允許開啟授權頁面</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="resolveModal" class="modal">
+  <div class="modal-card">
+    <div class="modal-head"><strong>確認目標論文</strong><button id="closeModal" class="btn small">關閉</button></div>
+    <div class="modal-body">
+      <div class="notice warn">PDF 沒有可靠辨識到 DOI，請從 OpenAlex 搜尋結果中選擇正確論文。</div>
+      <div id="candidateList"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+<div class="shell">OpenScite Web v10 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+</footer>
+<div id="toast" class="toast"></div>
+
+<script type="module">
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+let pdfjs = null;
+let state = {
+  target:null, targetText:"", sourceFileName:"", papers:[], log:[], mode:"stance_first", limit:20
+};
+
+const OA = "https://api.openalex.org";
+const SUPPORT = [
+  "replicat","reproduc","confirm","support","consistent with","in agreement with","validate",
+  "corroborat","similar result","accordance with","reinforce","robust","extends the finding"
+];
+const CONTRAST = [
+  "fail to replicat","failed to replicat","could not replicat","contrary to","inconsistent with",
+  "contradict","challenge","did not support","does not support","not support","null result",
+  "no significant","no evidence","reanalysis","overestimate","however","in contrast"
+];
+const EVAL = ["replicat","confirm","support","contrast","contradict","inconsistent","consistent","validate","null","reanalysis","evidence","effect"];
+
+function log(msg){
+  const t = new Date().toLocaleTimeString();
+  state.log.push(`[${t}] ${msg}`);
+  $("#log").textContent = state.log.join("\n");
+}
+function progress(p, label){
+  $("#progressWrap").classList.add("show");
+  $("#progressBar").style.width = `${p}%`;
+  $("#progressPct").textContent = `${Math.round(p)}%`;
+  $("#progressLabel").textContent = label;
+}
+function doneProgress(){setTimeout(()=>$("#progressWrap").classList.remove("show"),900)}
+function escapeHtml(s=""){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function norm(s=""){return s.toLowerCase().replace(/\s+/g," ").trim()}
+function rebuildAbstract(inv){
+  if(!inv) return "";
+  const pos=[];
+  for(const [word, arr] of Object.entries(inv)) for(const i of arr) pos[i]=word;
+  return pos.filter(Boolean).join(" ");
+}
+function doiFromText(text){
+  const matches = text.match(/10\.\d{4,9}\/[-._;()/:A-Z0-9]+/ig) || [];
+  return matches.map(x=>x.replace(/[),.;:\]]+$/,""))[0] || "";
+}
+function likelyTitle(text){
+  const lines=text.split(/\n+/).map(x=>x.trim()).filter(x=>x.length>12 && x.length<260);
+  const stop=/^(abstract|introduction|keywords|doi|www\.|http|received|accepted|copyright|volume|journal)/i;
+  const candidates=lines.slice(0,35).filter(x=>!stop.test(x) && !/^\d+$/.test(x));
+  return candidates.sort((a,b)=>{
+    const score=x=>(x.length>40&&x.length<180?3:0)+(x.split(" ").length>5?2:0)-(/[;{}]/.test(x)?2:0);
+    return score(b)-score(a)
+  })[0]||"";
+}
+async function loadPdfJs(){
+  if(pdfjs) return pdfjs;
+  log("載入瀏覽器 PDF parser…");
+  pdfjs = await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+  return pdfjs;
+}
+async function extractPdf(file, maxPages=Infinity){
+  const lib=await loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const doc=await lib.getDocument({data:buf}).promise;
+  const n=Math.min(doc.numPages,maxPages);
+  let out=[];
+  for(let p=1;p<=n;p++){
+    const page=await doc.getPage(p);
+    const content=await page.getTextContent();
+    const text=content.items.map(i=>i.str).join(" ");
+    out.push(`\n[PAGE ${p}]\n${text}`);
+  }
+  return {text:out.join("\n"),pages:doc.numPages};
+}
+async function oaFetch(path){
+  const res=await fetch(OA+path,{headers:{"Accept":"application/json"}});
+  if(!res.ok) throw new Error(`OpenAlex ${res.status}: ${await res.text().catch(()=>res.statusText)}`);
+  return res.json();
+}
+function openAlexId(x){return (x||"").split("/").pop()}
+async function resolveByDoi(doi){
+  const id=encodeURIComponent("https://doi.org/"+doi.toLowerCase());
+  return oaFetch(`/works/${id}`);
+}
+async function searchWorks(q, per=8){
+  return oaFetch(`/works?search=${encodeURIComponent(q)}&per-page=${per}`);
+}
+function targetDisplay(w){
+  const authors=(w.authorships||[]).slice(0,5).map(a=>a.author?.display_name).filter(Boolean).join(", ");
+  return `${authors}${(w.authorships||[]).length>5?" et al.":""} · ${w.publication_year||"n.d."} · ${w.doi||openAlexId(w.id)}`;
+}
+async function resolveInput(){
+  const q=$("#manualQuery").value.trim();
+  const file=$("#targetFile").files[0];
+  if(file){
+    state.sourceFileName=file.name;
+    progress(8,"解析目標 PDF");
+    log(`解析目標 PDF：${file.name}`);
+    const x=await extractPdf(file,Math.min(5,999));
+    state.targetText=x.text;
+    const doi=doiFromText(x.text);
+    if(doi){
+      log(`偵測到 DOI：${doi}`);
+      progress(18,"以 DOI 辨識論文");
+      try{return await resolveByDoi(doi)}catch(e){log(`DOI 解析失敗：${e.message}`)}
+    }
+    const title=likelyTitle(x.text);
+    if(title){
+      log(`未可靠取得 DOI，使用候選標題搜尋：${title}`);
+      const r=await searchWorks(title,8);
+      return await chooseCandidate(r.results||[]);
+    }
+    throw new Error("無法從 PDF 辨識 DOI 或合理標題；請在左側直接輸入 DOI / 標題。");
+  }
+  if(!q) throw new Error("請先上傳 PDF，或輸入 DOI / OpenAlex Work ID / 論文標題。");
+  if(/^10\.\d{4,9}\//i.test(q)) return resolveByDoi(q);
+  if(/^W\d+$/i.test(q)) return oaFetch(`/works/${encodeURIComponent(q.toUpperCase())}`);
+  const r=await searchWorks(q,8);
+  if(!r.results?.length) throw new Error("OpenAlex 找不到符合的論文。");
+  if(r.results.length===1) return r.results[0];
+  return chooseCandidate(r.results);
+}
+function chooseCandidate(results){
+  return new Promise((resolve,reject)=>{
+    const box=$("#candidateList");box.innerHTML="";
+    if(!results.length){reject(new Error("找不到候選論文"));return}
+    for(const w of results){
+      const div=document.createElement("button");
+      div.className="candidate";div.style.width="100%";div.style.textAlign="left";div.style.color="inherit";
+      div.innerHTML=`<div class="candidate-title">${escapeHtml(w.display_name||w.title||"Untitled")}</div><div class="candidate-meta">${escapeHtml(targetDisplay(w))} · cited by ${w.cited_by_count||0}</div>`;
+      div.onclick=()=>{$("#resolveModal").classList.remove("show");resolve(w)};
+      box.appendChild(div);
+    }
+    $("#resolveModal").classList.add("show");
+    $("#closeModal").onclick=()=>{$("#resolveModal").classList.remove("show");reject(new Error("已取消目標論文辨識"))};
+  });
+}
+function abstractCueScore(text){
+  const t=norm(text); let s=0,c=0;
+  SUPPORT.forEach(k=>{if(t.includes(k))s+=k.length>10?4:2});
+  CONTRAST.forEach(k=>{if(t.includes(k))c+=k.length>10?5:3});
+  const evals=EVAL.reduce((a,k)=>a+(t.includes(k)?1:0),0);
+  return {support:s,contrast:c,evidence:Math.max(s,c)+evals};
+}
+
+function journalPrestige(p){
+  const src=p?.primary_location?.source || p?.best_oa_location?.source || {};
+  const stats=src.summary_stats || {};
+  const h=Number(stats.h_index || 0);
+  const mean=Number(stats["2yr_mean_citedness"] || 0);
+  const i10=Number(stats.i10_index || 0);
+  const hasMetric=(h>0 || mean>0 || i10>0);
+
+  // Transparent heuristic: venue-level signals only.
+  // h-index dominates stability; 2-year mean citedness adds recent impact.
+  let score=0;
+  if(hasMetric){
+    score = Math.log1p(h)*18 + Math.log1p(mean)*28 + Math.log1p(i10)*5;
+  }
+
+  let tier="資料不足", cls="unknown";
+  if(hasMetric){
+    if(score>=125){tier="頂尖";cls="supporting"}
+    else if(score>=95){tier="高影響";cls="mentioning"}
+    else if(score>=65){tier="中等";cls="unknown"}
+    else {tier="較低";cls="contrasting"}
+  }
+  return {
+    score,
+    tier,
+    cls,
+    source: src.display_name || src.host_organization_name || "Unknown venue",
+    h,
+    mean,
+    i10,
+    hasMetric
+  };
+}
+function journalTierBadge(p){
+  const j=journalPrestige(p);
+  return `<span class="stance ${j.cls}" title="Venue: ${escapeHtml(j.source)} · h-index ${j.h||"n/a"} · 2yr mean citedness ${j.mean||"n/a"}">期刊：${j.tier}</span>`;
+}
+
+function rankWorks(list,mode){
+  const now=new Date().getFullYear();
+  return list.map(w=>{
+    const abs=rebuildAbstract(w.abstract_inverted_index);
+    const cues=abstractCueScore(`${w.title||""} ${abs}`);
+    const cites=w.cited_by_count||0;
+    const yr=w.publication_year||1900;
+    const sourceMean=w.primary_location?.source?.summary_stats?.["2yr_mean_citedness"]||0;
+    let score;
+    if(mode==="influence_first") score=Math.log1p(cites)*12+Math.log1p(sourceMean)*8+Math.max(0,yr-2000)*.18;
+    else score=cues.evidence*10+Math.log1p(cites)*1.8+Math.max(0,yr-(now-12))*.35+(abs?2:0);
+    return {...w,_abstract:abs,_cues:cues,_score:score,_fulltext:false,_passages:[],_stance:"unknown"};
+  }).sort((a,b)=>b._score-a._score);
+}
+async function getCitingWorks(targetId, limit, mode){
+  const wid=openAlexId(targetId);
+  const fetchN=Math.min(100,Math.max(limit*3,40));
+  log(`查詢 citing works：filter=cites:${wid}`);
+  const j=await oaFetch(`/works?filter=cites:${encodeURIComponent(wid)}&per-page=${fetchN}`);
+  log(`OpenAlex 回傳 ${j.results?.length||0} 篇候選引用文獻`);
+  return rankWorks(j.results||[],mode).slice(0,limit);
+}
+function targetPatterns(){
+  if(!state.target) return [];
+  const year=String(state.target.publication_year||"");
+  const surnames=(state.target.authorships||[]).slice(0,3).map(a=>a.author?.display_name?.trim().split(/\s+/).pop()).filter(Boolean);
+  const pats=[];
+  for(const s of surnames){
+    if(year) pats.push({label:`${s} … ${year}`,re:new RegExp(`${escapeReg(s)}.{0,90}${year}|${year}.{0,90}${escapeReg(s)}`,"gi")});
+    pats.push({label:s,re:new RegExp(`\\b${escapeReg(s)}\\b`,"gi")});
+  }
+  return pats;
+}
+function escapeReg(s){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function trimReferences(text){
+  const m=text.search(/\b(references|bibliography)\b/i);
+  return m>text.length*.55 ? text.slice(0,m) : text;
+}
+function extractPassages(text){
+  const body=trimReferences(text.replace(/\s+/g," "));
+  const hits=[];
+  for(const p of targetPatterns()){
+    p.re.lastIndex=0;let m;
+    while((m=p.re.exec(body)) && hits.length<20){
+      const start=Math.max(0,m.index-420),end=Math.min(body.length,m.index+m[0].length+520);
+      const passage=body.slice(start,end).trim();
+      if(!hits.some(h=>Math.abs(h.index-m.index)<250))hits.push({index:m.index,text:passage,pattern:p.label});
+    }
+  }
+  return hits.sort((a,b)=>a.index-b.index).slice(0,8);
+}
+
+function normalizeDoi(s=""){
+  return s.toLowerCase()
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//,"")
+    .replace(/^doi:\s*/,"")
+    .replace(/[)\],.;:\s]+$/,"")
+    .trim();
+}
+function targetIdentity(){
+  const t=state.target||{};
+  const title=t.display_name||t.title||"";
+  const doi=normalizeDoi(t.doi||"");
+  const year=String(t.publication_year||"");
+  const authors=(t.authorships||[]).map(a=>a.author?.display_name||"").filter(Boolean);
+  const surnames=authors.map(x=>x.trim().split(/\s+/).pop()).filter(Boolean);
+  const titleTokens=slug(title).split(" ").filter(x=>x.length>=5).slice(0,12);
+  return {title,doi,year,authors,surnames,titleTokens};
+}
+function splitReferenceSection(text){
+  const normalized=text.replace(/\r/g,"\n");
+  const patterns=[
+    /\n\s*(references|bibliography|literature cited|works cited)\s*\n/i,
+    /\n\s*(參考文獻|参考文献)\s*\n/i
+  ];
+  let idx=-1,matchLen=0;
+  for(const re of patterns){
+    const m=re.exec(normalized);
+    if(m && (idx<0 || m.index<idx)){idx=m.index;matchLen=m[0].length}
+  }
+  if(idx<0 || idx<normalized.length*.35){
+    return {body:normalized,references:"",headingFound:false};
+  }
+  return {body:normalized.slice(0,idx),references:normalized.slice(idx+matchLen),headingFound:true};
+}
+function referenceEntries(refText){
+  if(!refText)return [];
+  let txt=refText.replace(/\s+/g," ").trim();
+  const entries=[];
+  // Numeric forms: [23], 23., 23)
+  const re=/(?:^|\s)(?:\[(\d{1,4})\]|(\d{1,4})[.)])\s+/g;
+  let ms=[...txt.matchAll(re)];
+  if(ms.length>=3){
+    for(let i=0;i<ms.length;i++){
+      const start=ms[i].index+(ms[i][0].startsWith(" ")?1:0);
+      const end=i+1<ms.length?ms[i+1].index:txt.length;
+      entries.push({number:ms[i][1]||ms[i][2],text:txt.slice(start,end).trim()});
+    }
+    return entries;
+  }
+  // Fallback: sentence-ish reference splitting
+  return txt.split(/(?<=\.)\s+(?=[A-Z][A-Za-z'’-]+,\s+[A-Z])|(?<=\.)\s+(?=[A-Z][A-Za-z'’-]+\s+[A-Z]\.)/)
+    .map(x=>({number:null,text:x.trim()}))
+    .filter(x=>x.text.length>40);
+}
+function scoreReferenceEntry(entry,id){
+  const t=norm(entry.text);
+  let score=0;const hits=[];
+  const entryDoi=(entry.text.match(/10\.\d{4,9}\/[-._;()/:A-Z0-9]+/ig)||[]).map(normalizeDoi);
+  if(id.doi && entryDoi.includes(id.doi)){score+=14;hits.push("DOI")}
+  let surnameHits=0;
+  for(const s of id.surnames.slice(0,4)){
+    if(s && new RegExp(`\\b${escapeReg(s)}\\b`,"i").test(entry.text)){surnameHits++;score+=1.6}
+  }
+  if(surnameHits>=1)hits.push(`${surnameHits} author`);
+  if(id.year && new RegExp(`\\b${escapeReg(id.year)}\\b`).test(entry.text)){score+=3;hits.push("year")}
+  let tok=0;
+  for(const k of id.titleTokens){if(t.includes(k)){tok++;score+=.9}}
+  if(tok>=2)hits.push(`${tok} title tokens`);
+  return {score,hits};
+}
+function findTargetReference(refText){
+  const id=targetIdentity();
+  const entries=referenceEntries(refText);
+  let best=null;
+  for(const e of entries){
+    const s=scoreReferenceEntry(e,id);
+    if(!best||s.score>best.score)best={...e,...s};
+  }
+  if(!best)return {entry:null,confidence:0,method:"none",entries:0};
+  let confidence=Math.min(.99,best.score/18);
+  if(best.hits.includes("DOI"))confidence=Math.max(confidence,.98);
+  return {entry:best,confidence,method:best.number?"numeric-reference":"reference-text",entries:entries.length};
+}
+function expandNumericCitationToken(token){
+  // token examples: "23", "12-15", "12,14,18"
+  const out=new Set();
+  token.split(/[,;]/).forEach(part=>{
+    const m=part.trim().match(/^(\d+)\s*[-–]\s*(\d+)$/);
+    if(m){
+      let a=+m[1],b=+m[2];
+      if(b>=a && b-a<=20)for(let n=a;n<=b;n++)out.add(String(n));
+    }else if(/^\d+$/.test(part.trim())) out.add(part.trim());
+  });
+  return [...out];
+}
+
+
+
+function numericCitationGroups(body){
+  const groups=[];
+  const patterns=[
+    /\[([0-9,\s;–—-]+)\]/g,
+    /\(([0-9,\s;–—-]+)\)/g
+  ];
+  for(const re of patterns){
+    let m;
+    while((m=re.exec(body)) && groups.length<5000){
+      const nums=new Set();
+      m[1].split(/[;,]/).forEach(part=>{
+        const x=part.trim();
+        const mm=x.match(/^(\d+)\s*[-–—]\s*(\d+)$/);
+        if(mm){
+          let a=+mm[1],b=+mm[2];
+          if(b>=a && b-a<=30)for(let n=a;n<=b;n++)nums.add(String(n));
+        }else if(/^\d+$/.test(x)) nums.add(x);
+      });
+      if(nums.size)groups.push({index:m.index,raw:m[0],numbers:[...nums]});
+    }
+  }
+  return groups;
+}
+function sentenceBounds(text,index){
+  let s=index,e=index;
+  while(s>0 && !/[.!?。！？]\s*$/.test(text.slice(Math.max(0,s-2),s)))s--;
+  while(e<text.length && !/[.!?。！？]/.test(text[e]))e++;
+  return {start:Math.max(0,s),end:Math.min(text.length,e+1)};
+}
+function localClause(text,index){
+  const b=sentenceBounds(text,index);
+  let sentence=text.slice(b.start,b.end);
+  const localIndex=index-b.start;
+  let left=localIndex,right=localIndex;
+  while(left>0 && !/[;:，,]/.test(sentence[left-1]))left--;
+  while(right<sentence.length && !/[;:，,]/.test(sentence[right]))right++;
+  return {sentence:sentence.trim(),clause:sentence.slice(left,right).trim()};
+}
+function numericCitationPassages(body,refNumber){
+  const passages=[];
+  const groups=numericCitationGroups(body);
+  for(const g of groups){
+    if(!g.numbers.includes(String(refNumber)))continue;
+    const start=Math.max(0,g.index-440),end=Math.min(body.length,g.index+g.raw.length+560);
+    const text=body.slice(start,end).replace(/\s+/g," ").trim();
+    const local=localClause(body,g.index);
+    const groupSize=g.numbers.length;
+    const exclusive=groupSize===1;
+    const ambiguityPenalty=exclusive?0:Math.min(.36,(groupSize-1)*.07);
+    passages.push({
+      index:g.index,text,pattern:`ref #${refNumber}`,binding:"numeric",
+      citationGroup:g.raw,citationGroupSize:groupSize,exclusiveCitation:exclusive,
+      localSentence:local.sentence,localClause:local.clause,
+      ambiguityPenalty
+    });
+  }
+  return passages.filter((p,i,a)=>a.findIndex(x=>Math.abs(x.index-p.index)<120)===i).slice(0,20);
+}
+function authorYearCitationCount(sentence){
+  const years=(sentence.match(/\b(19|20)\d{2}[a-z]?\b/g)||[]).length;
+  const etal=(sentence.match(/\bet al\.?/gi)||[]).length;
+  const semis=(sentence.match(/;/g)||[]).length;
+  return Math.max(1,years,etal+semis+1);
+}
+function authorYearPassages(body){
+  const id=targetIdentity();
+  const passages=[];
+  for(const surname of id.surnames.slice(0,3)){
+    if(!surname)continue;
+    const pats=[];
+    if(id.year){
+      pats.push(new RegExp(`\\b${escapeReg(surname)}\\b.{0,85}\\b${escapeReg(id.year)}[a-z]?\\b`,"gi"));
+      pats.push(new RegExp(`\\b${escapeReg(id.year)}[a-z]?\\b.{0,85}\\b${escapeReg(surname)}\\b`,"gi"));
+    }else pats.push(new RegExp(`\\b${escapeReg(surname)}\\b`,"gi"));
+    for(const re of pats){
+      let m;
+      while((m=re.exec(body))&&passages.length<30){
+        const start=Math.max(0,m.index-440),end=Math.min(body.length,m.index+m[0].length+560);
+        const text=body.slice(start,end).replace(/\s+/g," ").trim();
+        const local=localClause(body,m.index);
+        const count=authorYearCitationCount(local.sentence);
+        const ambiguityPenalty=count<=1?0:Math.min(.34,(count-1)*.08);
+        if(!passages.some(x=>Math.abs(x.index-m.index)<120)){
+          passages.push({
+            index:m.index,text,pattern:`${surname} ${id.year}`.trim(),binding:"author-year",
+            citationGroupSize:count,exclusiveCitation:count<=1,
+            localSentence:local.sentence,localClause:local.clause,
+            ambiguityPenalty
+          });
+        }
+      }
+    }
+  }
+  return passages;
+}
+function evidenceScopeScore(passage){
+  const t=norm(passage.localClause||passage.localSentence||passage.text||"");
+  let score=.55;
+  const verbs=["show","find","found","demonstrat","report","observe","confirm","support","replicat","contradict","inconsistent","consistent","fail"];
+  verbs.forEach(v=>{if(t.includes(v))score+=.04});
+  if((passage.localClause||"").length<35)score-=.08;
+  if(passage.citationGroupSize>1)score-=Math.min(.25,(passage.citationGroupSize-1)*.05);
+  return Math.max(.2,Math.min(.95,score));
+}
+function ambiguityLabel(p){
+  if(p.exclusiveCitation)return {label:"exclusive",cls:"good"};
+  if((p.citationGroupSize||1)<=3)return {label:`group x${p.citationGroupSize}`,cls:"warn"};
+  return {label:`group x${p.citationGroupSize}`,cls:"bad"};
+}
+
+function validateBoundPassage(passage,bindingConfidence){
+  const id=targetIdentity();
+  let score=bindingConfidence*10;
+  const txt=norm(passage.text);
+  if(id.year && txt.includes(id.year))score+=1;
+  let surnameHit=0;for(const s of id.surnames.slice(0,3))if(s&&txt.includes(norm(s)))surnameHit++;
+  score+=Math.min(2,surnameHit*.8);
+  let titleHit=0;for(const k of id.titleTokens.slice(0,8))if(txt.includes(k))titleHit++;
+  score+=Math.min(2,titleHit*.35);
+  score += evidenceScopeScore(passage)*1.5;
+  score -= (passage.ambiguityPenalty||0)*6;
+  return Math.min(.99,Math.max(.15,score/15));
+}
+function accurateExtractPassages(fullText){
+  const sec=splitReferenceSection(fullText);
+  const ref=findTargetReference(sec.references);
+  let passages=[];
+  let bindingSummary={method:"author-year fallback",confidence:0.45,reference:null,referenceNumber:null,referenceHits:[]};
+
+  if(ref.entry && ref.confidence>=.48){
+    bindingSummary={
+      method:ref.method,
+      confidence:ref.confidence,
+      reference:ref.entry.text,
+      referenceNumber:ref.entry.number||null,
+      referenceHits:ref.entry.hits||[]
+    };
+    if(ref.entry.number){
+      passages=numericCitationPassages(sec.body,ref.entry.number);
+    }
+    if(!passages.length){
+      passages=authorYearPassages(sec.body);
+    }
+  }else{
+    passages=authorYearPassages(sec.body);
+  }
+
+  passages=passages.map(p=>({
+    ...p,
+    evidenceScope:evidenceScopeScore(p),
+    bindingConfidence:validateBoundPassage(p,bindingSummary.confidence)
+  })).filter(p=>p.bindingConfidence>=.38)
+    .sort((a,b)=>b.bindingConfidence-a.bindingConfidence||a.index-b.index)
+    .slice(0,10);
+
+  return {passages,bindingSummary,referenceSectionFound:sec.headingFound};
+}
+
+function classifyPassage(text){
+  const t=norm(text);let s=0,c=0,m=0;
+  const strongSupport=["replicated","replicate the finding","confirmed","consistent with","supports the hypothesis","in agreement with","validated","corroborated"];
+  const strongContrast=["failed to replicate","fail to replicate","could not replicate","contrary to","inconsistent with","did not support","does not support","no evidence for","null result","in contrast to"];
+  strongSupport.forEach(k=>{if(t.includes(k))s+=5});
+  strongContrast.forEach(k=>{if(t.includes(k))c+=6});
+  SUPPORT.forEach(k=>{if(t.includes(k))s+=k.length>10?3:1.5});
+  CONTRAST.forEach(k=>{if(t.includes(k))c+=k.length>10?4:2});
+  ["previously reported","as described by","following the method","according to","see also","introduced by"].forEach(k=>{if(t.includes(k))m+=2});
+  if(c>=5 && c>s+1) return {label:"contrasting",confidence:Math.min(.96,.58+c*.03),reason:"引用段落含有較強的衝突、零結果、未支持或重現失敗線索。"};
+  if(s>=4 && s>c+1) return {label:"supporting",confidence:Math.min(.94,.56+s*.03),reason:"引用段落含有較強的一致、支持、重現或驗證線索。"};
+  return {label:"mentioning",confidence:Math.min(.82,.58+m*.04),reason:"已可靠綁定目標論文，但目前未偵測到足夠強的支持或對比證據。"};
+}
+async function attachPdf(i,file){
+  const p=state.papers[i]; if(!p)return;
+  log(`解析引用全文：${file.name} → ${p.display_name||p.title}`);
+  try{
+    const x=await extractPdf(file);
+    const bound=accurateExtractPassages(x.text);
+    const passages=bound.passages.map(x=>{
+      const stance=classifyPassage(x.localClause||x.localSentence||x.text);
+      const combined=Math.max(.25,Math.min(.99,stance.confidence*.60+x.bindingConfidence*.40-(x.ambiguityPenalty||0)*.45));
+      return {...x,...stance,confidence:combined}
+    });
+    p._fulltext=true;
+    p._fileName=file.name;
+    p._passages=passages;
+    p._binding=bound.bindingSummary;
+    p._referenceSectionFound=bound.referenceSectionFound;
+
+    if(!passages.length){
+      p._stance="unknown";
+      p._reason=bound.bindingSummary?.reference
+        ?"參考文獻中疑似找到目標論文，但正文沒有足夠可靠的引用上下文。"
+        :"全文已解析，但未能可靠綁定目標論文。";
+    }else{
+      const labels=passages.map(x=>x.label);
+      p._stance=labels.includes("contrasting")?"contrasting":labels.includes("supporting")?"supporting":"mentioning";
+      p._reason=`已從 ${passages.length} 個通過 target binding 的引用上下文判定。`;
+    }
+    renderAll();
+    log(`全文解析完成：${passages.length} 個可靠引用段落；binding=${bound.bindingSummary?.method||"none"} (${(bound.bindingSummary?.confidence||0).toFixed(2)})`);
+  }catch(e){
+    alert("PDF 解析失敗："+e.message);
+    log(`PDF 解析失敗：${e.message}`);
+  }
+}
+async function tryOpenAccess(i){
+  const p=state.papers[i]; if(!p)return;
+  const url=p.best_oa_location?.pdf_url || p.primary_location?.pdf_url;
+  if(!url){
+    requestAuthorizedAccess(i);
+    return;
+  }
+  log(`嘗試讀取 OA PDF：${url}`);
+  try{
+    const r=await fetch(url);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const blob=await r.blob();
+    if(!/pdf/i.test(blob.type) && blob.size<1000)throw new Error("回應不是可解析 PDF");
+    const file=new File([blob],`oa-${openAlexId(p.id)}.pdf`,{type:"application/pdf"});
+    await attachPdf(i,file);
+  }catch(e){
+    log(`瀏覽器無法直接讀 OA PDF：${e.message}`);
+    requestAuthorizedAccess(i);
+  }
+}
+function stanceBadge(x){return `<span class="stance ${x}">${x}</span>`}
+function paperMeta(p){
+  const a=(p.authorships||[]).slice(0,3).map(x=>x.author?.display_name).filter(Boolean).join(", ");
+  return `${a}${(p.authorships||[]).length>3?" et al.":""} · ${p.publication_year||"n.d."} · cited by ${p.cited_by_count||0}`;
+}
+
+let viewMode="comfortable";
+
+let pendingAccessPaperIndex=null;
+
+
+const automationBridge={
+  connected:false,
+  lastPing:0,
+  nonce:null
+};
+function setAutomationStatus(kind,text){
+  const el=$("#automationStatus"); if(!el)return;
+  el.className="automation-status"+(kind?` ${kind}`:"");
+  el.textContent=text;
+}
+function automationPing(){
+  window.postMessage({source:"openscite-web",type:"OPENSCITE_EXTENSION_PING",nonce:automationBridge.nonce},"*");
+}
+window.addEventListener("message",e=>{
+  if(e.source!==window || !e.data || e.data.source!=="openscite-extension")return;
+  const msg=e.data;
+  if(msg.type==="OPENSCITE_EXTENSION_PONG"){
+    const n=msg.nonce || msg.payload?.nonce;
+    if(!n)return;
+    automationBridge.nonce=n;
+    automationBridge.connected=true;
+    automationBridge.lastPing=Date.now();
+    setAutomationStatus("online",`Automation extension ${msg.version||""} 已連線`);
+    return;
+  }
+  if(!automationBridge.nonce || msg.nonce!==automationBridge.nonce)return;
+
+  if(msg.type==="OPENSCITE_AUTOMATION_STATUS"){
+    const s=msg.payload||{};
+    if(s.state==="opening")setAutomationStatus("busy","正在開啟授權頁面…");
+    else if(s.state==="permission-required")setAutomationStatus("busy","等待本次出版社網域授權…");
+    else if(s.state==="scanning")setAutomationStatus("busy","正在偵測 PDF / viewer / Network…");
+    else if(s.state==="network-pdf-found")setAutomationStatus("busy","Network 已偵測到 PDF 回應…");
+    else if(s.state==="debugger-error")setAutomationStatus("error","高相容 Network 模式無法啟用");
+    else if(s.state==="awaiting-confirmation")setAutomationStatus("busy","等待下載授權…");
+    else if(s.state==="download-started"){
+      setAutomationStatus("online","PDF 下載已開始");
+      toast("PDF 下載已開始；完成後回到這裡選擇剛下載的 PDF");
+      if(Number.isInteger(s.paperIndex) && state.papers[s.paperIndex]){
+        state.papers[s.paperIndex]._accessAttempted=true;renderAll();
+      }
+    }else if(s.state==="no-pdf"){
+      setAutomationStatus("error","尚未找到 PDF 下載入口");
+      toast("目前頁面找不到 PDF。若需要學校登入，請先完成登入；頁面完成後擴充功能會再次掃描。");
+    }else if(s.state==="cancelled"){
+      setAutomationStatus("online","下載已取消");
+    }else if(s.state==="error"){
+      setAutomationStatus("error","自動化發生錯誤");
+      toast(s.message||"瀏覽器自動化失敗");
+    }
+  }
+});
+function automateAuthorizedAccess(i){
+  const p=state.papers[i]; if(!p)return;
+  const url=publisherUrlForPaper(p);
+  if(!url)return toast("這篇文獻沒有 DOI 或出版社頁面");
+  if(!automationBridge.connected || !automationBridge.nonce){
+    automationPing();
+    toast("尚未偵測到 OpenScite Browser Automation 擴充功能");
+    return;
+  }
+  p._accessAttempted=true;renderAll();
+  setAutomationStatus("busy","正在啟動自動化…");
+  window.postMessage({
+    source:"openscite-web",
+    type:"OPENSCITE_AUTOMATE_ACCESS",
+    nonce:automationBridge.nonce,
+    payload:{
+      paperIndex:i,
+      title:p.display_name||p.title||"",
+      doi:p.doi||"",
+      url
+    }
+  },"*");
+}
+setTimeout(automationPing,400);
+setInterval(()=>{
+  if(Date.now()-automationBridge.lastPing>15000 && automationBridge.connected){
+    automationBridge.connected=false;automationBridge.nonce=null;
+    setAutomationStatus("","Automation extension 未連線");
+  }
+  automationPing();
+},7000);
+
+
+function publisherUrlForPaper(p){
+  if(!p)return "";
+  if(p.doi)return p.doi;
+  if(p.primary_location?.landing_page_url)return p.primary_location.landing_page_url;
+  if(p.best_oa_location?.landing_page_url)return p.best_oa_location.landing_page_url;
+  return p.id||"";
+}
+function requestAuthorizedAccess(i){
+  const p=state.papers[i]; if(!p)return;
+  pendingAccessPaperIndex=i;
+  const url=publisherUrlForPaper(p);
+  if(!url){
+    toast("這篇文獻沒有可開啟的 DOI 或出版社頁面");
+    return;
+  }
+  $("#accessModal").classList.add("show");
+}
+function closeAccessModal(){
+  $("#accessModal").classList.remove("show");
+}
+function openAuthorizedPage(){
+  if(pendingAccessPaperIndex===null)return;
+  const p=state.papers[pendingAccessPaperIndex];
+  const url=publisherUrlForPaper(p);
+  closeAccessModal();
+  if(!url)return;
+  log(`使用者允許開啟授權頁面：${url}`);
+  window.open(url,"_blank","noopener,noreferrer");
+  p._accessAttempted=true;
+  renderAll();
+  setTimeout(()=>{
+    toast("下載 PDF 後，回到 OpenScite 按「選擇剛下載的 PDF」");
+  },700);
+}
+function chooseDownloadedPdf(i){
+  const inp=document.querySelector(`.pdf-input[data-i="${i}"]`);
+  if(inp)inp.click();
+}
+
+
+function toast(msg){
+  const t=$("#toast"); if(!t)return;
+  t.textContent=msg;t.classList.add("show");
+  clearTimeout(toast._tm);toast._tm=setTimeout(()=>t.classList.remove("show"),2400);
+}
+function slug(s=""){return norm(s).replace(/[^a-z0-9\u4e00-\u9fff]+/g," ").trim()}
+function titleSimilarity(a,b){
+  a=slug(a);b=slug(b); if(!a||!b)return 0;
+  const A=new Set(a.split(" ").filter(x=>x.length>2)),B=new Set(b.split(" ").filter(x=>x.length>2));
+  const inter=[...A].filter(x=>B.has(x)).length, uni=new Set([...A,...B]).size||1;
+  return inter/uni;
+}
+function getPaperDoi(p){return (p.doi||"").replace(/^https?:\/\/doi\.org\//i,"").toLowerCase()}
+async function inspectPdfIdentity(file){
+  const x=await extractPdf(file,5);
+  const doi=(doiFromText(x.text)||"").toLowerCase();
+  const title=likelyTitle(x.text);
+  return {file,text:x.text,doi,title};
+}
+function bestPaperMatch(identity){
+  let best={i:-1,score:0,reason:""};
+  state.papers.forEach((p,i)=>{
+    let score=0,reason=[];
+    const pdoi=getPaperDoi(p);
+    if(identity.doi && pdoi && identity.doi===pdoi){score=1;reason.push("DOI exact")}
+    else{
+      const sim=titleSimilarity(identity.title,p.display_name||p.title||"");
+      if(sim>score){score=sim;reason.push(`title ${(sim*100).toFixed(0)}%`)}
+    }
+    if(score>best.score)best={i,score,reason:reason.join(", ")};
+  });
+  return best;
+}
+async function bulkAttach(files){
+  const list=$("#matchList");list.innerHTML="";
+  let matched=0;
+  for(const file of files){
+    const row=document.createElement("div");row.className="match-row";
+    row.innerHTML=`<div><b>${escapeHtml(file.name)}</b><span>辨識中…</span></div><span>…</span>`;
+    list.appendChild(row);
+    try{
+      const id=await inspectPdfIdentity(file);
+      const m=bestPaperMatch(id);
+      const title=id.title||id.doi||"無法辨識";
+      if(m.i>=0 && (m.score>=.34 || id.doi)){
+        row.innerHTML=`<div><b>${escapeHtml(file.name)}</b><span>${escapeHtml(title)}</span></div><span class="match-ok">→ #${m.i+1} ${(m.score*100).toFixed(0)}%</span>`;
+        await attachPdf(m.i,file);matched++;
+      }else{
+        row.innerHTML=`<div><b>${escapeHtml(file.name)}</b><span>${escapeHtml(title)}</span></div><span class="match-warn">未配對</span>`;
+      }
+    }catch(e){
+      row.innerHTML=`<div><b>${escapeHtml(file.name)}</b><span>${escapeHtml(e.message)}</span></div><span class="match-warn">失敗</span>`;
+    }
+  }
+  toast(`批次處理完成：${matched}/${files.length} 篇成功配對`);
+}
+function saveSessionData(){
+  if(!state.target)return toast("目前沒有可儲存的分析");
+  const safe={
+    target:state.target,targetText:"",sourceFileName:state.sourceFileName,papers:state.papers.map(p=>({...p,_passages:p._passages||[]})),
+    log:state.log,mode:state.mode,limit:state.limit,savedAt:new Date().toISOString()
+  };
+  localStorage.setItem("openscite-web-session",JSON.stringify(safe));
+  $("#sessionStatus").textContent=`已儲存 ${new Date().toLocaleTimeString()}`;toast("工作階段已儲存在這台瀏覽器");
+}
+function loadSessionData(){
+  const raw=localStorage.getItem("openscite-web-session"); if(!raw)return toast("找不到已儲存工作階段");
+  try{
+    state=JSON.parse(raw);
+    state.targetText="";state.papers=(state.papers||[]).map(p=>({...p,_passages:p._passages||[]}));
+    $("#targetTitle").textContent=state.target.display_name||state.target.title||"Untitled";
+    $("#targetMeta").textContent=targetDisplay(state.target);
+    $("#target").classList.add("show");$("#empty").classList.add("hidden");$("#results").classList.remove("hidden");
+    $("#mode").value=state.mode||"stance_first";$("#limit").value=String(state.limit||20);
+    $("#log").textContent=(state.log||[]).join("\n");
+    renderAll();$("#sessionStatus").textContent="已載入本機工作階段";toast("工作階段已載入");
+  }catch(e){toast("工作階段資料損壞")}
+}
+function yearHistogram(){
+  const m={};state.papers.forEach(p=>{const y=p.publication_year;if(y)m[y]=(m[y]||0)+1});return Object.entries(m).sort((a,b)=>+a[0]-+b[0])
+}
+function svgBarChart(data){
+  if(!data.length)return `<div class="dashboard-empty">沒有年份資料</div>`;
+  const W=700,H=210,pad={l:34,r:10,t:12,b:35},max=Math.max(...data.map(x=>x[1]),1);
+  const bw=(W-pad.l-pad.r)/data.length;
+  const bars=data.map(([y,v],i)=>{
+    const h=(H-pad.t-pad.b)*v/max,x=pad.l+i*bw+3,yy=H-pad.b-h;
+    return `<rect x="${x}" y="${yy}" width="${Math.max(4,bw-6)}" height="${h}" rx="4" fill="var(--green)" opacity=".82">
+      <title>${y}: ${v}</title></rect>
+      <text x="${x+(bw-6)/2}" y="${H-12}" text-anchor="middle" fill="#78968a" font-size="9">${data.length>12&&i%2? "":y}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="${pad.l}" y1="${H-pad.b}" x2="${W-pad.r}" y2="${H-pad.b}" stroke="#244438"/>${bars}</svg>`;
+}
+function svgDonut(counts){
+  const vals=[counts.supporting||0,counts.contrasting||0,counts.mentioning||0,counts.unknown||0],total=vals.reduce((a,b)=>a+b,0);
+  if(!total)return `<div class="dashboard-empty">還沒有可分類的引用段落</div>`;
+  const cols=["var(--green)","var(--red)","var(--blue)","var(--amber)"],r=62,c=2*Math.PI*r;let off=0;
+  const segs=vals.map((v,i)=>{const len=c*v/total,el=`<circle cx="105" cy="105" r="${r}" fill="none" stroke="${cols[i]}" stroke-width="24" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 105 105)"/>`;off+=len;return el}).join("");
+  return `<svg viewBox="0 0 210 210"><circle cx="105" cy="105" r="${r}" fill="none" stroke="#14271f" stroke-width="24"/>${segs}<text x="105" y="101" text-anchor="middle" fill="#edf9f4" font-size="25" font-weight="800">${total}</text><text x="105" y="119" text-anchor="middle" fill="#78968a" font-size="10">passages</text></svg>`;
+}
+function renderDashboard(){
+  if(!$("#yearChart"))return;
+  $("#yearChart").innerHTML=svgBarChart(yearHistogram());
+  const counts={supporting:0,contrasting:0,mentioning:0,unknown:0};
+  state.papers.flatMap(x=>x._passages||[]).forEach(x=>counts[x.label]=(counts[x.label]||0)+1);
+  $("#stanceChart").innerHTML=svgDonut(counts);
+  const rows=state.papers.filter(p=>p._fulltext||p._passages?.length);
+  $("#evidenceMatrix").innerHTML=rows.length?`
+    <div class="matrix-row head"><div>文獻</div><div>Support</div><div>Contrast</div><div>Mention</div><div>Unknown</div></div>
+    ${rows.map(p=>{
+      const c={supporting:0,contrasting:0,mentioning:0,unknown:0};(p._passages||[]).forEach(x=>c[x.label]=(c[x.label]||0)+1);
+      return `<div class="matrix-row"><div class="matrix-name" title="${escapeHtml(p.display_name||p.title||"")}">${escapeHtml(p.display_name||p.title||"")}</div><div class="matrix-cell sup">${c.supporting}</div><div class="matrix-cell con">${c.contrasting}</div><div class="matrix-cell men">${c.mentioning}</div><div class="matrix-cell unk">${c.unknown}</div></div>`
+    }).join("")}`:`<div class="dashboard-empty">目前沒有 passage-level evidence</div>`;
+}
+
+
+function keywordTerms(){
+  const raw=(document.querySelector("#paperSearch")?.value||"").trim();
+  if(!raw) return [];
+  const quoted=[...raw.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].map(m=>m[1].trim()).filter(Boolean);
+  const rest=raw.replace(/"([^"\\]*(?:\\.[^"\\]*)*)"/g," ");
+  const tokens=rest.split(/[\s,;，；]+/u).map(x=>x.trim()).filter(Boolean);
+  return [...new Set([...quoted,...tokens])].sort((a,b)=>b.length-a.length).slice(0,24);
+}
+function escapeRegExp(s=""){return s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function highlightKeywords(value=""){
+  const s=String(value??"");
+  const terms=keywordTerms();
+  if(!terms.length) return escapeHtml(s);
+  let re;
+  try{ re=new RegExp(terms.map(escapeRegExp).filter(Boolean).join("|"),"giu") }
+  catch(_){ return escapeHtml(s) }
+  let html="", last=0;
+  for(const m of s.matchAll(re)){
+    const i=m.index??0;
+    html+=escapeHtml(s.slice(last,i));
+    html+=`<mark class="keyword-hit">${escapeHtml(m[0])}</mark>`;
+    last=i+m[0].length;
+    if(m[0].length===0) break;
+  }
+  return html+escapeHtml(s.slice(last));
+}
+function keywordHaystack(p){
+  const venue=p?.primary_location?.source?.display_name || p?.best_oa_location?.source?.display_name || "";
+  return [
+    p.display_name||p.title||"",
+    p._abstract||"",
+    paperMeta(p)||"",
+    venue,
+    ...(p.authorships||[]).map(x=>x.author?.display_name||""),
+    ...(p._passages||[]).map(x=>x.text||"")
+  ].join(" ");
+}
+
+function currentVisiblePapers(){
+  const terms=keywordTerms().map(norm).filter(Boolean);
+  const stance=$("#stanceFilter")?.value||"all";
+  const sort=$("#sortView")?.value||"rank";
+  let arr=state.papers.map((p,i)=>({p,i}));
+  if(terms.length) arr=arr.filter(({p})=>{
+    const hay=norm(keywordHaystack(p));
+    return terms.every(t=>hay.includes(t));
+  });
+  if(stance!=="all") arr=arr.filter(({p})=>p._stance===stance);
+  if(sort==="journal") arr.sort((a,b)=>{
+    const ja=journalPrestige(a.p), jb=journalPrestige(b.p);
+    if(ja.hasMetric!==jb.hasMetric) return jb.hasMetric-ja.hasMetric;
+    return jb.score-ja.score || (b.p.cited_by_count||0)-(a.p.cited_by_count||0);
+  });
+  if(sort==="citations") arr.sort((a,b)=>(b.p.cited_by_count||0)-(a.p.cited_by_count||0));
+  if(sort==="year") arr.sort((a,b)=>(b.p.publication_year||0)-(a.p.publication_year||0));
+  if(sort==="evidence") arr.sort((a,b)=>b.p._passages.length-a.p._passages.length);
+  return arr;
+}
+function renderCoverage(){
+  const total=state.papers.length;
+  const full=state.papers.filter(x=>x._fulltext).length;
+  const pct=total?full/total*100:0;
+  if($("#coverageText")) $("#coverageText").textContent=`${full} / ${total}`;
+  if($("#coverageBar")) $("#coverageBar").style.width=`${pct}%`;
+
+  const ps=state.papers.flatMap(x=>x._passages);
+  const counts={supporting:0,contrasting:0,mentioning:0,unknown:0};
+  ps.forEach(x=>counts[x.label]=(counts[x.label]||0)+1);
+  const n=ps.length||1;
+  if($("#stanceText")) $("#stanceText").textContent=ps.length?`${ps.length} 個可綁定引用段落`:"尚無全文證據";
+  if($("#stanceMeter")) $("#stanceMeter").innerHTML=`
+    <i class="sup" style="width:${counts.supporting/n*100}%"></i>
+    <i class="con" style="width:${counts.contrasting/n*100}%"></i>
+    <i class="men" style="width:${counts.mentioning/n*100}%"></i>
+    <i class="unk" style="width:${counts.unknown/n*100}%"></i>`;
+
+  let msg;
+  if(!total) msg="尚未建立 shortlist。";
+  else if(full===0) msg=`已找到 ${total} 篇候選引用研究，但尚未加入任何全文，因此目前只能做候選排序，不能可靠判斷 stance。`;
+  else if(pct<40) msg=`已解析 ${full}/${total} 篇全文。現在可以開始看 citation passages，但全文覆蓋率仍偏低，整體 stance 分布不宜過度解讀。`;
+  else if(pct<80) msg=`已解析 ${full}/${total} 篇全文，已有中等覆蓋率。建議優先補齊排名前段或高影響力文獻，再比較 supporting / contrasting 證據。`;
+  else msg=`已解析 ${full}/${total} 篇全文，覆蓋率高。現在的 passage-level stance 分布較適合用來形成研究概況，但仍應逐段核對原文。`;
+  if($("#insightCard")) $("#insightCard").innerHTML=`<h4>研究概況</h4><p>${msg}</p>`;
+}
+
+function renderPapers(){
+  const box=$("#paperList");box.innerHTML="";
+  currentVisiblePapers().forEach(({p,i})=>{
+    const el=document.createElement("article");el.className="paper"+(viewMode==="compact"?" compact":"");
+    const oaUrl=p.id||"#";const doi=p.doi||"";
+    const abstract=p._abstract||"OpenAlex 無摘要。";
+    const oaPdf=p.best_oa_location?.pdf_url || p.primary_location?.pdf_url;
+    el.innerHTML=`
+      <div class="paper-main">
+        <div class="paper-top"><div><div class="paper-title">${highlightKeywords(p.display_name||p.title||"Untitled")}</div><div class="paper-meta">${highlightKeywords(paperMeta(p))}</div></div><span class="rank">#${i+1} · ${p._score.toFixed(1)}</span></div>
+        <div class="abstract">${highlightKeywords(abstract)}</div>
+        <div class="evidence-summary">
+          <span class="metric-pill">${p._passages.length} passages</span>
+          <span class="metric-pill">${p._fulltext ? "fulltext ready" : "metadata only"}</span>
+          ${p._passages.length ? `<span class="confidence">max confidence <i style="--w:${Math.round(Math.max(...p._passages.map(x=>x.confidence))*100)}%"></i></span>` : ""}
+        </div>
+        ${p._fulltext?`<div class="binding-box">
+          <b>Target binding</b>
+          <div class="binding-tags">
+            <span class="accuracy-badge ${(p._binding?.confidence||0)>=.8?"high":(p._binding?.confidence||0)>=.5?"mid":"low"}">${p._binding?.method||"unknown"} · ${Math.round((p._binding?.confidence||0)*100)}%</span>
+            <span class="binding-tag ${p._referenceSectionFound?"hit":""}">References ${p._referenceSectionFound?"found":"not found"}</span>
+            ${p._binding?.referenceNumber?`<span class="binding-tag hit">ref #${p._binding.referenceNumber}</span>`:""}
+            ${(p._binding?.referenceHits||[]).map(x=>`<span class="binding-tag hit">${escapeHtml(x)}</span>`).join("")}
+          </div>
+          ${p._binding?.reference?`<div class="reference-hit"><strong>Matched reference:</strong> ${escapeHtml(p._binding.reference.slice(0,320))}${p._binding.reference.length>320?"…":""}</div>`:""}
+        </div>`:""}
+        ${!p._fulltext?`<div class="access-panel">
+          <h5>全文取得</h5>
+          <p>${(p.best_oa_location?.pdf_url || p.primary_location?.pdf_url)
+            ?"找到可能的 OA PDF，可先嘗試直接讀取。"
+            :"目前沒有可直接讀取的 OA PDF；若你已連上學校網路／VPN，可以開啟授權頁面後自行下載。"}</p>
+          <div class="access-actions">
+            ${(p.best_oa_location?.pdf_url || p.primary_location?.pdf_url)
+              ?`<button class="btn small try-oa" data-i="${i}">嘗試 OA 全文</button>`
+              :""}
+            <button class="btn small automate-access" data-i="${i}">自動化取得全文</button>
+            <button class="btn small auth-access" data-i="${i}">手動用學校授權開啟</button>
+            ${p._accessAttempted?`<button class="btn small choose-downloaded" data-i="${i}">選擇剛下載的 PDF</button>`:""}
+            <span class="access-status ${p._accessAttempted?"warn":""}">${p._accessAttempted?"等待你選 PDF":"尚未取得全文"}</span>
+          </div>
+          <div class="automation-help">v10 高相容模式：每篇論文只臨時授權當前出版社，並可選用單分頁 Network inspection（網路監看）偵測直接 PDF、viewer、短效 token、CDN、page-owned blob 與已授權 session 中的 PDF response；工作完成立即解除監看並撤銷網域權限。</div>
+        </div>`:""}
+        <div class="paper-actions">
+          ${stanceBadge(p._stance)}
+          ${journalTierBadge(p)}
+          <a class="btn small" href="${escapeHtml(oaUrl)}" target="_blank" rel="noreferrer">OpenAlex ↗</a>
+          ${doi?`<a class="btn small" href="${escapeHtml(doi)}" target="_blank" rel="noreferrer">DOI ↗</a>`:""}
+          <button class="btn small attach" data-i="${i}">${p._fulltext?"更換 PDF":"加入 PDF"}</button>
+          <input type="file" class="hidden pdf-input" data-i="${i}" accept="application/pdf,.pdf">
+        </div>
+      </div>
+      <details class="evidence-detail" style="margin:0 15px 10px"><summary>查看 ranking / metadata 細節</summary>
+        <div class="raw-meta">
+          <div>Ranking score: <b>${p._score.toFixed(2)}</b></div>
+          <div>Abstract evidence cue: <b>${p._cues?.evidence||0}</b></div>
+          <div>OpenAlex cited_by_count: <b>${p.cited_by_count||0}</b></div>
+          <div>Journal / venue: <b>${highlightKeywords(journalPrestige(p).source)}</b></div>
+          <div>Journal tier: <b>${journalPrestige(p).tier}</b> · prestige score <b>${journalPrestige(p).hasMetric?journalPrestige(p).score.toFixed(1):"n/a"}</b></div>
+          <div>Venue h-index: <b>${journalPrestige(p).h||"n/a"}</b> · 2yr mean citedness: <b>${journalPrestige(p).mean||"n/a"}</b></div>
+          <div>OA PDF: <b>${oaPdf?"available":"not listed"}</b></div>
+        </div>
+      </details>
+      ${p._fulltext?`<div class="passages"><h4>${p._passages.length?`已找到 ${p._passages.length} 個 citation contexts（引用上下文）`:`全文已讀取，但目前無可靠 target binding（目標綁定）`}</h4>
+        ${p._passages.map((x,j)=>{
+          const amb=ambiguityLabel(x);
+          return `<div class="passage">
+            ${stanceBadge(x.label)}
+            <div class="context-meta">
+              <span class="context-pill ${amb.cls}">${amb.label}</span>
+              <span class="context-pill">binding ${(x.bindingConfidence||0).toFixed(2)}</span>
+              <span class="context-pill">scope ${(x.evidenceScope||0).toFixed(2)}</span>
+              ${x.citationGroup?`<span class="context-pill">${escapeHtml(x.citationGroup)}</span>`:""}
+            </div>
+            <q>${highlightKeywords(x.text)}</q>
+            ${!x.exclusiveCitation&&x.citationGroupSize>1?`<div class="conflict-note">此句同時引用 ${x.citationGroupSize} 篇文獻，因此 stance confidence 已自動降低；請人工確認證據是否真的針對目標論文。</div>`:""}
+            <div class="passage-foot"><span>${escapeHtml(x.reason)}</span><span>stance ${x.confidence.toFixed(2)} · binding ${(x.bindingConfidence||0).toFixed(2)}</span></div>
+          </div>`}).join("")}
+      </div>`:""}
+    `;
+    box.appendChild(el);
+  });
+  $$(".attach").forEach(b=>b.onclick=()=>document.querySelector(`.pdf-input[data-i="${b.dataset.i}"]`).click());
+  $$(".pdf-input").forEach(inp=>inp.onchange=()=>inp.files[0]&&attachPdf(+inp.dataset.i,inp.files[0]));
+  $$(".try-oa").forEach(b=>b.onclick=()=>tryOpenAccess(+b.dataset.i));
+  $$(".automate-access").forEach(b=>b.onclick=()=>automateAuthorizedAccess(+b.dataset.i));
+  $$(".auth-access").forEach(b=>b.onclick=()=>requestAuthorizedAccess(+b.dataset.i));
+  $$(".choose-downloaded").forEach(b=>b.onclick=()=>chooseDownloadedPdf(+b.dataset.i));
+}
+function buildReport(){
+  if(!state.target)return "";
+  const t=state.target;
+  const lines=[
+`# OpenScite Web Report`,
+``,
+`## Target work`,
+``,
+`**${t.display_name||t.title||"Untitled"}**  `,
+`${targetDisplay(t)}  `,
+`${t.id||""}`,
+``,
+`## Method`,
+``,
+`- Citation graph / metadata: OpenAlex`,
+`- Ranking mode: \`${state.mode}\``,
+`- Selected citing works: ${state.papers.length}`,
+`- Final stance is assigned only when a locally parsed full-text citation context can be bound to the target work.`,
+`- Papers without reliable citation passages remain \`unknown\`.`,
+``,
+`## Citing works`,
+``
+  ];
+  currentVisiblePapers().forEach(({p,i})=>{
+    lines.push(`### ${i+1}. ${p.display_name||p.title||"Untitled"}`);
+    lines.push(`- Year: ${p.publication_year||"n.d."}`);
+    lines.push(`- OpenAlex: ${p.id||""}`);
+    lines.push(`- DOI: ${p.doi||"—"}`);
+    lines.push(`- Overall passage summary: **${p._stance}**`);
+    lines.push(`- Full text parsed: ${p._fulltext?"yes":"no"}`);
+    if(p._binding) lines.push(`- Target binding: ${p._binding.method} (confidence ${(p._binding.confidence||0).toFixed(2)})`);
+    if(p._passages.length){
+      lines.push(`- Citation passages:`);
+      p._passages.forEach((x,j)=>{
+        lines.push(`  ${j+1}. **${x.label}** (confidence ${x.confidence.toFixed(2)}, binding ${(x.bindingConfidence||0).toFixed(2)}, group ${x.citationGroupSize||1}): ${x.text}`);
+      });
+    }else lines.push(`- Citation passages: unavailable / not reliably bound`);
+    lines.push("");
+  });
+  lines.push(`## Important limitation`,``,`The browser version uses transparent keyword heuristics for passage stance after target binding. Treat labels as screening assistance rather than a substitute for expert reading.`);
+  return lines.join("\n");
+}
+function citationsJson(){
+  return {
+    generated_at:new Date().toISOString(),
+    target:{id:state.target?.id,doi:state.target?.doi,title:state.target?.display_name,year:state.target?.publication_year},
+    ranking_mode:state.mode,
+    citations:state.papers.map(p=>({
+      work_id:p.id,doi:p.doi,title:p.display_name,year:p.publication_year,
+      fulltext_parsed:p._fulltext,overall_passage_summary:p._stance,
+      binding:p._binding||null,
+      passages:p._passages.map(x=>({
+        text:x.text,label:x.label,confidence:x.confidence,
+        binding_confidence:x.bindingConfidence||null,
+        evidence_scope:x.evidenceScope||null,
+        citation_group:x.citationGroup||null,
+        citation_group_size:x.citationGroupSize||1,
+        exclusive_citation:!!x.exclusiveCitation,
+        local_sentence:x.localSentence||null,
+        local_clause:x.localClause||null,
+        reason:x.reason,target_pattern:x.pattern
+      }))
+    }))
+  };
+}
+function updateSummary(){
+  $("#sTotal").textContent=state.papers.length;
+  $("#sFulltext").textContent=state.papers.filter(x=>x._fulltext).length;
+  $("#sSupport").textContent=state.papers.flatMap(x=>x._passages).filter(x=>x.label==="supporting").length;
+  $("#sContrast").textContent=state.papers.flatMap(x=>x._passages).filter(x=>x.label==="contrasting").length;
+}
+function renderReport(){$("#reportPreview").textContent=buildReport()}
+function renderAll(){renderPapers();updateSummary();renderCoverage();renderDashboard();renderReport();$("#exportMdTop").disabled=!state.target}
+function download(name,text,type="text/plain"){
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),500)
+}
+async function run(){
+  $("#start").disabled=true;
+  try{
+    state.mode=$("#mode").value;state.limit=+$("#limit").value;state.log=[];$("#log").textContent="";
+    progress(3,"辨識目標論文");
+    const target=await resolveInput();state.target=target;
+    $("#targetTitle").textContent=target.display_name||target.title||"Untitled";
+    $("#targetMeta").textContent=targetDisplay(target);
+    $("#target").classList.add("show");
+    log(`目標論文：${target.display_name||target.title} (${openAlexId(target.id)})`);
+    progress(35,"查詢後續引用");
+    state.papers=await getCitingWorks(target.id,state.limit,state.mode);
+    progress(78,"排序候選文獻");
+    $("#empty").classList.add("hidden");$("#results").classList.remove("hidden");
+    renderAll();
+    progress(100,"分析完成");
+    doneProgress();
+  }catch(e){
+    log(`錯誤：${e.message}`);alert(e.message);doneProgress();
+  }finally{$("#start").disabled=false}
+}
+function reset(){
+  state={target:null,targetText:"",sourceFileName:"",papers:[],log:[],mode:"stance_first",limit:20};
+  $("#targetFile").value="";$("#manualQuery").value="";$("#target").classList.remove("show");$("#results").classList.add("hidden");$("#empty").classList.remove("hidden");$("#exportMdTop").disabled=true;$("#log").textContent="";
+}
+$("#pickTarget").onclick=()=>$("#targetFile").click();
+$("#start").onclick=run;$("#reset").onclick=reset;$("#changeTarget").onclick=()=>{$("#manualQuery").focus();};
+$("#exportMd").onclick=()=>download("report.md",buildReport(),"text/markdown");
+$("#exportMdTop").onclick=()=>download("report.md",buildReport(),"text/markdown");
+$("#exportJson").onclick=()=>download("citations.json",JSON.stringify(citationsJson(),null,2),"application/json");
+$$(".tab").forEach(t=>t.onclick=()=>{
+  $$(".tab").forEach(x=>x.classList.remove("active"));t.classList.add("active");
+  $("#papersTab").classList.toggle("hidden",t.dataset.tab!=="papers");
+  $("#dashboardTab").classList.toggle("hidden",t.dataset.tab!=="dashboard");
+  $("#reportTab").classList.toggle("hidden",t.dataset.tab!=="report");
+  $("#logTab").classList.toggle("hidden",t.dataset.tab!=="log");
+  if(t.dataset.tab==="report")renderReport();
+});
+const drop=$("#drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag")}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag")}));
+drop.addEventListener("drop",e=>{
+  const f=[...e.dataTransfer.files].find(x=>x.type==="application/pdf"||x.name.toLowerCase().endsWith(".pdf"));
+  if(!f)return alert("請放入 PDF 檔案");
+  const dt=new DataTransfer();dt.items.add(f);$("#targetFile").files=dt.files;
+  drop.querySelector("strong").textContent=f.name;
+});
+$("#targetFile").onchange=()=>{const f=$("#targetFile").files[0];if(f)drop.querySelector("strong").textContent=f.name};
+
+$("#heroAnalyze").onclick=()=>{
+  const q=$("#heroQuery").value.trim();
+  if(q){$("#manualQuery").value=q;document.querySelector(".app").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(run,250)}
+};
+$("#heroQuery").addEventListener("keydown",e=>{if(e.key==="Enter")$("#heroAnalyze").click()});
+$("#paperSearch").addEventListener("input",renderPapers);
+$("#stanceFilter").addEventListener("change",renderPapers);
+$("#sortView").addEventListener("change",renderPapers);
+$("#viewComfort").onclick=()=>{viewMode="comfortable";$("#viewComfort").classList.add("active");$("#viewCompact").classList.remove("active");renderPapers()};
+$("#viewCompact").onclick=()=>{viewMode="compact";$("#viewCompact").classList.add("active");$("#viewComfort").classList.remove("active");renderPapers()};
+
+$("#closeAccessModal").onclick=closeAccessModal;
+$("#denyAccess").onclick=closeAccessModal;
+$("#allowAccess").onclick=openAuthorizedPage;
+
+$("#bulkPick").onclick=()=>$("#bulkFiles").click();
+$("#bulkPick2").onclick=()=>$("#bulkFiles").click();
+$("#bulkFiles").onchange=()=>$("#bulkFiles").files.length&&bulkAttach([...$("#bulkFiles").files]);
+$("#saveSession").onclick=saveSessionData;
+$("#loadSession").onclick=loadSessionData;
+
+const bdrop=$("#bulkDrop");
+["dragenter","dragover"].forEach(ev=>bdrop.addEventListener(ev,e=>{e.preventDefault();bdrop.classList.add("drag")}));
+["dragleave","drop"].forEach(ev=>bdrop.addEventListener(ev,e=>{e.preventDefault();bdrop.classList.remove("drag")}));
+bdrop.addEventListener("drop",e=>{
+  const fs=[...e.dataTransfer.files].filter(f=>f.type==="application/pdf"||f.name.toLowerCase().endsWith(".pdf"));
+  if(fs.length)bulkAttach(fs);
+});
+</script>
+</body>
+</html>
