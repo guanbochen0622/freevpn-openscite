@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
 <meta name="description" content="OpenScite Web — 無需安裝，直接在瀏覽器分析一篇論文的後續引用如何支持、對比或提及它。">
-<title>OpenScite Web v16 — Citation Evidence Explorer</title>
+<title>OpenScite Web v17 — Citation Evidence Explorer</title>
 <style>
 :root{
   --bg:#07100e;--bg2:#0a1512;--card:#0d1a16;--card2:#10221c;--line:#203a31;
@@ -590,49 +590,17 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 }
 
 
+
 /* =========================================================
-   v16 — Brighter non-highlight text for readability
+   v17 — Normal text brightness + red keyword highlight only
    ========================================================= */
-:root{
-  --text:#f7fbf9;
-  --muted:#c3d2cc;
-}
-.paper-title,
-.scholar-title,
-.target-title,
-.candidate-title{
-  color:#f8fcfa !important;
-}
-.paper-meta,
-.scholar-meta,
-.target-meta,
-.candidate-meta,
-.passage-foot,
-.stat-card .label,
-.scholar-status,
-.scholar-key-row span{
-  color:#c9d8d2 !important;
-}
-.abstract,
-.scholar-abstract,
-.passage q,
-.notice,
-.sidebar-note,
-.empty,
-.scholar-empty{
-  color:#d7e4df !important;
-}
-.paper-meta b,
-.scholar-meta b,
-.target-meta b,
-.notice b{
-  color:#f5faf7 !important;
-}
 .keyword-hit{
-  background:rgba(255,74,74,.18) !important;
+  background:rgba(255,72,72,.14) !important;
   color:#ff4d4f !important;
-  font-weight:900 !important;
-  box-shadow:inset 0 -2px 0 rgba(255,77,79,.35) !important;
+  font-weight:850 !important;
+  border-radius:3px;
+  padding:0 2px;
+  box-shadow:none !important;
 }
 
 </style>
@@ -948,7 +916,7 @@ footer{color:#7b8c85!important;border-color:#e2e9e6!important}
 </div>
 
 <footer>
-<div class="shell">OpenScite Web v16 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
+<div class="shell">OpenScite Web v17 是 browser-first（瀏覽器優先）研究工作區。引用圖譜與 metadata 來自 OpenAlex；全文只處理你合法可取得或自行提供的 PDF。它不繞過付費牆。</div>
 </footer>
 <div id="toast" class="toast"></div>
 
