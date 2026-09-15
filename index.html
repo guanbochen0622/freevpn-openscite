@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="OpenScite Web v24.4 — Academic Search, Citation Evidence Explorer and deep academic figure analysis.">
-<title>OpenScite Web v24.4 — Search · Evidence · Reader</title>
+<meta name="description" content="OpenScite v24.5 — Academic research workspace.">
+<title>OpenScite v24.5 — Research Workspace</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -13,7 +13,7 @@
 <body>
 <nav class="topbar">
   <div class="shell nav-inner">
-    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v24.4</span></button>
+    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v24.5</span></button>
     <div class="nav-tabs" role="navigation">
       <button class="nav-tab active" data-view="search">學術搜尋</button>
       <button class="nav-tab" data-view="reader">PDF Reader</button>
@@ -27,19 +27,16 @@
   </div>
 </nav>
 
-<header class="hero">
-  <div class="shell hero-grid">
+<header class="hero workspace-hero">
+  <div class="shell workspace-hero-inner">
     <div>
-      <span class="eyebrow">SEARCH · READ · VERIFY</span>
-      <h1>找論文、讀論文，<br><span>再確認它到底支持什麼。</span></h1>
-      <p>保留原本的 OpenAlex 學術搜尋、紅色關鍵字 Highlight（高亮）、期刊分區推估、引用排序與 citation stance（引用立場）分析，新增 Moonlight 類型的 PDF 閱讀器工作區。</p>
-      <div class="hero-chips"><span>PDF 本機解析</span><span>兩階段 Figure AI 解釋</span><span>選字翻譯 / 解釋</span><span>Auto Highlight</span><span>筆記與 Library</span><span>Scholar Deep Search</span></div>
+      <span class="eyebrow">RESEARCH WORKSPACE</span>
+      <h1>OpenScite</h1>
+      <p>搜尋、閱讀與驗證學術證據。</p>
     </div>
-    <div class="hero-card">
-      <div class="hero-flow"><b>1</b><span>Search：像 Google Scholar 一樣搜尋，所有輸入詞逐字紅色標示。</span></div>
-      <div class="hero-flow"><b>2</b><span>Reader：直接讀 PDF，選取單字、片語、段落後翻譯、解釋、標記。</span></div>
-      <div class="hero-flow"><b>3</b><span>Evidence：追蹤 citing works（後續引用）並分 supporting / contrasting / mentioning。</span></div>
-      <div class="hero-flow"><b>4</b><span>Research Fit：把論文結論整理成「支持什麼 / 不支持什麼 / 下一步怎麼驗證」。</span></div>
+    <div class="workspace-hero-actions">
+      <button class="btn ghost nav-view" data-view="reader">開啟 PDF</button>
+      <button class="btn primary nav-view" data-view="search">搜尋論文</button>
     </div>
   </div>
 </header>
@@ -47,7 +44,7 @@
 <main class="shell app-shell">
   <section id="view-search" class="view active">
     <div class="section-head">
-      <div><span class="section-kicker">ACADEMIC SEARCH</span><h2>學術搜尋</h2><p>輸入完整句子也可以。你輸入過的每個有效單字都會在標題與摘要以紅色 Highlight（高亮）顯示。</p></div>
+      <div><span class="section-kicker">DISCOVER</span><h2>學術搜尋</h2><p>搜尋相關論文與學術資料。</p></div>
       <button id="searchToReader" class="btn">上傳 PDF 閱讀</button>
     </div>
 
@@ -67,19 +64,19 @@
     </div>
 
     <div id="searchStatus" class="status-row"><span>輸入研究主題後開始搜尋。</span><span>尚無結果</span></div>
-    <div id="searchResults" class="paper-list"><div class="empty-card">⌕<br><br>搜尋結果會顯示在這裡。</div></div>
+    <div id="searchResults" class="paper-list"><div class="empty-card"><span class="empty-icon">⌕</span><strong>Start with a research question</strong><span>Search results will appear here.</span></div></div>
     <div class="pager"><button id="prevPage" class="btn small" disabled>← 上一頁</button><span id="pageLabel">第 1 頁</span><button id="nextPage" class="btn small" disabled>下一頁 →</button></div>
   </section>
 
   <section id="view-reader" class="view">
     <div class="section-head compact-head">
-      <div><span class="section-kicker">PAPER READER</span><h2>PDF Reader <span class="green">AI-assisted</span></h2><p>PDF 內容預設只在你的瀏覽器本機解析。選取文字可翻譯 / 解釋；滑到論文圖片、圖表或偵測到的 Figure 區域後，可像 Moonlight 一樣點 ✦ Explain image 直接解釋。</p></div>
+      <div><span class="section-kicker">READ</span><h2>論文閱讀器</h2><p>閱讀、標註與分析論文。</p></div>
       <div class="row-actions"><button id="readerUploadTop" class="btn primary">上傳 PDF</button><button id="readerSaveLibrary" class="btn">加入 Library</button></div>
     </div>
 
     <div class="reader-grid">
       <aside class="panel reader-left">
-        <div class="panel-head"><h3>文件</h3><p>本機 PDF 最穩定；OA PDF 可直接嘗試載入。</p></div>
+        <div class="panel-head"><h3>文件</h3><p>開啟本機或遠端 PDF。</p></div>
         <div class="panel-body">
           <div id="readerDrop" class="drop-zone"><span>↥</span><b>拖入 PDF</b><small>或點擊選擇檔案</small><button id="readerPick" class="btn primary full">選擇 PDF</button><input id="readerFile" class="hidden" type="file" accept="application/pdf,.pdf"></div>
           <label class="stack-label">或貼 PDF URL<input id="pdfUrl" class="control" placeholder="https://.../paper.pdf"></label>
@@ -90,12 +87,12 @@
             <div class="tool-row"><button id="prevPdfPage" class="btn small">←</button><input id="pageJump" class="control tiny" inputmode="numeric" value="1"><span id="pdfPageCount">/ 0</span><button id="nextPdfPage" class="btn small">→</button></div>
             <label class="switch-row"><input id="autoHighlight" type="checkbox"><span>Auto Highlight（自動標註）</span></label>
           </div>
-          <div class="privacy-note"><b>Local-first（本機優先）</b><br>PDF 不會由本站自動上傳。只有你主動使用 AI 解釋時，所選文字 / 摘要片段才會送到你設定的 AI API。</div>
+          <div class="privacy-note"><b>Local-first</b><span>PDF processing stays in your browser unless you invoke AI.</span></div>
         </div>
       </aside>
 
       <section class="panel pdf-panel">
-        <div id="readerEmpty" class="reader-empty"><div>▤</div><h3>把論文放進來就可以開始讀</h3><p>支援 PDF 上傳、Open Access PDF URL，以及從搜尋結果直接開啟。</p></div>
+        <div id="readerEmpty" class="reader-empty"><div>▤</div><h3>開啟一篇論文</h3><p>上傳 PDF，或從搜尋結果直接開啟。</p></div>
         <div id="pdfViewport" class="pdf-viewport hidden"><div id="pdfPages"></div></div>
       </section>
 
@@ -103,7 +100,7 @@
         <div class="reader-tabs"><button class="reader-tab active" data-reader-tab="assistant">Assistant</button><button class="reader-tab" data-reader-tab="summary">Summary</button><button class="reader-tab" data-reader-tab="citations">Citation</button><button class="reader-tab" data-reader-tab="notes">Notes</button></div>
         <div class="reader-side-body">
           <div id="readerTab-assistant" class="reader-tabpane active">
-            <div class="assistant-intro"><b>Deep Figure Reader · Two-stage verification</b><span>文字：放開滑鼠後出現 Explain / Highlight / Translate / Comment / Chat。圖片：點 ✦ Explain image 後先做 Visual Extraction（視覺事實抽取），再用 caption、正文引用與全文脈絡做 Paper-grounded Interpretation（論文脈絡解釋），降低看圖補腦。</span></div>
+            <div class="assistant-intro"><b>研究助理</b><span>選取文字或圖片即可分析。</span></div>
             <div id="figureExplainBox" class="figure-explain-box hidden">
               <div class="figure-preview-wrap"><img id="figurePreview" alt="Selected PDF figure preview"></div>
               <div class="figure-explain-meta"><span id="figureExplainLabel">Figure</span><button id="reanalyzeFigure" class="btn small">高精度重分析</button></div>
@@ -139,7 +136,7 @@
 
   <section id="view-evidence" class="view">
     <div class="section-head">
-      <div><span class="section-kicker">CITATION EVIDENCE</span><h2>引用證據分析</h2><p>保留原本 OpenScite 的核心：先找 citing works（後續引用），再區分 supporting、contrasting、mentioning；有全文 PDF 時可用真正 citation context（引用上下文）提高可信度。</p></div>
+      <div><span class="section-kicker">VERIFY</span><h2>引用證據</h2><p>追蹤後續文獻如何支持、反駁或提及目標論文。</p></div>
       <div class="row-actions"><button id="exportMd" class="btn">匯出 Markdown</button><button id="exportJson" class="btn">匯出 JSON</button></div>
     </div>
     <div class="evidence-layout">
@@ -147,34 +144,34 @@
       <section>
         <div class="evidence-kpis"><div><b id="kpiTotal">0</b><span>Citing works</span></div><div><b id="kpiSupporting">0</b><span>Supporting</span></div><div><b id="kpiContrasting">0</b><span>Contrasting</span></div><div><b id="kpiMentioning">0</b><span>Mentioning / Unknown</span></div></div>
         <div class="result-toolbar"><input id="evidenceFilter" class="control" placeholder="結果關鍵字（同樣紅色 Highlight）"><select id="stanceFilter" class="control"><option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option></select><select id="evidenceSort" class="control"><option value="rank">目前排名</option><option value="journal">期刊 Q1 → Q4</option><option value="citations">引用次數</option><option value="year">年份</option><option value="evidence">全文證據數</option></select></div>
-        <div id="evidenceResults" class="paper-list"><div class="empty-card">先輸入一篇目標論文開始分析。</div></div>
+        <div id="evidenceResults" class="paper-list"><div class="empty-card"><span class="empty-icon">⌁</span><strong>Select a target paper</strong><span>Citation evidence will appear here.</span></div></div>
       </section>
     </div>
   </section>
 
   <section id="view-library" class="view">
-    <div class="section-head"><div><span class="section-kicker">LIBRARY</span><h2>論文庫</h2><p>保存你搜尋過、讀過或想回來看的論文。遠端 PDF 儲存連結；本機 PDF 會嘗試存進瀏覽器 IndexedDB。</p></div><button id="clearLibrary" class="btn">清空 Library</button></div>
-    <div id="libraryList" class="library-grid"><div class="empty-card">Library 還是空的。</div></div>
+    <div class="section-head"><div><span class="section-kicker">LIBRARY</span><h2>論文庫</h2><p>保存的研究文獻。</p></div><button id="clearLibrary" class="btn">清空 Library</button></div>
+    <div id="libraryList" class="library-grid"><div class="empty-card"><span class="empty-icon">▱</span><strong>Your library is empty</strong><span>Save papers to keep them here.</span></div></div>
   </section>
 </main>
 
 <div id="aiModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-card">
-    <div class="modal-head"><div><h3>AI 設定</h3><p>可選。Figure Explanation（圖表解釋）使用獨立模型，預設 gpt-5.6-terra，並採兩階段視覺抽取 + 論文脈絡驗證。沒有 API key 時其他本機功能仍可使用。</p></div><button id="closeModal" class="icon-btn">×</button></div>
+    <div class="modal-head"><div><h3>AI Settings</h3><p>Configure models and API access.</p></div><button id="closeModal" class="icon-btn">×</button></div>
     <div class="modal-body">
       <label class="stack-label">OpenAI API key<input id="aiKey" class="control" type="password" autocomplete="off" placeholder="sk-..."></label>
       <label class="stack-label">Text Model（文字模型）<input id="aiModel" class="control" value="gpt-5-mini"></label>
       <label class="stack-label">Figure Model（圖表解釋模型，建議）<input id="figureModel" class="control" value="gpt-5.6-terra" placeholder="gpt-5.6-terra"></label>
       <label class="stack-label">Responses API endpoint<input id="aiEndpoint" class="control" value="https://api.openai.com/v1/responses"></label>
       <label class="switch-row"><input id="rememberAi" type="checkbox"><span>只在這台瀏覽器儲存 API key（不建議公用電腦勾選）</span></label>
-      <div class="modal-note">ChatGPT Plus 與 OpenAI API 計費是分開的；只有你主動按 AI 功能時才會呼叫 API。</div>
+      <div class="modal-note">Your API key is stored only in this browser when enabled.</div>
     </div>
     <div class="modal-foot"><button id="clearAi" class="btn">清除設定</button><button id="saveAi" class="btn primary">儲存設定</button></div>
   </div>
 </div>
 
 <div id="toast" class="toast hidden"></div>
-<footer><div class="shell">OpenScite Web v24.2 · Search + Precision Reader + Citation Evidence · Local-first PDF processing</div></footer>
+<footer><div class="shell">OpenScite · Research Workspace</div></footer>
 <script src="app.js"></script>
 </body>
 </html>
