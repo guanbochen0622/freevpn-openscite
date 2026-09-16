@@ -4,21 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="OpenScite v24.5 — Academic research workspace.">
-<title>OpenScite v24.5 — Research Workspace</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css">
+<meta name="description" content="OpenScite v25.0 — Academic research workspace.">
+<title>OpenScite v25.0 — Research Workspace</title>
+<link rel="stylesheet" href="vendor/pdf_viewer.css">
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="workspace.css">
+
 </head>
 <body>
+<a href="#view-search" class="skip-link">跳至主要內容</a>
 <nav class="topbar">
   <div class="shell nav-inner">
-    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v24.5</span></button>
+    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v25.0</span></button>
     <div class="nav-tabs" role="navigation">
       <button class="nav-tab active" data-view="search">學術搜尋</button>
-      <button class="nav-tab" data-view="reader">PDF Reader</button>
-      <button class="nav-tab" data-view="evidence">Citation Evidence</button>
-      <button class="nav-tab" data-view="library">Library</button>
+      <button class="nav-tab" data-view="reader">PDF 閱讀器</button>
+      <button class="nav-tab" data-view="evidence">引用證據</button>
+      <button class="nav-tab" data-view="library">論文庫</button>
     </div>
     <div class="nav-actions">
       <button id="settingsBtn" class="btn ghost">AI 設定</button>
@@ -32,7 +34,7 @@
     <div>
       <span class="eyebrow">RESEARCH WORKSPACE</span>
       <h1>OpenScite</h1>
-      <p>搜尋、閱讀與驗證學術證據。</p>
+      <p>從研究問題，走到可核對的證據。</p>
     </div>
     <div class="workspace-hero-actions">
       <button class="btn ghost nav-view" data-view="reader">開啟 PDF</button>
@@ -56,15 +58,15 @@
       <div class="filters">
         <label>起始年份<input id="yearFrom" class="control" inputmode="numeric" placeholder="2020"></label>
         <label>結束年份<input id="yearTo" class="control" inputmode="numeric" placeholder="2026"></label>
-        <label>排序<select id="searchSort" class="control"><option value="relevance">相關性：高 → 低</option><option value="journal">期刊：推估 Q1 → Q4</option><option value="citations">引用次數：高 → 低</option><option value="newest">最新 → 最舊</option><option value="oldest">最舊 → 最新</option></select></label>
+        <label>排序<select id="searchSort" class="control"><option value="relevance">相關性：高 → 低</option><option value="journal">期刊指標（當頁排序）</option><option value="citations">引用次數：高 → 低</option><option value="newest">最新 → 最舊</option><option value="oldest">最舊 → 最新</option></select></label>
         <label>Open Access<select id="searchOA" class="control"><option value="all">全部</option><option value="oa">只看 OA</option></select></label>
         <label>每頁<select id="perPage" class="control"><option>10</option><option selected>20</option><option>50</option></select></label>
       </div>
-      <details class="api-details"><summary>OpenAlex API key（選填）</summary><div class="api-row"><input id="oaKey" class="control" type="password" autocomplete="off" placeholder="OpenAlex API key"><button id="saveOaKey" class="btn small">儲存本機</button><button id="clearOaKey" class="btn small">清除</button></div><p>沒有 key 也會先嘗試 OpenAlex；失敗時改用 Crossref。期刊 Q1–Q4 為 OpenAlex source metrics（來源指標）推估，不是官方 JCR/SJR。</p></details>
+      <details class="api-details"><summary>OpenAlex API key（選填）</summary><div class="api-row"><input id="oaKey" class="control" type="password" autocomplete="off" placeholder="OpenAlex API key"><button id="saveOaKey" class="btn small">儲存本機</button><button id="clearOaKey" class="btn small">清除</button></div><p>沒有 key 也會先嘗試 OpenAlex；失敗時改用 Crossref。期刊指標不是官方 JCR/SJR 分區，系統不會自行推定 Q1–Q4。</p></details>
     </div>
 
-    <div id="searchStatus" class="status-row"><span>輸入研究主題後開始搜尋。</span><span>尚無結果</span></div>
-    <div id="searchResults" class="paper-list"><div class="empty-card"><span class="empty-icon">⌕</span><strong>Start with a research question</strong><span>Search results will appear here.</span></div></div>
+    <div id="searchStatus" class="status-row" role="status" aria-live="polite"><span>輸入研究主題後開始搜尋。</span><span>尚無結果</span></div>
+    <div id="searchResults" class="paper-list"><div class="empty-card"><span class="empty-icon">⌕</span><strong>從你的研究問題開始</strong><span>輸入主題、關鍵字或論文標題，開始探索。</span></div></div>
     <div class="pager"><button id="prevPage" class="btn small" disabled>← 上一頁</button><span id="pageLabel">第 1 頁</span><button id="nextPage" class="btn small" disabled>下一頁 →</button></div>
   </section>
 
@@ -87,7 +89,7 @@
             <div class="tool-row"><button id="prevPdfPage" class="btn small">←</button><input id="pageJump" class="control tiny" inputmode="numeric" value="1"><span id="pdfPageCount">/ 0</span><button id="nextPdfPage" class="btn small">→</button></div>
             <label class="switch-row"><input id="autoHighlight" type="checkbox"><span>Auto Highlight（自動標註）</span></label>
           </div>
-          <div class="privacy-note"><b>Local-first</b><span>PDF processing stays in your browser unless you invoke AI.</span></div>
+          <div class="privacy-note"><b>Local-first</b><span>PDF 解析在本機進行。AI 會傳送相關文字或圖片；第三方翻譯會先詢問。</span></div>
         </div>
       </aside>
 
@@ -140,38 +142,38 @@
       <div class="row-actions"><button id="exportMd" class="btn">匯出 Markdown</button><button id="exportJson" class="btn">匯出 JSON</button></div>
     </div>
     <div class="evidence-layout">
-      <aside class="panel evidence-controls"><div class="panel-head"><h3>目標論文</h3><p>DOI / OpenAlex Work ID / 論文標題</p></div><div class="panel-body"><input id="targetQuery" class="control" placeholder="10.1038/... 或 W2741809807"><button id="analyzeCitations" class="btn primary full">開始分析</button><div id="targetInfo" class="target-info">尚未設定目標論文。</div><div class="privacy-note">摘要 stance（立場）只作候選排序；若要更可靠，請在結果卡加入你合法取得的 citing PDF，系統會改用 citation passage（引用段落）判定。</div></div></aside>
+      <aside class="panel evidence-controls"><div class="panel-head"><h3>目標論文</h3><p>DOI / OpenAlex Work ID / 論文標題</p></div><div class="panel-body"><input id="targetQuery" class="control" placeholder="10.1038/... 或 W2741809807"><button id="analyzeCitations" class="btn primary full">開始分析</button><div id="targetInfo" class="target-info">尚未設定目標論文。</div><div class="privacy-note">取得引用文獻不代表支持原論文。請加入合法取得的引用方 PDF，以參考文獻與引用編號綁定原文段落。支持／反駁僅為規則判讀候選，仍須人工核對；作者年份格式暫不自動綁定。</div></div></aside>
       <section>
-        <div class="evidence-kpis"><div><b id="kpiTotal">0</b><span>Citing works</span></div><div><b id="kpiSupporting">0</b><span>Supporting</span></div><div><b id="kpiContrasting">0</b><span>Contrasting</span></div><div><b id="kpiMentioning">0</b><span>Mentioning / Unknown</span></div></div>
-        <div class="result-toolbar"><input id="evidenceFilter" class="control" placeholder="結果關鍵字（同樣紅色 Highlight）"><select id="stanceFilter" class="control"><option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option></select><select id="evidenceSort" class="control"><option value="rank">目前排名</option><option value="journal">期刊 Q1 → Q4</option><option value="citations">引用次數</option><option value="year">年份</option><option value="evidence">全文證據數</option></select></div>
-        <div id="evidenceResults" class="paper-list"><div class="empty-card"><span class="empty-icon">⌁</span><strong>Select a target paper</strong><span>Citation evidence will appear here.</span></div></div>
+        <div class="evidence-kpis"><div><b id="kpiTotal">0</b><span>引用文獻（最多 50 篇）</span></div><div><b id="kpiSupporting">0</b><span>可能支持（待核對）</span></div><div><b id="kpiContrasting">0</b><span>可能反駁（待核對）</span></div><div><b id="kpiMentioning">0</b><span>提及 / 未驗證</span></div></div>
+        <div class="result-toolbar"><input id="evidenceFilter" class="control" placeholder="結果關鍵字（同樣紅色 Highlight）"><select id="stanceFilter" class="control"><option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option></select><select id="evidenceSort" class="control"><option value="rank">目前排名</option><option value="journal">期刊指標</option><option value="citations">引用次數</option><option value="year">年份</option><option value="evidence">全文證據數</option></select></div>
+        <div id="evidenceResults" class="paper-list"><div class="empty-card"><span class="empty-icon">⌁</span><strong>選擇要追蹤的論文</strong><span>輸入 DOI、標題或 OpenAlex 識別碼。</span></div></div>
       </section>
     </div>
   </section>
 
   <section id="view-library" class="view">
     <div class="section-head"><div><span class="section-kicker">LIBRARY</span><h2>論文庫</h2><p>保存的研究文獻。</p></div><button id="clearLibrary" class="btn">清空 Library</button></div>
-    <div id="libraryList" class="library-grid"><div class="empty-card"><span class="empty-icon">▱</span><strong>Your library is empty</strong><span>Save papers to keep them here.</span></div></div>
+    <div id="libraryList" class="library-grid"><div class="empty-card"><span class="empty-icon">▱</span><strong>建立你的研究論文庫</strong><span>從搜尋結果收藏論文，或匯入自己的 PDF。</span></div></div>
   </section>
 </main>
 
 <div id="aiModal" class="modal hidden" role="dialog" aria-modal="true">
   <div class="modal-card">
-    <div class="modal-head"><div><h3>AI Settings</h3><p>Configure models and API access.</p></div><button id="closeModal" class="icon-btn">×</button></div>
+    <div class="modal-head"><div><h3>AI 設定</h3><p>設定自己的模型與 API 連線。</p></div><button id="closeModal" class="icon-btn">×</button></div>
     <div class="modal-body">
       <label class="stack-label">OpenAI API key<input id="aiKey" class="control" type="password" autocomplete="off" placeholder="sk-..."></label>
       <label class="stack-label">Text Model（文字模型）<input id="aiModel" class="control" value="gpt-5-mini"></label>
-      <label class="stack-label">Figure Model（圖表解釋模型，建議）<input id="figureModel" class="control" value="gpt-5.6-terra" placeholder="gpt-5.6-terra"></label>
+      <label class="stack-label">Figure Model（圖表解釋模型，建議）<input id="figureModel" class="control" value="gpt-5-mini" placeholder="gpt-5-mini"></label>
       <label class="stack-label">Responses API endpoint<input id="aiEndpoint" class="control" value="https://api.openai.com/v1/responses"></label>
       <label class="switch-row"><input id="rememberAi" type="checkbox"><span>只在這台瀏覽器儲存 API key（不建議公用電腦勾選）</span></label>
-      <div class="modal-note">Your API key is stored only in this browser when enabled.</div>
+      <div class="modal-note">勾選後會將金鑰保存在此瀏覽器。AI 功能會將所需文字或圖片傳送至你設定的服務。</div>
     </div>
     <div class="modal-foot"><button id="clearAi" class="btn">清除設定</button><button id="saveAi" class="btn primary">儲存設定</button></div>
   </div>
 </div>
 
-<div id="toast" class="toast hidden"></div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <footer><div class="shell">OpenScite · Research Workspace</div></footer>
-<script src="app.js"></script>
+<script type="module" src="boot.js"></script>
 </body>
 </html>
