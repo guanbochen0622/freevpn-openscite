@@ -302,7 +302,7 @@ async function renderPdfPages(token=state.reader.renderToken){
       let tc;try{tc=await page.getTextContent();}catch(e){tc={items:[],styles:{}};wrap.dataset.textError=String(e.message);}
       if(!active())return;
       const textLayer=document.createElement('div');textLayer.className='textLayer';textLayer.dataset.page=n;wrap.appendChild(textLayer);
-      try{await new pdfjsLib.TextLayer({textContentSource:tc,container:textLayer,viewport}).render();}catch{ textLayer.replaceChildren();textLayer.classList.add('manual-text-layer');textLayer.removeAttribute('data-main-rotation');textLayer.style.width=viewport.width+'px';textLayer.style.height=viewport.height+'px';manualTextLayer(tc,textLayer,viewport);}
+      try{const layer=new pdfjsLib.TextLayer({textContentSource:tc,container:textLayer,viewport});await layer.render();await document.fonts.ready;calibrateTextLayer(layer.textDivs,tc,viewport);}catch{ textLayer.replaceChildren();textLayer.classList.add('manual-text-layer');textLayer.removeAttribute('data-main-rotation');textLayer.style.width=viewport.width+'px';textLayer.style.height=viewport.height+'px';manualTextLayer(tc,textLayer,viewport);}
       if(!active())return;
       $$('span',textLayer).forEach((span,i)=>span.dataset.textIndex=String(i));applyTextMarks(textLayer);renderSavedHighlights(wrap,n);
       const fig=document.createElement('div');fig.className='figureLayer';wrap.appendChild(fig);
@@ -542,6 +542,19 @@ async function explainPdfFigure(pageNo,region,index=-1){
   }finally{page?.classList.remove('image-explain-busy');}
 }
 
+// Calibrate against DOM metrics after fonts load. Canvas measureText can differ
+// from rendered span metrics on macOS, particularly at fractional zoom levels.
+function calibrateTextLayer(spans,tc,viewport){
+  const items=tc.items.filter(item=>typeof item.str==='string');
+  spans.forEach((span,index)=>{
+    const item=items[index];if(!item?.str||span.textContent!==item.str)return;
+    const style=getComputedStyle(span),width=parseFloat(style.width);
+    const minFont=Number(style.getPropertyValue('--min-font-size'))||1;
+    const vertical=tc.styles?.[item.fontName]?.vertical;
+    const target=Math.abs((vertical?item.height:item.width)*viewport.scale*(viewport.userUnit||1));
+    if(width>0&&target>0)span.style.setProperty('--scale-x',String(target*minFont/width));
+  });
+}
 function manualTextLayer(tc,container,viewport){
   const created=[];
   for(const item of tc.items){

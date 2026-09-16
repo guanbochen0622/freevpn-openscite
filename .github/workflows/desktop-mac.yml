@@ -5,6 +5,12 @@ on:
     branches: [main]
     paths:
       - 'desktop/**'
+      - 'app.js'
+      - 'boot.js'
+      - 'index.html'
+      - 'styles.css'
+      - 'workspace.*'
+      - 'vendor/**'
       - '.github/workflows/desktop-mac.yml'
 permissions:
   contents: read
