@@ -1,7 +1,7 @@
 'use strict';
 
 if (window.pdfjsLib) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.mjs';
+  pdfjsLib.GlobalWorkerOptions.workerPort = window.pdfjsWorker;
 }
 
 const $ = (id) => document.getElementById(id);
