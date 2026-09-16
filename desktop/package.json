@@ -7,7 +7,7 @@
     "electron-builder": "26.15.3"
   },
   "name": "openscite-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "OpenScite desktop paper reader with personal ChatGPT authentication",
   "main": "main.cjs",
@@ -30,7 +30,8 @@
       "web/**/*",
       "!test.cjs",
       "!prepare.cjs",
-      "!test-*.cjs"
+      "!test-*.cjs",
+      "!fixture.cjs"
     ],
     "directories": {
       "output": "dist"

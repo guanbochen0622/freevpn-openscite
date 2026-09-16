@@ -1,5 +1,5 @@
 // Keep search and the library usable even if the PDF engine cannot initialize.
-const ASSET_VERSION = '25.1.3';
+const ASSET_VERSION = '25.1.4';
 try {
   const inflate = async (url) => {
     const response = await fetch(url);
