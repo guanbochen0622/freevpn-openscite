@@ -11,10 +11,30 @@ on:
       - 'styles.css'
       - 'workspace.*'
       - 'vendor/**'
+      - 'i18n.js'
+      - 'locales/**'
+      - 'tests/**'
       - '.github/workflows/desktop-mac.yml'
 permissions:
   contents: read
 jobs:
+  web-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check
+      - run: npm run test:logic
+      - run: node tests/reader-lifecycle.cjs
+      - run: node tests/partial-index.cjs
+      - run: node tests/locales.cjs
+      - run: npm test
   build:
     strategy:
       fail-fast: false
@@ -60,7 +80,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
   release:
-    needs: build
+    needs: [build, web-tests]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -1,0 +1,264 @@
+學術搜尋|Academic search|学术搜索|論文検索|논문 검색
+PDF 閱讀器|PDF reader|PDF 阅读器|PDF リーダー|PDF 리더
+引用證據|Citation evidence|引用证据|引用の根拠|인용 근거
+論文庫|Library|论文库|ライブラリ|라이브러리
+AI 設定|AI settings|AI 设置|AI 設定|AI 설정
+ChatGPT 帳號|ChatGPT account|ChatGPT 账号|ChatGPT アカウント|ChatGPT 계정
+搜尋論文|Search papers|搜索论文|論文を検索|논문 검색
+搜尋|Search|搜索|検索|검색
+上傳 PDF|Upload PDF|上传 PDF|PDF をアップロード|PDF 업로드
+上傳 PDF 閱讀|Read a PDF|上传 PDF 阅读|PDF を読む|PDF 읽기
+加入 Library|Save to library|加入论文库|ライブラリに保存|라이브러리에 저장
+文件|Document|文档|文書|문서
+論文閱讀器|Paper reader|论文阅读器|論文リーダー|논문 리더
+研究助理|Research assistant|研究助理|研究アシスタント|연구 도우미
+拖入 PDF|Drop a PDF here|拖入 PDF|PDF をここにドロップ|PDF를 여기에 놓으세요
+或點擊選擇檔案|Or click to choose a file|或点击选择文件|またはクリックしてファイルを選択|또는 클릭하여 파일 선택
+選擇 PDF|Choose PDF|选择 PDF|PDF を選択|PDF 선택
+或貼 PDF URL|Or paste a PDF URL|或粘贴 PDF URL|または PDF の URL を貼り付け|또는 PDF URL 붙여넣기
+開啟 PDF URL|Open PDF URL|打开 PDF URL|PDF の URL を開く|PDF URL 열기
+開啟 PDF|Open PDF|打开 PDF|PDF を開く|PDF 열기
+適合寬度|Fit width|适合宽度|幅に合わせる|너비에 맞추기
+目前選取|Selected text|当前选择|選択したテキスト|선택한 텍스트
+翻譯|Translate|翻译|翻訳|번역
+解釋|Explain|解释|解説|설명
+對我的研究|Research relevance|对我的研究|研究との関連性|내 연구와의 관련성
+高亮|Highlight|高亮|ハイライト|강조
+註記|Comment|注释|コメント|메모
+提問|Ask a question|提问|質問する|질문하기
+摘要|Summary|摘要|要約|요약
+筆記|Notes|笔记|ノート|노트
+引用資訊|Citation details|引用信息|引用情報|인용 정보
+高精度重分析|Reanalyze figure|重新分析图表|図を再分析|그림 재분석
+等待分析|Waiting for analysis|等待分析|分析待ち|분석 대기 중
+產生本機摘要|Extract local summary|生成本地摘要|ローカル要約を抽出|로컬 요약 추출
+AI 深度摘要|AI detailed summary|AI 深度摘要|AI 詳細要約|AI 상세 요약
+延伸搜尋|Related search|扩展搜索|関連検索|관련 검색
+匯出筆記|Export notes|导出笔记|ノートを書き出す|노트 내보내기
+清空|Clear all|清空|すべて消去|모두 지우기
+取消|Cancel|取消|キャンセル|취소
+儲存|Save|保存|保存|저장
+儲存本機|Save locally|保存到本地|ローカルに保存|로컬에 저장
+儲存設定|Save settings|保存设置|設定を保存|설정 저장
+清除|Clear|清除|消去|지우기
+清除設定|Clear settings|清除设置|設定を消去|설정 지우기
+完成|Done|完成|完了|완료
+關閉|Close|关闭|閉じる|닫기
+重新整理|Refresh|刷新|更新|새로고침
+登入 ChatGPT|Sign in to ChatGPT|登录 ChatGPT|ChatGPT にログイン|ChatGPT 로그인
+登出|Sign out|退出登录|ログアウト|로그아웃
+測試模型回答|Test model response|测试模型回答|モデルの応答をテスト|모델 응답 테스트
+取消分析|Cancel analysis|取消分析|分析をキャンセル|분석 취소
+模型|Model|模型|モデル|모델
+推理強度|Reasoning effort|推理强度|推論の強度|추론 강도
+低|Low|低|低|낮음
+中|Medium|中|中|중간
+高|High|高|高|높음
+更高|Very high|更高|非常に高い|매우 높음
+尚未登入|Not signed in|尚未登录|未ログイン|로그인되지 않음
+正在連線…|Connecting…|正在连接…|接続中…|연결 중…
+處理中…|Processing…|处理中…|処理中…|처리 중…
+分析已結束|Analysis finished|分析已结束|分析が終了しました|분석 완료
+正在確認 ChatGPT 帳號…|Checking ChatGPT account…|正在确认 ChatGPT 账号…|ChatGPT アカウントを確認中…|ChatGPT 계정 확인 중…
+正在確認可用模型…|Checking available models…|正在确认可用模型…|利用可能なモデルを確認中…|사용 가능한 모델 확인 중…
+模型已收到問題，正在分析…|Model received your question. Analyzing…|模型已收到问题，正在分析…|モデルが質問を受信しました。分析中…|모델이 질문을 받았습니다. 분석 중…
+正在接收模型回答…|Receiving the model response…|正在接收模型回答…|モデルの応答を受信中…|모델 응답 수신 중…
+已取消 AI 分析|AI analysis cancelled|已取消 AI 分析|AI 分析をキャンセルしました|AI 분석 취소됨
+已有分析正在進行|An analysis is already running|已有分析正在进行|分析がすでに実行中です|분석이 이미 진행 중입니다
+登入後，可用「測試模型回答」確認是否真的能分析。|After signing in, test a model response to verify analysis works.|登录后，可用“测试模型回答”确认是否能分析。|ログイン後、モデルの応答テストで分析できるか確認できます。|로그인 후 모델 응답 테스트로 분석이 가능한지 확인하세요.
+尚未測試。測試會發送一句簡短問題，使用少量帳號額度，不傳送論文。|Not tested yet. The test sends a short question and uses a small amount of your quota. No paper is sent.|尚未测试。测试会发送一句简短问题，使用少量账号额度，不发送论文。|未テストです。短い質問を送信し、利用枠を少量消費します。論文は送信しません。|아직 테스트하지 않았습니다. 짧은 질문을 보내 소량의 사용 한도를 소모합니다. 논문은 전송하지 않습니다.
+分析時，所需論文文字或裁切圖片會傳送給 OpenAI。可用模型與額度依帳號而定。|Analysis sends relevant paper text or cropped images to OpenAI. Models and limits depend on your account.|分析时，相关论文文字或裁剪图片会发送给 OpenAI。模型与额度取决于账号。|分析では必要な論文テキストや切り抜き画像を OpenAI に送信します。モデルと利用枠はアカウントによります。|분석 시 필요한 논문 텍스트나 잘라낸 이미지가 OpenAI에 전송됩니다. 모델과 한도는 계정에 따라 다릅니다.
+請在瀏覽器完成登入，再回到程式。|Complete sign-in in your browser, then return to the app.|请在浏览器完成登录，再回到程序。|ブラウザーでログインを完了し、アプリに戻ってください。|브라우저에서 로그인을 완료한 후 앱으로 돌아오세요.
+排序|Sort|排序|並べ替え|정렬
+起始年份|From year|起始年份|開始年|시작 연도
+結束年份|To year|结束年份|終了年|종료 연도
+年份|Year|年份|年|연도
+每頁|Per page|每页|ページあたり|페이지당
+全部|All|全部|すべて|전체
+只看 OA|Open access only|仅开放获取|オープンアクセスのみ|오픈 액세스만
+相關性：高 → 低|Relevance: high → low|相关性：高 → 低|関連度：高 → 低|관련성: 높음 → 낮음
+期刊指標（當頁排序）|Journal metrics (current page)|期刊指标（当前页排序）|雑誌指標（現在のページ）|학술지 지표(현재 페이지)
+引用次數：高 → 低|Citations: high → low|引用次数：高 → 低|引用数：多 → 少|인용 수: 많음 → 적음
+最新 → 最舊|Newest first|最新 → 最旧|新しい順|최신순
+最舊 → 最新|Oldest first|最旧 → 最新|古い順|오래된순
+← 上一頁|← Previous|← 上一页|← 前へ|← 이전
+下一頁 →|Next →|下一页 →|次へ →|다음 →
+上一頁|Previous page|上一页|前のページ|이전 페이지
+下一頁|Next page|下一页|次のページ|다음 페이지
+第 {n} 頁|Page {n}|第 {n} 页|{n} ページ|{n} 페이지
+尚無結果|No results yet|暂无结果|結果はまだありません|아직 결과 없음
+搜尋中|Searching|搜索中|検索中|검색 중
+搜尋未完成|Search incomplete|搜索未完成|検索未完了|검색 미완료
+重新搜尋|Retry search|重新搜索|再検索|다시 검색
+正在查詢學術資料來源…|Searching academic sources…|正在查询学术资料来源…|学術情報源を検索中…|학술 자료 검색 중…
+搜尋失敗，請檢查連線或 API 設定。|Search failed. Check your connection or API settings.|搜索失败，请检查连接或 API 设置。|検索に失敗しました。接続または API 設定を確認してください。|검색에 실패했습니다. 연결 또는 API 설정을 확인하세요.
+請先輸入搜尋關鍵字|Enter search keywords first|请先输入搜索关键词|検索キーワードを入力してください|먼저 검색어를 입력하세요
+請先輸入問題|Enter a question first|请先输入问题|質問を入力してください|먼저 질문을 입력하세요
+請先載入 PDF|Load a PDF first|请先加载 PDF|先に PDF を読み込んでください|먼저 PDF를 불러오세요
+請先開啟 PDF|Open a PDF first|请先打开 PDF|先に PDF を開いてください|먼저 PDF를 여세요
+請先選取 PDF 文字|Select PDF text first|请先选择 PDF 文字|先に PDF のテキストを選択してください|먼저 PDF 텍스트를 선택하세요
+請先選取文字|Select text first|请先选择文字|先にテキストを選択してください|먼저 텍스트를 선택하세요
+請先搜尋論文|Search for papers first|请先搜索论文|先に論文を検索してください|먼저 논문을 검색하세요
+匯出 Markdown|Export Markdown|导出 Markdown|Markdown を書き出す|Markdown 내보내기
+匯出 JSON|Export JSON|导出 JSON|JSON を書き出す|JSON 내보내기
+目標論文|Target paper|目标论文|対象論文|대상 논문
+開始分析|Start analysis|开始分析|分析を開始|분석 시작
+全文證據數|Full-text evidence|全文证据数|全文の根拠数|전문 근거 수
+可能支持（待核對）|Potential support (verify)|可能支持（待核实）|支持の可能性（要確認）|지지 가능성(검증 필요)
+可能反駁（待核對）|Potential contradiction (verify)|可能反驳（待核实）|反証の可能性（要確認）|반박 가능성(검증 필요)
+提及 / 未驗證|Mention / unverified|提及 / 未验证|言及 / 未検証|언급 / 미검증
+全部 stance|All citation types|全部引用类型|すべての引用分類|모든 인용 유형
+目前排名|Current ranking|当前排名|現在の順位|현재 순위
+引用次數|Citations|引用次数|引用数|인용 수
+期刊指標|Journal metrics|期刊指标|雑誌指標|학술지 지표
+清空 Library|Clear library|清空论文库|ライブラリを消去|라이브러리 비우기
+閱讀|Read|阅读|読む|읽기
+移除|Remove|移除|削除|제거
+放大|Zoom in|放大|拡大|확대
+縮小|Zoom out|缩小|縮小|축소
+跳至頁碼|Go to page|跳至页码|ページへ移動|페이지로 이동
+關閉 AI 設定|Close AI settings|关闭 AI 设置|AI 設定を閉じる|AI 설정 닫기
+專注閱讀|Focus mode|专注阅读|集中モード|집중 모드
+離開專注|Exit focus mode|退出专注|集中モードを終了|집중 모드 종료
+☆ 書籤|☆ Bookmark|☆ 书签|☆ ブックマーク|☆ 북마크
+書籤|Bookmarks|书签|ブックマーク|북마크
+目錄|Outline|目录|目次|목차
+全文搜尋|Search full text|全文搜索|全文検索|전문 검색
+下載原始 PDF|Download original PDF|下载原始 PDF|元の PDF をダウンロード|원본 PDF 다운로드
+↓ PDF|↓ PDF|↓ PDF|↓ PDF|↓ PDF
+比對|Compare|比较|比較|비교
+論文比較|Compare papers|论文比较|論文の比較|논문 비교
+比較|Compare|比较|比較|비교
+匯出 BibTeX|Export BibTeX|导出 BibTeX|BibTeX を書き出す|BibTeX 내보내기
+備份工作區|Back up workspace|备份工作区|ワークスペースをバックアップ|작업 공간 백업
+匯入備份|Restore backup|导入备份|バックアップを復元|백업 복원
+最近收藏|Recently saved|最近收藏|最近保存した順|최근 저장순
+標題 A–Z|Title A–Z|标题 A–Z|タイトル A–Z|제목 A–Z
+年份新到舊|Newest year first|年份新到旧|出版年の新しい順|출판 연도 최신순
+搜尋標題、作者、標籤…|Search title, author, tags…|搜索标题、作者、标签…|タイトル、著者、タグを検索…|제목, 저자, 태그 검색…
+＋ 加入標籤|＋ Add tags|＋ 添加标签|＋ タグを追加|＋ 태그 추가
+刪除筆記|Delete note|删除笔记|ノートを削除|노트 삭제
+移除高亮|Remove highlight|移除高亮|ハイライトを削除|강조 제거
+回到第 {n} 頁|Go to page {n}|回到第 {n} 页|{n} ページへ移動|{n} 페이지로 이동
+高亮標註 · {n}|Highlights · {n}|高亮标注 · {n}|ハイライト · {n}|강조 · {n}
+尚無筆記。|No notes yet.|暂无笔记。|ノートはまだありません。|아직 노트가 없습니다.
+尚未載入論文|No paper loaded|尚未加载论文|論文が読み込まれていません|불러온 논문 없음
+尚未設定目標論文。|No target paper selected.|尚未设置目标论文。|対象論文が未選択です。|대상 논문이 선택되지 않았습니다.
+Library 還是空的。|Your library is empty.|论文库为空。|ライブラリは空です。|라이브러리가 비어 있습니다.
+搜尋相關論文與學術資料。|Find relevant papers and academic sources.|搜索相关论文与学术资料。|関連論文と学術情報を検索します。|관련 논문과 학술 자료를 검색합니다.
+閱讀、標註與分析論文。|Read, annotate and analyze papers.|阅读、标注与分析论文。|論文を読み、注釈を付け、分析します。|논문을 읽고 주석을 달고 분석합니다.
+開啟本機或遠端 PDF。|Open a local or remote PDF.|打开本地或远程 PDF。|ローカルまたはオンラインの PDF を開きます。|로컬 또는 온라인 PDF를 엽니다.
+選取文字或圖片即可分析。|Select text or a figure to analyze.|选择文字或图片即可分析。|テキストや図を選択して分析します。|텍스트나 그림을 선택하여 분석하세요.
+開啟一篇論文|Open a paper|打开一篇论文|論文を開く|논문 열기
+上傳 PDF，或從搜尋結果直接開啟。|Upload a PDF or open one from search results.|上传 PDF，或从搜索结果直接打开。|PDF をアップロードするか検索結果から開いてください。|PDF를 업로드하거나 검색 결과에서 여세요.
+從學術搜尋點「閱讀 PDF」也會直接送進這裡。|You can also open a PDF from academic search results.|也可从学术搜索点击“阅读 PDF”打开。|論文検索の「PDF を読む」からも開けます。|논문 검색에서 PDF 읽기를 눌러도 열 수 있습니다.
+保存的研究文獻。|Your saved research papers.|保存的研究文献。|保存した研究論文。|저장한 연구 논문입니다.
+建立你的研究論文庫|Build your research library|建立你的研究论文库|研究ライブラリを作る|연구 라이브러리 만들기
+從搜尋結果收藏論文，或匯入自己的 PDF。|Save papers from search results or import your PDFs.|从搜索结果收藏论文，或导入自己的 PDF。|検索結果から論文を保存するか PDF を取り込んでください。|검색 결과에서 논문을 저장하거나 PDF를 가져오세요.
+從你的研究問題開始|Start with your research question|从你的研究问题开始|研究の問いから始める|연구 질문에서 시작하세요
+輸入主題、關鍵字或論文標題，開始探索。|Enter a topic, keywords or paper title to explore.|输入主题、关键词或论文标题，开始探索。|テーマ、キーワード、論文タイトルを入力してください。|주제, 키워드 또는 논문 제목을 입력하세요.
+輸入研究主題後開始搜尋。|Enter a research topic to start searching.|输入研究主题后开始搜索。|研究テーマを入力して検索を開始してください。|연구 주제를 입력하여 검색을 시작하세요.
+從研究問題，走到可核對的證據。|From research questions to verifiable evidence.|从研究问题，走向可核实的证据。|研究の問いから検証できる根拠へ。|연구 질문에서 검증 가능한 근거까지.
+跳至主要內容|Skip to main content|跳至主要内容|本文へスキップ|본문으로 건너뛰기
+OpenScite 首頁|OpenScite home|OpenScite 首页|OpenScite ホーム|OpenScite 홈
+針對這篇論文提問，例如：作者為什麼認為低濃度的擾動更大？|Ask about this paper, e.g. why do the authors expect a larger perturbation at lower concentrations?|针对这篇论文提问，例如：作者为什么认为低浓度的扰动更大？|この論文について質問してください。例：低濃度で摂動が大きいと考える理由は？|논문에 대해 질문하세요. 예: 저농도에서 섭동이 더 크다고 보는 이유는 무엇인가요?
+替這段加註記…|Add a note to this passage…|为这段添加注释…|この箇所にコメントを追加…|이 문단에 메모 추가…
+AI / 本機分析結果會顯示在這裡。|AI or local analysis appears here.|AI 或本地分析结果会显示在这里。|AI またはローカル分析をここに表示します。|AI 또는 로컬 분석 결과가 여기에 표시됩니다.
+載入 PDF 後可整理研究目的、方法、主要結果、限制與結論。|Load a PDF to summarize its aims, methods, results, limitations and conclusions.|加载 PDF 后可整理研究目的、方法、结果、限制与结论。|PDF を読み込むと、目的・方法・結果・限界・結論を整理できます。|PDF를 불러와 연구 목적, 방법, 결과, 한계 및 결론을 정리하세요.
+載入論文後顯示 DOI、期刊、年份、作者、引用次數與 References（參考文獻）節錄。|Load a paper to view its DOI, journal, year, authors, citations and reference excerpts.|加载论文后显示 DOI、期刊、年份、作者、引用次数与参考文献摘录。|論文を読み込むと DOI、雑誌、年、著者、引用数、参考文献の抜粋を表示します。|논문을 불러오면 DOI, 학술지, 연도, 저자, 인용 수 및 참고문헌 발췌를 표시합니다.
+PDF 解析在本機進行。AI 會傳送相關文字或圖片；第三方翻譯會先詢問。|PDF parsing is local. AI sends relevant text or images; third-party translation asks first.|PDF 在本地解析。AI 会发送相关文字或图片；第三方翻译会先询问。|PDF はローカルで解析します。AI は関連テキストや画像を送信し、外部翻訳は事前に確認します。|PDF는 로컬에서 처리합니다. AI는 관련 텍스트나 이미지를 전송하며 외부 번역은 먼저 확인합니다.
+設定自己的模型與 API 連線。|Configure your model and API connection.|设置自己的模型与 API 连接。|モデルと API 接続を設定してください。|모델과 API 연결을 설정하세요.
+OpenAlex API key（選填）|OpenAlex API key (optional)|OpenAlex API key（可选）|OpenAlex API キー（任意）|OpenAlex API 키(선택)
+Text Model（文字模型）|Text model|文字模型|テキストモデル|텍스트 모델
+Figure Model（圖表解釋模型，建議）|Figure analysis model|图表分析模型|図表分析モデル|그림 분석 모델
+只在這台瀏覽器儲存 API key（不建議公用電腦勾選）|Remember API key in this browser (avoid on shared computers)|在此浏览器保存 API key（不建议公用电脑使用）|このブラウザーに API キーを保存（共有端末では非推奨）|이 브라우저에 API 키 저장(공용 컴퓨터에서는 권장하지 않음)
+勾選後會將金鑰保存在此瀏覽器。AI 功能會將所需文字或圖片傳送至你設定的服務。|This stores your key in this browser. AI sends required text or images to the configured service.|勾选后会在此浏览器保存密钥。AI 会将所需文字或图片发送至设定的服务。|キーをこのブラウザーに保存します。AI は必要なテキストや画像を設定先サービスへ送信します。|키를 이 브라우저에 저장합니다. AI는 필요한 텍스트나 이미지를 설정한 서비스로 전송합니다.
+沒有 key 也會先嘗試 OpenAlex；失敗時改用 Crossref。Q1–Q4 為 OpenAlex 公開指標的啟發式推估，不是官方 JCR／SJR／中科院分區，投稿前必須另行核對。|OpenAlex is tried without a key, with Crossref as fallback. Q1–Q4 are heuristic estimates from public metrics, not official JCR, SJR or CAS rankings. Verify before submission.|无密钥也会先尝试 OpenAlex，失败时改用 Crossref。Q1–Q4 是公开指标的启发式估计，并非官方 JCR、SJR 或中科院分区，投稿前须核实。|キーなしで OpenAlex を試し、失敗時は Crossref を使います。Q1–Q4 は公開指標からの推定で、公式 JCR・SJR・中国科学院区分ではありません。投稿前に確認してください。|키 없이 OpenAlex를 시도하고 실패하면 Crossref를 사용합니다. Q1–Q4는 공개 지표 기반 추정이며 공식 JCR·SJR·중국과학원 등급이 아닙니다. 투고 전 확인하세요.
+追蹤後續文獻如何支持、反駁或提及目標論文。|Track how later papers support, challenge or mention the target paper.|追踪后续文献如何支持、反驳或提及目标论文。|後続論文による支持・反証・言及を追跡します。|후속 논문의 지지, 반박 또는 언급을 추적합니다.
+選擇要追蹤的論文|Choose a paper to track|选择要追踪的论文|追跡する論文を選択|추적할 논문 선택
+輸入 DOI、標題或 OpenAlex 識別碼。|Enter a DOI, title or OpenAlex ID.|输入 DOI、标题或 OpenAlex ID。|DOI、タイトル、OpenAlex ID を入力してください。|DOI, 제목 또는 OpenAlex ID를 입력하세요.
+DOI / OpenAlex Work ID / 論文標題|DOI / OpenAlex Work ID / paper title|DOI / OpenAlex Work ID / 论文标题|DOI / OpenAlex Work ID / 論文タイトル|DOI / OpenAlex Work ID / 논문 제목
+10.1038/... 或 W2741809807|10.1038/... or W2741809807|10.1038/... 或 W2741809807|10.1038/... または W2741809807|10.1038/... 또는 W2741809807
+引用文獻（最多 50 篇）|Citing papers (up to 50)|引用文献（最多 50 篇）|引用した論文（最大 50 件）|인용 논문(최대 50편)
+結果關鍵字（同樣紅色 Highlight）|Filter result keywords|结果关键词筛选|結果のキーワード絞り込み|결과 키워드 필터
+取得引用文獻不代表支持原論文。請加入合法取得的引用方 PDF，以參考文獻與引用編號綁定原文段落。支持／反駁僅為規則判讀候選，仍須人工核對；作者年份格式暫不自動綁定。|A citation does not imply support. Add a lawfully obtained citing PDF to match passages using references and citation numbers. Support/contradiction labels are rule-based candidates requiring manual verification. Author-year citations are not automatically matched.|被引用不代表获得支持。请加入合法取得的引用方 PDF，以参考文献和编号匹配原文。支持或反驳是规则判断候选，仍须人工核实；作者年份格式暂不自动匹配。|引用は支持を意味しません。適法に入手した引用側 PDF を追加し、参考文献と番号で本文を対応付けます。支持・反証は規則による候補で、人による確認が必要です。著者年形式は自動対応しません。|인용이 지지를 의미하지는 않습니다. 적법하게 확보한 인용 논문 PDF를 추가하여 참고문헌과 번호로 본문을 연결하세요. 지지·반박은 규칙 기반 후보로 수동 검증이 필요합니다. 저자-연도 형식은 자동 연결하지 않습니다.
+自動標註|Automatic highlighting|自动标注|自動ハイライト|자동 강조
+選取文字操作|Selected text actions|所选文字操作|選択テキストの操作|선택한 텍스트 작업
+切換明暗主題|Toggle light/dark theme|切换明暗主题|ライト/ダーク切替|라이트/다크 전환
+鍵盤快捷鍵|Keyboard shortcuts|键盘快捷键|キーボードショートカット|키보드 단축키
+取消 AI|Cancel AI|取消 AI|AI をキャンセル|AI 취소
+重試此頁|Retry this page|重试此页|このページを再試行|이 페이지 다시 시도
+論文頁面 ↗|Paper page ↗|论文页面 ↗|論文ページ ↗|논문 페이지 ↗
+找不到符合的文獻。|No matching papers.|未找到符合的文献。|該当する論文はありません。|일치하는 논문이 없습니다.
+例如：Fiber-to-Silicon Edge Coupling   Adiabatic mode transfer   SiN–Si mode transition|e.g. Fiber-to-Silicon Edge Coupling; adiabatic mode transfer|例如：Fiber-to-Silicon Edge Coupling；绝热模式转换|例：Fiber-to-Silicon Edge Coupling、断熱モード変換|예: Fiber-to-Silicon Edge Coupling, 단열 모드 변환
+請輸入有效的四位數年份，起始年不可晚於結束年。|Enter valid four-digit years. The start year cannot exceed the end year.|请输入有效的四位数年份，起始年不能晚于结束年。|有効な西暦4桁を入力してください。開始年は終了年以前にしてください。|유효한 네 자리 연도를 입력하세요. 시작 연도는 종료 연도보다 늦을 수 없습니다.
+標籤（以逗號分隔）|Tags (comma separated)|标签（用逗号分隔）|タグ（カンマ区切り）|태그(쉼표로 구분)
+刪除這則筆記？|Delete this note?|删除这条笔记？|このノートを削除しますか？|이 노트를 삭제할까요?
+清空全部 Library？|Clear the entire library?|清空全部论文库？|ライブラリをすべて消去しますか？|라이브러리를 모두 비울까요?
+將備份與現有資料合併？相同項目保留目前版本，PDF 原檔需另行匯入。|Merge this backup with existing data? Current copies win on duplicates. PDF files must be imported separately.|将备份与现有数据合并？重复项保留当前版本，PDF 原文件需另行导入。|バックアップを既存データに統合しますか？重複時は現在のデータを保持します。PDF は別途取り込んでください。|백업을 기존 데이터와 병합할까요? 중복 항목은 현재 버전을 유지합니다. PDF 원본은 별도로 가져와야 합니다.
+備份已合併；PDF 原檔請另行保留。|Backup merged. Keep PDF originals separately.|备份已合并，请另行保留 PDF 原文件。|バックアップを統合しました。PDF 原本は別途保管してください。|백업이 병합되었습니다. PDF 원본은 별도로 보관하세요.
+高亮已儲存|Highlight saved|高亮已保存|ハイライトを保存しました|강조가 저장되었습니다
+已加入 Library|Saved to library|已加入论文库|ライブラリに保存しました|라이브러리에 저장했습니다
+已在 Library 中|Already in library|已在论文库中|ライブラリに保存済みです|이미 라이브러리에 있습니다
+AI 設定已更新|AI settings updated|AI 设置已更新|AI 設定を更新しました|AI 설정을 업데이트했습니다
+AI 設定已清除|AI settings cleared|AI 设置已清除|AI 設定を消去しました|AI 설정을 지웠습니다
+模型測試失敗：|Model test failed:|模型测试失败：|モデルのテストに失敗しました：|모델 테스트 실패:
+已收到模型真實回答：|Received a model response:|已收到模型真实回答：|モデルの応答を受信しました：|모델 응답을 받았습니다:
+解釋未完成|Explanation failed|解释未完成|解説を完了できませんでした|설명을 완료하지 못했습니다
+研究分析未完成|Research analysis failed|研究分析未完成|研究分析を完了できませんでした|연구 분석을 완료하지 못했습니다
+問答未完成|Question could not be answered|问答未完成|質問に回答できませんでした|질문에 답변하지 못했습니다
+未找到選擇的可用模型。請在帳號設定重新選擇，或確認 Codex 使用權限。|Selected model is unavailable. Choose another model in account settings or check Codex access.|所选模型不可用。请在账号设置重新选择，或确认 Codex 使用权限。|選択したモデルは利用できません。アカウント設定で再選択するか Codex の利用権限を確認してください。|선택한 모델을 사용할 수 없습니다. 계정 설정에서 다시 선택하거나 Codex 권한을 확인하세요.
+模型初始化逾時，請檢查網路後重試。|Model initialization timed out. Check your connection and retry.|模型初始化超时，请检查网络后重试。|モデルの初期化がタイムアウトしました。接続を確認して再試行してください。|모델 초기화 시간이 초과되었습니다. 연결을 확인하고 다시 시도하세요.
+模型未能開始回答，請重試或切換模型。|The model could not start a response. Retry or switch models.|模型未能开始回答，请重试或切换模型。|モデルが応答を開始できませんでした。再試行するかモデルを変更してください。|모델이 응답을 시작하지 못했습니다. 다시 시도하거나 모델을 변경하세요.
+最近搜尋|Recent searches|最近搜索|最近の検索|최근 검색
+精簡列表|Compact list|精简列表|コンパクト表示|간결한 목록
+舒適列表|Comfortable list|舒适列表|ゆったり表示|여유로운 목록
+比較選取的論文|Compare selected papers|比较所选论文|選択した論文を比較|선택한 논문 비교
+比較論文|Compare papers|比较论文|論文を比較|논문 비교
+搜尋文件全文|Search document text|搜索文档全文|文書の全文を検索|문서 전문 검색
+搜尋全文… ⌘ / Ctrl F|Find in document… ⌘ / Ctrl F|搜索全文… ⌘ / Ctrl F|文書内を検索… ⌘ / Ctrl F|문서 내 검색… ⌘ / Ctrl F
+上一筆命中|Previous match|上一个匹配|前の一致|이전 검색 결과
+下一筆命中|Next match|下一个匹配|次の一致|다음 검색 결과
+加入目前頁面書籤|Bookmark this page|为当前页添加书签|現在のページをブックマーク|현재 페이지 북마크
+開啟 PDF 後即可全文搜尋|Open a PDF to search its full text|打开 PDF 后即可搜索全文|PDF を開くと全文検索できます|PDF를 열면 전문 검색이 가능합니다
+高亮顏色|Highlight color|高亮颜色|ハイライトの色|강조 색상
+黃色 · 重點|Yellow · key points|黄色 · 重点|黄 · 要点|노랑 · 핵심
+綠色 · 方法|Green · methods|绿色 · 方法|緑 · 方法|초록 · 방법
+藍色 · 數據|Blue · data|蓝色 · 数据|青 · データ|파랑 · 데이터
+粉色 · 疑問|Pink · questions|粉色 · 疑问|ピンク · 疑問|분홍 · 질문
+文件導覽|Document navigation|文档导航|文書ナビゲーション|문서 탐색
+尚未載入文件|No document loaded|尚未加载文档|文書が未読込です|불러온 문서 없음
+匯出備份|Export backup|导出备份|バックアップを書き出す|백업 내보내기
+搜尋論文庫|Search library|搜索论文库|ライブラリを検索|라이브러리 검색
+論文庫排序|Library sorting|论文库排序|ライブラリの並べ替え|라이브러리 정렬
+閱讀器內搜尋全文|Search within the reader|阅读器内搜索全文|リーダー内で全文検索|리더 내 전문 검색
+PDF 上一頁 / 下一頁|Previous / next PDF page|PDF 上一页 / 下一页|PDF の前 / 次のページ|PDF 이전 / 다음 페이지
+離開專注閱讀 / 關閉視窗|Exit focus / close dialog|退出专注阅读 / 关闭窗口|集中モード終了 / ダイアログを閉じる|집중 모드 종료 / 대화상자 닫기
+PDF、筆記和閱讀位置在這台瀏覽器保存。備份包含論文資料、筆記、標註及書籤，不含 PDF 原檔與 API 金鑰。|PDFs, notes and reading positions are stored in this browser. Backups include metadata, notes, annotations and bookmarks, but not PDF files or API keys.|PDF、笔记和阅读位置保存在此浏览器。备份包含论文资料、笔记、标注及书签，不含 PDF 原文件与 API 密钥。|PDF、ノート、読書位置はこのブラウザーに保存します。バックアップには書誌情報、ノート、注釈、ブックマークを含みますが、PDF 原本と API キーは含みません。|PDF, 노트, 읽기 위치는 이 브라우저에 저장됩니다. 백업에는 메타데이터, 노트, 주석, 북마크가 포함되며 PDF 원본과 API 키는 제외됩니다.
+這份 PDF 未提供目錄。可使用頁碼或全文搜尋導覽。|This PDF has no outline. Use page numbers or full-text search.|此 PDF 没有目录，可使用页码或全文搜索。|この PDF に目次はありません。ページ番号か全文検索をご利用ください。|이 PDF에는 목차가 없습니다. 페이지 번호나 전문 검색을 사용하세요.
+按「☆ 書籤」保存目前頁面。|Click ☆ Bookmark to save this page.|点击“☆ 书签”保存当前页。|「☆ ブックマーク」で現在のページを保存します。|☆ 북마크를 눌러 현재 페이지를 저장하세요.
+輸入文字搜尋整份文件。|Enter text to search the entire document.|输入文字搜索整个文档。|文字を入力して文書全体を検索します。|텍스트를 입력하여 문서 전체를 검색하세요.
+書籤名稱|Bookmark name|书签名称|ブックマーク名|북마크 이름
+書籤已儲存|Bookmark saved|书签已保存|ブックマークを保存しました|북마크를 저장했습니다
+此頁已加入書籤|This page is already bookmarked|此页已添加书签|このページはブックマーク済みです|이미 북마크한 페이지입니다
+筆記已儲存|Note saved|笔记已保存|ノートを保存しました|노트를 저장했습니다
+這段要記什麼？|What would you like to note?|这段要记什么？|この箇所に何をメモしますか？|이 문단에 무엇을 기록할까요?
+清空這篇論文的所有筆記？|Delete all notes for this paper?|清空这篇论文的所有笔记？|この論文のノートをすべて削除しますか？|이 논문의 모든 노트를 삭제할까요?
+清空 Library？|Clear the library?|清空论文库？|ライブラリを消去しますか？|라이브러리를 비울까요?
+將選取文字的前 480 字元傳給 MyMemory 第三方翻譯服務？|Send the first 480 characters of selected text to the MyMemory translation service?|将所选文字的前 480 个字符发送给 MyMemory 第三方翻译服务？|選択テキストの先頭480文字を外部翻訳サービス MyMemory に送信しますか？|선택한 텍스트의 처음 480자를 외부 번역 서비스 MyMemory로 전송할까요?
+全文索引完成 · {n} 頁|Text index complete · {n} pages|全文索引完成 · {n} 页|全文索引完了 · {n} ページ|전문 색인 완료 · {n} 페이지
+PDF 已載入：{n} 頁|PDF loaded: {n} pages|PDF 已加载：{n} 页|PDF 読込完了：{n} ページ|PDF 불러옴: {n} 페이지
+正在載入文件與建立全文索引…|Loading document and indexing text…|正在加载文档并建立全文索引…|文書を読み込み、全文索引を作成中…|문서 로딩 및 전문 색인 생성 중…
+正在解析 PDF…|Parsing PDF…|正在解析 PDF…|PDF を解析中…|PDF 처리 중…
+正在建立 {model} 分析工作…|Starting analysis with {model}…|正在建立 {model} 分析任务…|{model} の分析を開始中…|{model} 분석 시작 중…
+帳號已登入：{account}|Signed in: {account}|账号已登录：{account}|ログイン済み：{account}|로그인됨: {account}
+ChatGPT 已登入 · {model} · 尚未驗證本次模型連線|ChatGPT signed in · {model} · Model response not tested yet|ChatGPT 已登录 · {model} · 尚未验证模型连接|ChatGPT ログイン済み · {model} · モデル応答は未テスト|ChatGPT 로그인됨 · {model} · 모델 응답 미확인
+ChatGPT：正在確認帳號…|ChatGPT: checking account…|ChatGPT：正在确认账号…|ChatGPT：アカウント確認中…|ChatGPT: 계정 확인 중…
+ChatGPT 尚未登入：按右上「ChatGPT 帳號」登入。|ChatGPT is not signed in. Use the account button above.|ChatGPT 尚未登录，请点击右上角账号按钮登录。|未ログインです。右上のアカウントボタンをご利用ください。|ChatGPT에 로그인되지 않았습니다. 위의 계정 버튼으로 로그인하세요.
+ChatGPT 分析已結束；回答或錯誤詳見下方。|ChatGPT analysis finished. See the response or error below.|ChatGPT 分析已结束，回答或错误见下方。|ChatGPT の分析が終了しました。応答またはエラーは下に表示します。|ChatGPT 분석이 끝났습니다. 아래 응답이나 오류를 확인하세요.
+ChatGPT 模型回答已驗證 · {model}|ChatGPT response verified · {model}|ChatGPT 模型回答已验证 · {model}|ChatGPT 応答確認済み · {model}|ChatGPT 모델 응답 확인됨 · {model}
+{n} / {total} 篇|{n} / {total} papers|{n} / {total} 篇|{n} / {total} 件|{n} / {total} 편
+第 {n} 頁 ↗|Page {n} ↗|第 {n} 页 ↗|{n} ページ ↗|{n} 페이지 ↗
+研究工作區|Research workspace|研究工作区|研究ワークスペース|연구 작업 공간
+本機優先|Local-first|本地优先|ローカル優先|로컬 우선
+未判定|Unclassified|未判定|未分類|미분류

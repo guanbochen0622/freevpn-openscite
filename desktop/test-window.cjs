@@ -44,10 +44,19 @@ app.on('browser-window-created',(_e,win)=>{
  await new Promise(r=>setTimeout(r,100));
  assert.ok(request.input[1].content[0].text.includes('What wavelength was measured?'));
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
+ for(const [locale,label,name] of [['en','Academic search','English'],['zh-Hant','學術搜尋','Traditional Chinese'],['zh-Hans','学术搜索','Simplified Chinese'],['ja','論文検索','Japanese'],['ko','논문 검색','Korean']]){
+   const text=await win.webContents.executeJavaScript(`I18n.setLanguage(${JSON.stringify(locale)});document.querySelector('.nav-tab[data-view="search"]').textContent`);
+   assert.equal(text,label);
+   await win.webContents.executeJavaScript(`explainSelection()`);
+   assert.equal(request.language,locale);
+   assert.ok(request.input[0].content[0].text.includes('Response language: '+name));
+   assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
+ }
+ await win.webContents.executeJavaScript(`I18n.setLanguage('zh-Hant')`);
  ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',()=>{throw Error('TEST: model quota exhausted');});
  await win.webContents.executeJavaScript(`explainSelection()`);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/model quota exhausted/);
- console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC and visible model errors');
+ console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors and five-language AI routing');
  clearTimeout(timer);app.quit();
  }catch(e){console.error(e);clearTimeout(timer);app.exit(1);}
  });

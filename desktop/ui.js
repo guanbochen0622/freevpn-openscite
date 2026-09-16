@@ -66,7 +66,7 @@ if (bridge) {
     running = progress.stage !== 'idle';
     if (!running) { status.textContent = 'ChatGPT 分析已結束；回答或錯誤詳見下方。'; return; }
     const text = (progress.model ? progress.model + ' · ' : '') + progress.message;
-    status.textContent = text;
+    status.textContent = window.I18n?.t(text)||text;
     if (testing) el('desktopTestResult').textContent = text + (progress.text ? '\n' + progress.text : '');
     else if (progress.stage === 'answering' && progress.text) {
       const output = document.getElementById('assistantOutput');
@@ -92,7 +92,7 @@ if (bridge) {
   el('desktopTest').onclick = async () => {
     testing = true;el('desktopTest').disabled = true;save();
     try {
-      const answer = await bridge.ask({desktopModel:el('desktopModel').value,desktopEffort:el('desktopEffort').value,input:[{role:'user',content:[{type:'input_text',text:'This is a connection test, not a paper question. Reply with exactly: OpenScite 連線成功'}]}]});
+      const answer = await bridge.ask({desktopModel:el('desktopModel').value,desktopEffort:el('desktopEffort').value,language:window.I18n?.language||'zh-Hant',input:[{role:'user',content:[{type:'input_text',text:'This is a connection test, not a paper question. Reply with exactly: OpenScite 連線成功'}]}]});
       el('desktopTestResult').textContent = '已收到模型真實回答：\n' + answer;
       status.textContent = 'ChatGPT 模型回答已驗證 · ' + el('desktopModel').value;
     } catch (e) {

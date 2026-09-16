@@ -23,3 +23,11 @@ ctx.state={reader:{pageTexts:['Introduction on optics.','Unique measurement: 980
 assert.match(vm.runInContext("relevantContext('980 wavelength',70)",ctx),/Page 2/);
 assert.match(vm.runInContext('summaryContext()',ctx),/Page 3/);
 console.log('PASS: tokenization, URL sanitization, negation, ambiguous stance, reference binding, missing binding, relevant-page retrieval and summary page markers.');
+assert.equal(vm.runInContext("classifyStance('We did not confirm the results [7].').stance",ctx),'contrasting');
+assert.equal(vm.runInContext("classifyStance(\"We couldn't replicate the results [7].\").stance",ctx),'contrasting');
+assert.equal(vm.runInContext("classifyStance('Our findings are not inconsistent with [7].').stance",ctx),'unknown');
+assert.equal(vm.runInContext("classifyStance('This does not contradict the proposed mechanism [7].').stance",ctx),'unknown');
+ctx.target={doi:'10.1234/test',title:'Unmatched target title'};
+assert.equal(vm.runInContext("citationContexts('[Page 1] We confirm the results [1].\\nReferences\\n[1] Other title 10.1234/testing',target).length",ctx),0);
+assert.equal(vm.runInContext("citationContexts('[Page 1] We confirm the results [1].\\nReferences\\n[1] Other title 10.1234/test.',target).length",ctx),1);
+console.log('PASS: negated support, double negation and exact DOI boundaries.');

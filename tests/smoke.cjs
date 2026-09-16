@@ -56,5 +56,18 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  assert.equal(await page.evaluate(()=>{try{validateBackup({format:'openscite-workspace',version:1,data:{openscite_library_v24:[{}]}});return false}catch{return true}}),true);
  await page.setViewportSize({width:390,height:844});await page.click('.nav-tab[data-view="search"]');await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.screenshot({path:'/tmp/openscite-mobile.png',fullPage:true});
  await page.click('#themeToggle');await page.screenshot({path:'/tmp/openscite-light.png',fullPage:true});
+ // Language changes preserve research data, typed input, behavior and persistence.
+ await page.evaluate(()=>{const paper=document.createElement('div');paper.id='languagePaper';paper.className='paper-title';paper.textContent='搜尋論文';document.body.append(paper);$('assistantOutput').textContent='搜尋論文';$('askInput').value='Keep my question 980 nm';});
+ for(const [locale,label] of [['en','Academic search'],['zh-Hant','學術搜尋'],['zh-Hans','学术搜索'],['ja','論文検索'],['ko','논문 검색']]){
+   await page.selectOption('#languageSelect',locale);
+   await page.waitForFunction(([locale,label])=>document.documentElement.lang===locale&&document.querySelector('.nav-tab[data-view="search"]').textContent===label,[locale,label]);
+   assert.equal(await page.locator('#languagePaper').textContent(),'搜尋論文');
+   assert.equal(await page.locator('#assistantOutput').textContent(),'搜尋論文');
+   assert.equal(await page.locator('#askInput').inputValue(),'Keep my question 980 nm');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+ }
+ await page.selectOption('#languageSelect','en');await page.reload();await page.waitForSelector('#themeToggle');
+ assert.equal(await page.locator('#languageSelect').inputValue(),'en');
+ assert.equal(await page.locator('.nav-tab[data-view="search"]').textContent(),'Academic search');
  assert.deepEqual(errors,[]);console.log('PASS: failure paths, request races, mocked AI page links, backup roundtrip, library reopen,  search, comparison, library filters, PDF text, bounded canvases, find, navigation, bookmarks, zoom, stable annotations, citation binding, backup validation, mobile layout.');await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});

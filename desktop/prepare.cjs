@@ -1,6 +1,6 @@
 const fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'..'),dest=path.join(__dirname,'web');fs.mkdirSync(dest,{recursive:true});
-for(const name of ['index.html','app.js','boot.js','workspace.js','workspace.css','styles.css','vendor'])fs.cpSync(path.join(root,name),path.join(dest,name),{recursive:true});
+for(const name of ['index.html','app.js','boot.js','workspace.js','workspace.css','styles.css','i18n.js','locales','vendor'])fs.cpSync(path.join(root,name),path.join(dest,name),{recursive:true});
 fs.copyFileSync(path.join(__dirname,'ui.js'),path.join(dest,'desktop-ui.js'));
 const boot=path.join(dest,'boot.js');fs.appendFileSync(boot,'\nawait import("./desktop-ui.js");\n');
 const index=path.join(dest,'index.html');

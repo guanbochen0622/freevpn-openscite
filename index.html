@@ -83,7 +83,7 @@
           <div id="readerDrop" class="drop-zone"><span>↥</span><b>拖入 PDF</b><small>或點擊選擇檔案</small><button id="readerPick" class="btn primary full">選擇 PDF</button><input id="readerFile" class="hidden" type="file" accept="application/pdf,.pdf"></div>
           <label class="stack-label">或貼 PDF URL<input id="pdfUrl" class="control" placeholder="https://.../paper.pdf"></label>
           <button id="loadPdfUrl" class="btn full">開啟 PDF URL</button>
-          <div class="reader-meta" id="readerMeta"><b>尚未載入論文</b><span>從學術搜尋點「閱讀 PDF」也會直接送進這裡。</span></div>
+          <div class="reader-meta" id="readerMeta"><b class="placeholder">尚未載入論文</b><span class="placeholder">從學術搜尋點「閱讀 PDF」也會直接送進這裡。</span></div>
           <div class="toolbar-card">
             <div class="tool-row"><button id="zoomOut" class="icon-btn">−</button><span id="zoomLabel">125%</span><button id="zoomIn" class="icon-btn">＋</button><button id="fitWidth" class="btn small">適合寬度</button></div>
             <div class="tool-row"><button id="prevPdfPage" class="btn small">←</button><input id="pageJump" class="control tiny" inputmode="numeric" value="1"><span id="pdfPageCount">/ 0</span><button id="nextPdfPage" class="btn small">→</button></div>
@@ -142,7 +142,7 @@
       <div class="row-actions"><button id="exportMd" class="btn">匯出 Markdown</button><button id="exportJson" class="btn">匯出 JSON</button></div>
     </div>
     <div class="evidence-layout">
-      <aside class="panel evidence-controls"><div class="panel-head"><h3>目標論文</h3><p>DOI / OpenAlex Work ID / 論文標題</p></div><div class="panel-body"><input id="targetQuery" class="control" placeholder="10.1038/... 或 W2741809807"><button id="analyzeCitations" class="btn primary full">開始分析</button><div id="targetInfo" class="target-info">尚未設定目標論文。</div><div class="privacy-note">取得引用文獻不代表支持原論文。請加入合法取得的引用方 PDF，以參考文獻與引用編號綁定原文段落。支持／反駁僅為規則判讀候選，仍須人工核對；作者年份格式暫不自動綁定。</div></div></aside>
+      <aside class="panel evidence-controls"><div class="panel-head"><h3>目標論文</h3><p>DOI / OpenAlex Work ID / 論文標題</p></div><div class="panel-body"><input id="targetQuery" class="control" placeholder="10.1038/... 或 W2741809807"><button id="analyzeCitations" class="btn primary full">開始分析</button><div id="targetInfo" class="target-info"><span class="placeholder">尚未設定目標論文。</span></div><div class="privacy-note">取得引用文獻不代表支持原論文。請加入合法取得的引用方 PDF，以參考文獻與引用編號綁定原文段落。支持／反駁僅為規則判讀候選，仍須人工核對；作者年份格式暫不自動綁定。</div></div></aside>
       <section>
         <div class="evidence-kpis"><div><b id="kpiTotal">0</b><span>引用文獻（最多 50 篇）</span></div><div><b id="kpiSupporting">0</b><span>可能支持（待核對）</span></div><div><b id="kpiContrasting">0</b><span>可能反駁（待核對）</span></div><div><b id="kpiMentioning">0</b><span>提及 / 未驗證</span></div></div>
         <div class="result-toolbar"><input id="evidenceFilter" class="control" placeholder="結果關鍵字（同樣紅色 Highlight）"><select id="stanceFilter" class="control"><option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option></select><select id="evidenceSort" class="control"><option value="rank">目前排名</option><option value="journal">期刊指標</option><option value="citations">引用次數</option><option value="year">年份</option><option value="evidence">全文證據數</option></select></div>
@@ -174,7 +174,7 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <footer><div class="shell">OpenScite · Research Workspace</div></footer>
-<script src="vendor/fflate.min.js?v=25.1.4"></script>
-<script type="module" src="boot.js?v=25.1.4"></script>
+<script src="vendor/fflate.min.js?v=25.2.0"></script>
+<script type="module" src="boot.js?v=25.2.0"></script>
 </body>
 </html>
