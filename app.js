@@ -99,6 +99,11 @@ function workFromCrossref(w){
 }
 
 function oaKey(){ return localStorage.getItem(STORE.oaKey)||''; }
+function estimateQuartile(hIndex, mean2y, citedBy){
+  const h=Math.max(0,Number(hIndex)||0),m=Math.max(0,Number(mean2y)||0),c=Math.max(0,Number(citedBy)||0);
+  const score=h*2 + m*18 + Math.log10(c+1)*20;
+  return {score,q:score>=300?'Q1':score>=190?'Q2':score>=105?'Q3':'Q4'};
+}
 async function oa(path, params={}){
   const url=new URL(`https://api.openalex.org${path}`);
   Object.entries(params).forEach(([k,v])=>{ if(v!==''&&v!==undefined&&v!==null) url.searchParams.set(k,v); });
@@ -123,9 +128,11 @@ async function enrichSources(works, sourceMap){
     for(const w of works){
       const s=sourceMap.get(w.sourceId); if(!s) continue;
       const h=Number(s.summary_stats?.h_index||0), m=Number(s.summary_stats?.['2yr_mean_citedness']||0), c=Number(s.cited_by_count||0);
-      const score=h*2 + m*18 + Math.log10(c+1)*20;
+      const {score,q}=estimateQuartile(h,m,c);
       w.sourceMetrics={hIndex:h, mean2y:m, worksCount:s.works_count||0,citedBy:s.cited_by_count||0,type:s.type||''}; w.sourceScore=score;
-      w.q='Q?'; // Official subject/year quartiles cannot be inferred from arbitrary thresholds.
+      // Transparent heuristic only. This is deliberately labelled as an estimate in the UI.
+      w.q=q;
+      w.qReason=`OpenAlex h-index ${h}、2 年平均引用 ${m.toFixed(2)}、累積引用 ${fmtNum(c)}；估計分數 ${Math.round(score)}`;
     }
   }catch(e){ console.warn('source enrichment failed',e); }
 }
@@ -157,7 +164,7 @@ async function runSearch(resetPage=true){
   $('searchResults').setAttribute('aria-busy','true');
   try{
     let works,total,provider;
-    try{const d=await oa('/works',params);works=(d.results||[]).map(workFromOpenAlex);total=d.meta?.count||0;provider='OpenAlex';if(sort==='journal')await enrichSources(works,state.search.sourceMap);}
+    try{const d=await oa('/works',params);works=(d.results||[]).map(workFromOpenAlex);total=d.meta?.count||0;provider='OpenAlex';await enrichSources(works,state.search.sourceMap);}
     catch(err){if(oaOnly)throw new Error('OpenAlex 暫時無法使用；Crossref 無法可靠套用 OA 篩選，請稍後重試或切換全部文獻。');const d=await crossrefSearch(query,per,(page-1)*per,{y1,y2,sort});works=d.results;total=d.total;provider='Crossref（備援）';}
     if(request!==state.search.request)return;
     const seen=new Set();works=works.filter(w=>{const k=(w.doi||w.id||w.title).toLowerCase();if(seen.has(k))return false;seen.add(k);return true;});
@@ -185,7 +192,7 @@ function paperCard(w, query, context='search', index=0){
   if(context==='search') actions.push(`<button class="btn small" data-action="evidence" data-context="search" data-index="${index}">分析引用證據</button>`);
   if(context==='evidence') actions.push(`<button class="btn small" data-action="citingpdf" data-context="evidence" data-index="${index}">加入 citing PDF</button><input type="file" accept="application/pdf,.pdf" class="hidden citing-file" data-index="${index}">`);
   const stance=w.stance?`<span class="badge ${w.stance}" title="僅依綁定段落規則判讀，需人工核對">${esc(({unknown:'尚未驗證',supporting:'可能支持 · 待核對',contrasting:'可能反駁 · 待核對',mentioning:'提及 · 待核對'})[w.stance]||w.stance)}</span>`:'';
-  const qBadge=w.q&&w.q!=='Q?'?`<span class="badge ${qCls}" title="OpenAlex-based estimate; not official JCR/SJR">推估 ${esc(w.q)}</span>`:`<span class="badge" title="未提供官方年度與學科分區">分區未驗證</span>`;
+  const qBadge=w.q&&w.q!=='Q?'?`<span class="badge ${qCls}" title="${esc(w.qReason||'依 OpenAlex 公開指標推估；不是官方 JCR／SJR／中科院分區')}">推估 ${esc(w.q)}</span>`:`<span class="badge" title="資料不足，無法使用 OpenAlex 指標推估">分區無法推估</span>`;
   const evidence=w.contexts?.length?`<div class="context-box"><h4>FULL-TEXT CITATION CONTEXT · ${w.contexts.length} passages</h4>${w.contexts.slice(0,4).map(c=>`<div class="context">${highlightHtml(c,query)}</div>`).join('')}</div>`:'';
   return `<article class="paper-card"><div class="paper-top"><div><div class="paper-title">${highlightHtml(w.title,query)}</div><div class="paper-meta">${esc(w.authors||'Unknown authors')} · ${esc(w.year||'n.d.')} · ${esc(venue)}</div></div><div class="paper-badges">${stance}${qBadge}<span class="badge">${fmtNum(w.citations)} cites</span>${w.isOA?'<span class="badge">OA</span>':''}</div></div>${w.abstract?`<div class="paper-abstract">${highlightHtml(w.abstract,query)}</div>`:''}<div class="paper-actions">${actions.join('')}</div>${evidence}</article>`;
 }

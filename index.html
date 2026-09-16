@@ -62,7 +62,7 @@
         <label>Open Access<select id="searchOA" class="control"><option value="all">全部</option><option value="oa">只看 OA</option></select></label>
         <label>每頁<select id="perPage" class="control"><option>10</option><option selected>20</option><option>50</option></select></label>
       </div>
-      <details class="api-details"><summary>OpenAlex API key（選填）</summary><div class="api-row"><input id="oaKey" class="control" type="password" autocomplete="off" placeholder="OpenAlex API key"><button id="saveOaKey" class="btn small">儲存本機</button><button id="clearOaKey" class="btn small">清除</button></div><p>沒有 key 也會先嘗試 OpenAlex；失敗時改用 Crossref。期刊指標不是官方 JCR/SJR 分區，系統不會自行推定 Q1–Q4。</p></details>
+      <details class="api-details"><summary>OpenAlex API key（選填）</summary><div class="api-row"><input id="oaKey" class="control" type="password" autocomplete="off" placeholder="OpenAlex API key"><button id="saveOaKey" class="btn small">儲存本機</button><button id="clearOaKey" class="btn small">清除</button></div><p>沒有 key 也會先嘗試 OpenAlex；失敗時改用 Crossref。Q1–Q4 為 OpenAlex 公開指標的啟發式推估，不是官方 JCR／SJR／中科院分區，投稿前必須另行核對。</p></details>
     </div>
 
     <div id="searchStatus" class="status-row" role="status" aria-live="polite"><span>輸入研究主題後開始搜尋。</span><span>尚無結果</span></div>
@@ -174,6 +174,7 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <footer><div class="shell">OpenScite · Research Workspace</div></footer>
+<script src="vendor/fflate.min.js"></script>
 <script type="module" src="boot.js"></script>
 </body>
 </html>

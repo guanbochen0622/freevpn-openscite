@@ -3,10 +3,12 @@ try {
   const inflate = async (url) => {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`Unable to load ${url} (${response.status})`);
-    if (!('DecompressionStream' in window)) {
-      throw new Error('This browser does not support the PDF engine loader.');
+    if ('DecompressionStream' in window) {
+      return new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).blob();
     }
-    return new Response(response.body.pipeThrough(new DecompressionStream('gzip'))).blob();
+    if (!window.fflate?.gunzipSync) throw new Error('No compatible PDF engine decompressor is available.');
+    const compressed = new Uint8Array(await response.arrayBuffer());
+    return new Blob([window.fflate.gunzipSync(compressed)], { type: 'text/javascript' });
   };
 
   const mainSource = await inflate('./vendor/pdf.mjs.gz');
@@ -24,7 +26,7 @@ try {
   }, { once: true });
 } catch (error) {
   console.error('PDF engine could not initialize', error);
-  document.getElementById('readerEmpty').textContent = 'PDF 閱讀器未能載入。請重新整理或使用最新版瀏覽器；搜尋與論文庫仍可使用。';
+  window.pdfEngineError = error instanceof Error ? error.message : String(error);
 }
 for (const src of ['app.js', 'workspace.js']) {
   try {
@@ -41,4 +43,8 @@ for (const src of ['app.js', 'workspace.js']) {
     console.error('Application script could not load', src, error);
     break;
   }
+}
+if (!window.pdfjsLib) {
+  const reader = document.getElementById('readerEmpty');
+  if (reader) reader.textContent = `PDF 閱讀器未能載入：${window.pdfEngineError || '未知錯誤'}。搜尋與論文庫仍可使用。`;
 }
