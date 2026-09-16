@@ -1,4 +1,5 @@
 // Keep search and the library usable even if the PDF engine cannot initialize.
+const ASSET_VERSION = '25.1.1';
 try {
   const inflate = async (url) => {
     const response = await fetch(url);
@@ -11,11 +12,11 @@ try {
     return new Blob([window.fflate.gunzipSync(compressed)], { type: 'text/javascript' });
   };
 
-  const mainSource = await inflate('./vendor/pdf.mjs.gz');
+  const mainSource = await inflate(`./vendor/pdf.mjs.gz?v=${ASSET_VERSION}`);
   const mainUrl = URL.createObjectURL(new Blob([mainSource], { type: 'text/javascript' }));
   window.pdfjsLib = await import(mainUrl);
 
-  const workerSource = await inflate('./vendor/pdf.worker.mjs.gz');
+  const workerSource = await inflate(`./vendor/pdf.worker.mjs.gz?v=${ASSET_VERSION}`);
   const workerUrl = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
   window.pdfjsWorker = new Worker(workerUrl, { type: 'module' });
 
@@ -28,7 +29,7 @@ try {
   console.error('PDF engine could not initialize', error);
   window.pdfEngineError = error instanceof Error ? error.message : String(error);
 }
-for (const src of ['app.js', 'workspace.js']) {
+for (const src of [`app.js?v=${ASSET_VERSION}`, `workspace.js?v=${ASSET_VERSION}`]) {
   try {
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
