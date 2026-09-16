@@ -277,7 +277,14 @@ async function renderPdfPages(token=state.reader.renderToken){
   const epoch=state.reader.paintEpoch=(state.reader.paintEpoch||0)+1;
   const anchor=capturePdfScrollAnchor();state.reader.observer?.disconnect();
   hideSelectionUi(true);clearNativePdfSelection();
-  const container=$('pdfPages');container.innerHTML='';
+  const container=$('pdfPages');
+  state.reader.renderTasks?.forEach(task=>task.cancel());
+  state.reader.renderTasks=new Set();
+  const renderTasks=state.reader.renderTasks;
+  container.querySelectorAll('canvas').forEach(c=>{c.width=0;c.height=0;});
+  container.innerHTML='';
+  const compact=window.matchMedia('(pointer: coarse)').matches||window.innerWidth<768;
+  const pageBudget=compact?3:9,pixelBudget=compact?2000000:6000000;
   const entries=[];let queue=Promise.resolve();
   const active=()=>token===state.reader.renderToken&&epoch===state.reader.paintEpoch;
   const paint=async entry=>{
@@ -285,11 +292,15 @@ async function renderPdfPages(token=state.reader.renderToken){
     const {page,viewport,wrap,n}=entry;
     try{
       const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d',{alpha:false});
-      const ratio=Math.min(window.devicePixelRatio||1,2,Math.sqrt(6000000/(viewport.width*viewport.height)));
+      const readyBefore=entries.filter(e=>e.wrap.dataset.ready).sort((a,b)=>Math.abs(a.n-n)-Math.abs(b.n-n));
+      for(const old of readyBefore.slice(pageBudget-1)){old.wrap.querySelectorAll('canvas').forEach(c=>{c.width=0;c.height=0;});old.wrap.replaceChildren();delete old.wrap.dataset.ready;}
+      const ratio=Math.min(window.devicePixelRatio||1,compact?1.5:2,Math.sqrt(pixelBudget/(viewport.width*viewport.height)));
       canvas.width=Math.floor(viewport.width*ratio);canvas.height=Math.floor(viewport.height*ratio);canvas.style.width=`${viewport.width}px`;canvas.style.height=`${viewport.height}px`;
       wrap.replaceChildren(canvas);
-      await page.render({canvasContext:ctx,viewport,transform:ratio!==1?[ratio,0,0,ratio,0,0]:null}).promise;if(!active())return;
-      const tc=await page.getTextContent();if(!active())return;
+      const task=page.render({canvasContext:ctx,viewport,transform:ratio!==1?[ratio,0,0,ratio,0,0]:null});
+      renderTasks.add(task);try{await task.promise;}finally{renderTasks.delete(task);}if(!active())return;
+      let tc;try{tc=await page.getTextContent();}catch(e){tc={items:[],styles:{}};wrap.dataset.textError=String(e.message);}
+      if(!active())return;
       const textLayer=document.createElement('div');textLayer.className='textLayer';textLayer.dataset.page=n;wrap.appendChild(textLayer);
       try{await new pdfjsLib.TextLayer({textContentSource:tc,container:textLayer,viewport}).render();}catch{manualTextLayer(tc,textLayer,viewport);}
       if(!active())return;
@@ -300,29 +311,35 @@ async function renderPdfPages(token=state.reader.renderToken){
       wrap.dataset.ready='1';document.dispatchEvent(new CustomEvent('research:page',{detail:n}));
       // Keep at most nine rasterized pages. Text index is independent of canvases.
       const ready=entries.filter(e=>e.wrap.dataset.ready).sort((a,b)=>Math.abs(a.n-state.reader.currentPage)-Math.abs(b.n-state.reader.currentPage));
-      for(const old of ready.slice(9)){if(old.n===state.reader.currentPage)continue;old.wrap.querySelectorAll('canvas').forEach(c=>{c.width=0;c.height=0});old.wrap.replaceChildren();delete old.wrap.dataset.ready;}
-    }catch(e){if(active()){wrap.textContent=`第 ${n} 頁載入失敗：${e.message}`;}}
+      for(const old of ready.slice(pageBudget)){if(old.n===state.reader.currentPage)continue;old.wrap.querySelectorAll('canvas').forEach(c=>{c.width=0;c.height=0});old.wrap.replaceChildren();delete old.wrap.dataset.ready;}
+    }catch(e){if(active()&&e.name!=='RenderingCancelledException'){wrap.textContent=`第 ${n} 頁載入失敗：${e.message}`;const retry=document.createElement('button');retry.className='btn';retry.textContent='重試此頁';retry.onclick=()=>state.reader.paintPage(n);wrap.appendChild(retry);}}
     finally{entry.busy=false;}
   };
   for(let n=1;n<=pdf.numPages;n++){
-    const page=await pdf.getPage(n);if(!active())return;
+    let page;try{page=await pdf.getPage(n);}catch(e){if(!active())return;const failed=document.createElement('div');failed.className='pdf-page';failed.dataset.page=n;failed.textContent=`第 ${n} 頁無法解析：${e.message}`;container.appendChild(failed);continue;}if(!active())return;
     const viewport=page.getViewport({scale:state.reader.scale});const wrap=document.createElement('div');
     wrap.className='pdf-page';wrap.dataset.page=n;wrap.setAttribute('role','document');wrap.setAttribute('aria-label',`PDF 第 ${n} 頁`);
     wrap.style.width=`${viewport.width}px`;wrap.style.height=`${viewport.height}px`;wrap.style.setProperty('--scale-factor',state.reader.scale);
     container.appendChild(wrap);entries.push({page,viewport,wrap,n,busy:false});
   }
   if(!active())return;
-  state.reader.paintPage=n=>{const e=entries[n-1];if(e)queue=queue.then(()=>paint(e));return queue;};
+  state.reader.paintPage=n=>{const e=entries.find(x=>x.n===n);if(e)queue=queue.then(()=>paint(e));return queue;};
   state.reader.observer=new IntersectionObserver(items=>{for(const i of items)if(i.isIntersecting)state.reader.paintPage(Number(i.target.dataset.page));},{root:$('pdfViewport'),rootMargin:'700px 0px'});
   entries.forEach(e=>state.reader.observer.observe(e.wrap));restorePdfScrollAnchor(anchor);
   await state.reader.paintPage(anchor.page||1);
 }
 async function indexPdfText(token){
   const pdf=state.reader.pdf;if(!pdf)return;
+  const errors=[];
   for(let n=1;n<=pdf.numPages;n++){
-    const page=await pdf.getPage(n),tc=await page.getTextContent();if(token!==state.reader.renderToken)return;
-    state.reader.pageTexts[n-1]=tc.items.filter(x=>typeof x.str==='string').map(x=>x.str+(x.hasEOL?'\n':' ')).join('');
+    if(token!==state.reader.renderToken)return;
+    try{const page=await pdf.getPage(n),tc=await page.getTextContent();if(token!==state.reader.renderToken)return;
+      state.reader.pageTexts[n-1]=tc.items.filter(x=>typeof x.str==='string').map(x=>x.str+(x.hasEOL?'\n':' ')).join('');
+    }catch(e){if(token!==state.reader.renderToken)return;state.reader.pageTexts[n-1]='';errors.push({page:n,message:String(e.message)});}
+    if($('readerProgress'))$('readerProgress').textContent=`建立全文索引 ${n} / ${pdf.numPages} 頁`;
+    await new Promise(resolve=>setTimeout(resolve,0));
   }
+  state.reader.indexErrors=errors;
   state.reader.indexReady=true;
   state.reader.fullText=state.reader.pageTexts.map((t,i)=>`[Page ${i+1}]\n${t}`).join('\n\n');
 }
