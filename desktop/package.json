@@ -39,7 +39,12 @@
       "target": "nsis"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "notarize": false,
+      "category": "public.app-category.education",
+      "artifactName": "OpenScite-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": "AppImage"

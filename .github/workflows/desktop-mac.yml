@@ -1,0 +1,84 @@
+name: Build Mac desktop
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-mac.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - name: Verify reader window and official Codex connection
+        run: npm run test:window
+      - name: Build native Mac disk image
+        run: npm run dist -- --mac dmg --${{ matrix.arch }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Check bundled Codex and application signature
+        run: |
+          APP=$(find dist -maxdepth 2 -name OpenScite.app -type d -print -quit)
+          test -n "$APP"
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/OpenScite" "$APP/Contents/Resources/app/node_modules/@openai/codex/bin/codex.js" --version
+          codesign --verify --deep --strict "$APP"
+          shasum -a 256 dist/*.dmg > dist/SHA256-${{ matrix.arch }}.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenScite-mac-${{ matrix.arch }}
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/SHA256-*.txt
+          if-no-files-found: error
+          retention-days: 30
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: OpenScite-mac-*
+          merge-multiple: true
+          path: installers
+      - name: Publish tested Mac preview installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_TAG: desktop-mac-${{ github.run_number }}
+          BUILD_SHA: ${{ github.sha }}
+        run: |
+          cat > notes.md <<'NOTES'
+          Mac 預覽版。下載符合電腦晶片的 DMG，開啟後將 OpenScite 拖入 Applications（應用程式）。不需安裝 Node.js 或輸入指令。
+
+          - arm64：Apple 晶片（M 系列）
+          - x64：Intel 處理器
+
+          已測試原生 Mac 視窗載入、PDF 引擎、帳號介面及未登入的官方 Codex 連線。登入與模型分析需使用自己的 ChatGPT 帳號及可用額度。
+
+          此預覽版僅有臨時簽章，尚未經 Apple 開發者簽章與公證，因此 macOS 可能阻擋首次開啟。這不是正式販售版本。
+          NOTES
+          gh release create "$BUILD_TAG" installers/* --repo "$GH_REPO" --target "$BUILD_SHA" --prerelease --title "OpenScite Mac 預覽版 $BUILD_TAG" --notes-file notes.md
