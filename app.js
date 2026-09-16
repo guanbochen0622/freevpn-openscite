@@ -781,13 +781,17 @@ function responseText(d){
   return d?JSON.stringify(d,null,2):'';
 }
 async function responseRequest(body){
-  const s=aiSettings();if(!s.key)throw new Error('NO_AI_KEY');
-  if(!safeUrl(s.endpoint)||new URL(s.endpoint).protocol!=='https:')throw new Error('AI endpoint 必須使用 HTTPS');
+  const s=aiSettings();if(!window.opensciteDesktop&&!s.key)throw new Error('NO_AI_KEY');
+  if(!window.opensciteDesktop&&(!safeUrl(s.endpoint)||new URL(s.endpoint).protocol!=='https:'))throw new Error('AI endpoint 必須使用 HTTPS');
   if(state.aiBusy)throw new Error('AI 正在處理另一個請求，請稍候。');
   state.aiBusy=true;state.aiController=new AbortController();if($('cancelAi'))$('cancelAi').classList.remove('hidden');
   const ids=['askBtn','aiSummaryBtn','explainBtn','translateBtn','supportBtn','reanalyzeFigure'];
   const before=[...ids.map(id=>$(id)),...$$('#selectionToolbar button')].filter(Boolean).map(el=>({el,disabled:el.disabled}));before.forEach(x=>{if(x.el)x.el.disabled=true});
   try{
+    if(window.opensciteDesktop){
+      state.aiController.signal.addEventListener('abort',()=>window.opensciteDesktop.cancel().catch(()=>{}),{once:true});
+      return await window.opensciteDesktop.ask({...body,desktopModel:localStorage.getItem('desktopModel'),desktopEffort:localStorage.getItem('desktopEffort')||'medium'});
+    }
     const res=await fetch(s.endpoint,{signal:AbortSignal.any([state.aiController.signal,AbortSignal.timeout(120000)]),method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.key}`},body:JSON.stringify({...body,store:false})});
     const d=await res.json();if(!res.ok)throw new Error(d.error?.message||`AI API ${res.status}`);return responseText(d);
   }finally{state.aiBusy=false;state.aiController=null;if($('cancelAi'))$('cancelAi').classList.add('hidden');before.forEach(x=>{if(x.el)x.el.disabled=x.disabled});}
@@ -809,7 +813,7 @@ async function freeTranslate(text){
   const clipped=text.slice(0,480); const url=new URL('https://api.mymemory.translated.net/get'); url.searchParams.set('q',clipped); url.searchParams.set('langpair','en|zh-TW'); const res=await fetch(url); if(!res.ok) throw new Error('Free translation unavailable'); const d=await res.json(); return d.responseData?.translatedText||'';
 }
 function setAssistant(title,body){ $('assistantOutput').innerHTML=`<h4>${esc(title)}</h4><div>${esc(body).replace(/\n/g,'<br>')}</div>`; $$('.reader-tab').forEach(b=>b.classList.toggle('active',b.dataset.readerTab==='assistant')); $$('.reader-tabpane').forEach(p=>p.classList.toggle('active',p.id==='readerTab-assistant')); }
-async function translateSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取 PDF 文字');return;} setAssistant('Translation（翻譯）','處理中…'); try{let out; try{out=await askAI('Translate the selected academic text into Traditional Chinese. Preserve technical terms in English followed by Traditional Chinese in parentheses when helpful. Do not add unrelated commentary.',t);}catch(e){if(e.message!=='NO_AI_KEY')console.warn(e);out=await freeTranslate(t);}setAssistant('Translation（翻譯）',out||'無翻譯結果');}catch(e){setAssistant('Translation（翻譯）',`目前無法自動翻譯。可複製所選文字後使用外部翻譯服務。\n\n${e.message}`)} }
+async function translateSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取 PDF 文字');return;} setAssistant('Translation（翻譯）','處理中…'); try{let out; try{out=await askAI('Translate the selected academic text into Traditional Chinese. Preserve technical terms in English followed by Traditional Chinese in parentheses when helpful. Do not add unrelated commentary.',t);}catch(e){if(window.opensciteDesktop||e.name==='AbortError')throw e;if(e.message!=='NO_AI_KEY')console.warn(e);out=await freeTranslate(t);}setAssistant('Translation（翻譯）',out||'無翻譯結果');}catch(e){setAssistant('Translation（翻譯）',`目前無法自動翻譯。可複製所選文字後使用外部翻譯服務。\n\n${e.message}`)} }
 function localExplain(text){ const nums=[...text.matchAll(/\b\d+(?:\.\d+)?(?:\s?(?:nm|μm|um|mM|µM|nM|pM|dB|Hz|kHz|MHz|GHz|%))?\b/g)].map(m=>m[0]).slice(0,10); const caps=[...new Set((text.match(/\b[A-Z][A-Z0-9-]{2,}\b/g)||[]))].slice(0,12); return `這段文字的主旨：${text.slice(0,320)}${text.length>320?'…':''}\n\n關鍵縮寫 / 技術詞：${caps.length?caps.join(', '):'未明顯辨識'}\n數值 / 條件：${nums.length?nums.join(', '):'未明顯辨識'}\n\n要得到更精準、結合整篇上下文的解釋，可在「AI 設定」加入自己的 API key。`; }
 async function explainSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取 PDF 文字');return;} setAssistant('Explanation（解釋）','處理中…'); try{const context=relevantContext(t);const out=await askAI('You are an academic paper reading assistant. Explain the selected passage in Traditional Chinese, grounded only in the supplied paper context. For English technical terms, add Traditional Chinese meaning in parentheses. Separate: plain-language meaning, variables/terms, what the authors are claiming, and caveats.',`PAPER CONTEXT:\n${context}\n\nSELECTED PASSAGE:\n${t}`);setAssistant('Explanation（解釋）',out);}catch(e){setAssistant('Explanation（本機解釋）',localExplain(t));} }
 async function researchFitSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取文字');return;} setAssistant('Research Fit（與我的研究關係）','處理中…'); try{const out=await askAI('Analyze the selected academic passage for research usefulness. Answer in Traditional Chinese with four headings: 支持什麼, 不支持/不能證明什麼, 可引用的證據, 下一個驗證實驗. Do not overclaim. For English technical terms, add Traditional Chinese meaning in parentheses).',t);setAssistant('Research Fit（與我的研究關係）',out);}catch(e){setAssistant('Research Fit（本機）',`支持：這段內容可直接支持其中明確陳述的機制 / 現象。\n\n不能證明：不要把作者沒有測量的因果關係延伸成結論。\n\n建議：把這段的量測條件、樣品、濃度 / 波長 / 時間尺度與你的實驗逐項對照後再引用。\n\n原文：${t}`);} }

@@ -1,0 +1,48 @@
+{
+  "dependencies": {
+    "@openai/codex": "0.154.0"
+  },
+  "devDependencies": {
+    "electron": "44.4.1",
+    "electron-builder": "26.15.3"
+  },
+  "name": "openscite-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenScite desktop paper reader with personal ChatGPT authentication",
+  "main": "main.cjs",
+  "author": "OpenScite",
+  "scripts": {
+    "prepare:web": "node prepare.cjs",
+    "start": "node prepare.cjs && electron .",
+    "test": "node --test test.cjs",
+    "pack": "node prepare.cjs && electron-builder --dir",
+    "dist": "node prepare.cjs && electron-builder",
+    "test:window": "node prepare.cjs && electron test-window.cjs"
+  },
+  "build": {
+    "appId": "io.github.guanbochen0622.openscite",
+    "productName": "OpenScite",
+    "asar": false,
+    "files": [
+      "*.cjs",
+      "ui.js",
+      "web/**/*",
+      "!test.cjs",
+      "!prepare.cjs",
+      "!test-*.cjs"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

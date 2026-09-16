@@ -41,3 +41,7 @@ This is a local-first browser application, not a hosted multi-tenant subscriptio
 - [PDF.js API](https://mozilla.github.io/pdf.js/api/draft/module-pdfjsLib.html)
 - [OpenAlex documentation](https://docs.openalex.org/)
 - [Crossref REST API](https://www.crossref.org/documentation/retrieve-metadata/rest-api/)
+
+## 電腦版：使用自己的 ChatGPT 帳號
+
+[電腦版預覽與啟動說明](desktop/README.md)。包含官方 Codex 登入、帳號可用模型選擇、PDF 問答與圖表分析整合；不需填 API 金鑰。這是另行啟動的桌面程式，尚待登入與各平台實機驗證。
