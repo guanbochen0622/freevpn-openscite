@@ -1,5 +1,5 @@
 // Keep search and the library usable even if the PDF engine cannot initialize.
-const ASSET_VERSION = '25.1.1';
+const ASSET_VERSION = '25.1.2';
 try {
   const inflate = async (url) => {
     const response = await fetch(url);
@@ -14,17 +14,16 @@ try {
 
   const mainSource = await inflate(`./vendor/pdf.mjs.gz?v=${ASSET_VERSION}`);
   const mainUrl = URL.createObjectURL(new Blob([mainSource], { type: 'text/javascript' }));
-  window.pdfjsLib = await import(mainUrl);
+  const pdfModule = await import(mainUrl);
 
   const workerSource = await inflate(`./vendor/pdf.worker.mjs.gz?v=${ASSET_VERSION}`);
   const workerUrl = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
-  window.pdfjsWorker = new Worker(workerUrl, { type: 'module' });
-
-  window.addEventListener('pagehide', () => {
-    window.pdfjsWorker?.terminate();
-    URL.revokeObjectURL(mainUrl);
-    URL.revokeObjectURL(workerUrl);
-  }, { once: true });
+  // Let PDF.js own a separate worker for each loading task. Shared workerPort
+  // races with asynchronous destruction when replacing a document.
+  pdfModule.GlobalWorkerOptions.workerSrc = workerUrl;
+  window.pdfjsLib = pdfModule;
+  // Keep module URLs alive across back/forward-cache restoration. The browser
+  // releases them when this document is actually discarded.
 } catch (error) {
   console.error('PDF engine could not initialize', error);
   window.pdfEngineError = error instanceof Error ? error.message : String(error);

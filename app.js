@@ -1,9 +1,5 @@
 'use strict';
 
-if (window.pdfjsLib) {
-  pdfjsLib.GlobalWorkerOptions.workerPort = window.pdfjsWorker;
-}
-
 const $ = (id) => document.getElementById(id);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const STORE = {
@@ -131,7 +127,7 @@ async function enrichSources(works, sourceMap){
       const {score,q}=estimateQuartile(h,m,c);
       w.sourceMetrics={hIndex:h, mean2y:m, worksCount:s.works_count||0,citedBy:s.cited_by_count||0,type:s.type||''}; w.sourceScore=score;
       // Transparent heuristic only. This is deliberately labelled as an estimate in the UI.
-      w.q=q;
+      w.q=s.type==='journal'&&s.summary_stats?.h_index!=null&&s.summary_stats?.['2yr_mean_citedness']!=null?q:'Q?';
       w.qReason=`OpenAlex h-index ${h}、2 年平均引用 ${m.toFixed(2)}、累積引用 ${fmtNum(c)}；估計分數 ${Math.round(score)}`;
     }
   }catch(e){ console.warn('source enrichment failed',e); }
@@ -242,14 +238,23 @@ async function openPdfUrl(url,meta){
 async function loadPdfBuffer(buffer,meta,fileName='',url=''){
   if(state.aiBusy){toast('請先完成或取消目前的 AI 分析，再切換文件。');return;}
   if(!window.pdfjsLib){ toast('PDF.js 載入失敗'); return; }
+  const request=state.reader.loadRequest=(state.reader.loadRequest||0)+1;
+  const task=pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:buffer.slice(0)});
+  let pdf;
+  try{pdf=await task.promise;}catch(e){
+    await task.destroy().catch(()=>{});
+    if(request===state.reader.loadRequest)toast(`PDF 無法開啟：${e.message}。原文件已保留。`,6000);
+    return;
+  }
+  if(request!==state.reader.loadRequest){await task.destroy().catch(()=>{});return;}
   state.reader.indexReady=false;if($('readerProgress'))$('readerProgress').textContent='正在載入文件與建立全文索引…';
-  const token=++state.reader.renderToken; state.reader.paintEpoch=(state.reader.paintEpoch||0)+1;state.reader.observer?.disconnect();state.reader.pdf?.destroy();state.reader.pdf=null; state.reader.buffer=buffer.slice(0); state.reader.meta=meta||{}; state.reader.fileName=fileName; state.reader.url=url; state.reader.fullText=''; state.reader.pageTexts=[]; state.reader.selectedText=''; state.reader.currentPage=1; state.reader.figureRegions=new Map(); state.reader.activeFigure=null; $('figureExplainBox')?.classList.add('hidden');
+  const token=++state.reader.renderToken; state.reader.paintEpoch=(state.reader.paintEpoch||0)+1;state.reader.observer?.disconnect();const previous=state.reader.pdf;state.reader.pdf=pdf;previous?.destroy().catch(e=>console.warn('Previous PDF cleanup',e)); state.reader.buffer=buffer.slice(0); state.reader.meta=meta||{}; state.reader.fileName=fileName; state.reader.url=url; state.reader.fullText=''; state.reader.pageTexts=[]; state.reader.selectedText=''; state.reader.currentPage=1; state.reader.figureRegions=new Map(); state.reader.activeFigure=null; $('figureExplainBox')?.classList.add('hidden');
   state.reader.highlights=loadJSON(STORE.highlights,[]).filter(x=>x.paperKey===readerKey()); state.reader.notes=loadJSON(STORE.notes,[]).filter(x=>x.paperKey===readerKey()); hideSelectionUi(true); $('selectionBox').classList.add('hidden');
   $('readerEmpty').classList.add('hidden'); $('pdfViewport').classList.remove('hidden'); $('pdfPages').innerHTML='<div class="empty-card">正在解析 PDF…</div>';
   try{
-    const pdf=await pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:buffer.slice(0)}).promise; if(token!==state.reader.renderToken) return; state.reader.pdf=pdf; state.reader.pages=pdf.numPages; $('pdfPageCount').textContent=`/ ${pdf.numPages}`; $('pageJump').value='1';
+    state.reader.pages=pdf.numPages; $('pdfPageCount').textContent=`/ ${pdf.numPages}`; $('pageJump').value='1';
     updateReaderMeta(); renderNotes(); await renderPdfPages(token); await indexPdfText(token); if(token!==state.reader.renderToken)return; updateCitationInfo(); document.dispatchEvent(new CustomEvent('research:document'));  toast(`PDF 已載入：${pdf.numPages} 頁`);
-  }catch(e){ if(token!==state.reader.renderToken)return;state.reader.pdf=null;state.reader.buffer=null;state.reader.pages=0; $('pdfPages').innerHTML=`<div class="empty-card">PDF 解析失敗：${esc(e.message)}</div>`; toast('PDF 解析失敗'); }
+  }catch(e){ if(token!==state.reader.renderToken)return;state.reader.indexReady=false; $('readerProgress').textContent=`全文索引未完成：${e.message}`; toast('PDF 部分內容處理失敗，請重新開啟文件'); }
 }
 function capturePdfScrollAnchor(){
   const vp=$('pdfViewport'), page=currentPageElement();
@@ -859,7 +864,12 @@ function sortedEvidence(){ let list=state.evidence.works.map((w,i)=>({w,i}));con
 function stanceWeight(s){return s==='supporting'?4:s==='contrasting'?3:s==='mentioning'?2:1}
 function renderEvidence(){const q=$('evidenceFilter').value.trim();const list=sortedEvidence();const all=state.evidence.works;$('kpiTotal').textContent=all.length;$('kpiSupporting').textContent=all.filter(x=>x.stance==='supporting').length;$('kpiContrasting').textContent=all.filter(x=>x.stance==='contrasting').length;$('kpiMentioning').textContent=all.filter(x=>x.stance==='mentioning'||x.stance==='unknown').length;$('evidenceResults').innerHTML=list.length?list.map(x=>paperCard(x.w,q,'evidence',x.i)).join(''):'<div class="empty-card">目前篩選條件下沒有結果。</div>';}
 $('stanceFilter').addEventListener('change',renderEvidence);$('evidenceSort').addEventListener('change',renderEvidence);$('evidenceFilter').addEventListener('input',debounce(renderEvidence,100));
-async function pdfTextFromFile(file){const b=await file.arrayBuffer(),pdf=await pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:b}).promise;let t='';for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),tc=await p.getTextContent();t+=`\n[Page ${i}]\n`+tc.items.map(x=>x.str).join(' ');}return t;}
+async function pdfTextFromFile(file){
+  if(!window.pdfjsLib)throw new Error('PDF 引擎尚未載入');
+  const b=await file.arrayBuffer(),task=pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:b});
+  try{const pdf=await task.promise;let t='';for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),tc=await p.getTextContent();t+=`\n[Page ${i}]\n`+tc.items.map(x=>x.str).join(' ');}return t;}
+  finally{await task.destroy().catch(()=>{});}
+}
 function targetAnchors(target){const titleTokens=queryTokens(target.title).filter(x=>x.length>=5).slice(0,12), surname=(target.authors||'').split(',')[0].trim().split(/\s+/).pop()||'',year=String(target.year||'');return{titleTokens,surname,year};}
 function citationContexts(text,target){
   const split=text.search(/\b(?:references|bibliography)\b/i);if(split<0)return [];
