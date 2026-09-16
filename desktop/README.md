@@ -2,7 +2,20 @@
 
 使用自己的 ChatGPT 帳號登入 Codex，從 PDF 閱讀器進行摘要、選取文字解釋、翻譯、論文問答與圖片分析。不需要填 API 金鑰。這是獨立電腦程式；GitHub Pages 網址仍是網頁版，iPhone 無法安裝此電腦版本。
 
-## 啟動
+## Mac 直接安裝（不需指令）
+
+到 [Mac 預覽版下載頁](https://github.com/guanbochen0622/freevpn-openscite/releases) 選擇 DMG：
+
+- `mac-arm64.dmg`：Apple 晶片（M 系列）。
+- `mac-x64.dmg`：Intel 處理器。
+
+不確定晶片型號時，可從 Mac 左上角蘋果選單開啟「關於這台 Mac」查看。
+
+打開 DMG，將 OpenScite 拖入 Applications（應用程式），再從應用程式開啟。按右上「ChatGPT 帳號」登入並選擇模型。安裝包已包含執行環境，不需要另外安裝 Node.js。
+
+此預覽版使用臨時簽章，尚未有 Apple 開發者簽章或公證。首次開啟可能被 macOS 阻擋；若你確認來源是本儲存庫，可以依 [Apple 官方說明](https://support.apple.com/zh-tw/guide/mac-help/mh40616/mac)，在「系統設定 → 隱私權與安全性」允許這個 App 開啟。不需要關閉整台電腦的安全保護。
+
+## 從原始碼啟動（開發者用）
 
 在 Windows、macOS 或 Linux 安裝 Node.js 22 或更新版本，下載整個儲存庫並解壓縮。在儲存庫資料夾開啟終端機，執行：
 
@@ -40,10 +53,10 @@ npm test
 npm run dist
 ```
 
-產物放在 `desktop/dist`：Windows 安裝程式、macOS DMG、Linux AppImage。`npm run pack` 只產生未封裝的應用程式目錄。正式販售前仍需簽章、公證、各平台實機登入與 PDF 圖表分析驗收。本預覽版尚未宣稱完成上述驗收。
+產物放在 `desktop/dist`：Windows 安裝程式、macOS DMG、Linux AppImage。`npm run pack` 只產生未封裝的應用程式目錄。正式販售前仍需簽章、公證、使用者實機登入與 PDF 圖表分析驗收。本預覽版尚未宣稱完成上述驗收。
 
 ## 驗證狀態
 
-已成功建置 Linux 未封裝程式目錄，並確認內附 Codex 可執行。已驗證 7 項核心協定模擬測試、網頁語法與原有邏輯測試，以及實際 Codex 0.154.0 的初始化與未登入帳號查詢。Electron 圖形啟動在建置環境受到顯示/程序限制，尚未完成視窗實機驗證。未使用任何使用者帳號代登入，尚未完成訂閱帳號端到端分析測試。若登入後沒有模型，請確認帳號的 Codex 使用權限；不要填 API 金鑰來繞過登入。
+已成功建置 Linux 未封裝程式目錄，並確認內附 Codex 可執行。已驗證 7 項核心協定模擬測試、網頁語法與原有邏輯測試，以及實際 Codex 0.154.0 的初始化與未登入帳號查詢。Apple 晶片與 Intel 的原生 Mac 建置環境皆已通過視窗啟動、PDF 引擎載入、帳號介面與未登入狀態查詢測試。未使用任何使用者帳號代登入，尚未完成訂閱帳號端到端分析測試。若登入後沒有模型，請確認帳號的 Codex 使用權限；不要填 API 金鑰來繞過登入。
 
 官方整合文件：https://learn.chatgpt.com/docs/app-server

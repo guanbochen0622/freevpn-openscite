@@ -44,4 +44,4 @@ This is a local-first browser application, not a hosted multi-tenant subscriptio
 
 ## 電腦版：使用自己的 ChatGPT 帳號
 
-[電腦版預覽與啟動說明](desktop/README.md)。包含官方 Codex 登入、帳號可用模型選擇、PDF 問答與圖表分析整合；不需填 API 金鑰。這是另行啟動的桌面程式，尚待登入與各平台實機驗證。
+[電腦版預覽與啟動說明](desktop/README.md)。包含官方 Codex 登入、帳號可用模型選擇、PDF 問答與圖表分析整合；不需填 API 金鑰。Mac 使用者可從 [預覽版下載頁](https://github.com/guanbochen0622/freevpn-openscite/releases) 下載 DMG，無須安裝 Node.js。Apple 晶片與 Intel 的 Mac 啟動測試已通過；個人帳號登入後的分析仍待使用者實機驗證。
