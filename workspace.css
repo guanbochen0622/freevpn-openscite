@@ -26,3 +26,5 @@ body[data-view="reader"] .workspace-hero{display:none}
 #pagePreviewDialog{width:min(780px,calc(100vw - 28px));max-height:90vh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel,#131925);color:var(--text);padding:18px}#pagePreviewDialog::backdrop{background:#0009}#pagePreviewBody{min-height:100px;margin:14px 0}#pagePreviewBody canvas{display:block;max-width:100%;height:auto;margin:auto}.assistant-width-control{display:flex;gap:6px;align-items:center;font-size:11px}.assistant-width-control input{width:80px}
 @media(min-width:1200px){.reader-grid{grid-template-columns:205px minmax(320px,1fr) var(--assistant-width,360px)}body.reader-tools-hidden .reader-grid{grid-template-columns:minmax(320px,1fr) var(--assistant-width,360px)}body.reader-tools-hidden .reader-left{display:none}.reader-right{max-height:calc(100vh - 100px)}.ask-row{position:sticky;bottom:0;background:var(--panel,#131925);padding:10px 0}.reader-side-body{padding-bottom:0}}
 @media(max-width:1199px){.assistant-width-control{display:none}body.reader-tools-hidden .reader-left{display:none}}
+
+body.reader-focus .reader-grid{grid-template-columns:minmax(0,1fr)}

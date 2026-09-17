@@ -39,7 +39,8 @@ renderReaderHistory();
 
 // Preserve the selected original alongside its translation without rewriting it.
 const readingSetAssistant=setAssistant;
-setAssistant=function(title,body){readingSetAssistant(title,body);if(title==='Translation（翻譯）'&&body!=='處理中…'&&state.reader.selectedText){const block=document.createElement('blockquote');block.className='translation-original';block.dataset.i18nSkip='';block.textContent=state.reader.selectedText;$('assistantOutput').prepend(block);}for(const button of $$('.page-citation',$('assistantOutput'))){const preview=document.createElement('button');preview.className='btn small page-preview';preview.dataset.previewPage=button.dataset.pageLink;preview.textContent=readerText('預覽');button.after(preview);}};
+setAssistant=function(title,body){readingSetAssistant(title,body);for(const button of $$('.page-citation',$('assistantOutput'))){const preview=document.createElement('button');preview.className='btn small page-preview';preview.dataset.previewPage=button.dataset.pageLink;preview.textContent=readerText('預覽');button.after(preview);}};
+function setTranslationResult(original,answer){setAssistant('Translation（翻譯）',answer);const block=document.createElement('blockquote');block.className='translation-original';block.dataset.i18nSkip='';block.textContent=original;$('assistantOutput').prepend(block);}
 
 // A separate preview canvas leaves the reading position unchanged.
 insertTools('body','<dialog id="pagePreviewDialog"><div class="dialog-header"><strong id="pagePreviewTitle"></strong><button id="closePagePreview" class="icon-btn" aria-label="關閉">×</button></div><div id="pagePreviewBody"></div><button id="jumpPreviewPage" class="btn primary">前往此頁</button></dialog>');

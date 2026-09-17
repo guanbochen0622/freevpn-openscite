@@ -45,7 +45,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  assert.equal(await page.locator('.chat-turn').count(),2);
  await page.click('#toggleReaderTools');assert.equal(await page.locator('.reader-left').isVisible(),false);await page.click('#toggleReaderTools');
  // Export contains persisted notes/metadata but no credentials, restore merges safely.
- await page.click('.nav-tab[data-view="library"]');const dlPromise=page.waitForEvent('download');await page.click('#backupWorkspace');const dl=await dlPromise;const backup=JSON.parse(await fs.readFile(await dl.path(),'utf8'));assert.equal(backup.includesPdfFiles,false);assert.ok(!JSON.stringify(backup).includes('test-key-not-a-real-credential'));
+ await page.click('.nav-tab[data-view="library"]');const dlPromise=page.waitForEvent('download');await page.click('#backupWorkspace');const dl=await dlPromise;const backup=JSON.parse(await fs.readFile(await dl.path(),'utf8'));assert.equal(backup.includesPdfFiles,false);assert.equal(backup.data.openscite_chat_v1[key].length,2);assert.ok(!JSON.stringify(backup).includes('test-key-not-a-real-credential'));
  await fs.writeFile('/tmp/openscite-backup.json',JSON.stringify(backup));await page.setInputFiles('#backupFile','/tmp/openscite-backup.json');await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已合併'));assert.equal(await page.evaluate(()=>state.library.length),2);
  // Invalid year ranges never send a search request.
  await page.click('.nav-tab[data-view="search"]');await page.fill('#yearFrom','2026');await page.fill('#yearTo','2020');await page.click('#searchBtn');assert.match(await page.locator('#toast').textContent(),/起始年/);await page.fill('#yearFrom','');await page.fill('#yearTo','');

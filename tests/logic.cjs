@@ -35,3 +35,7 @@ console.log('PASS: negated support, double negation and exact DOI boundaries.');
 assert.equal(ctx.responseText({output:[{content:[{type:'output_text',text:'980 nm'}]}]}),'980 nm');
 assert.throws(()=>ctx.responseText({status:'incomplete',output:[]}),/AI/);
 console.log('PASS: empty AI response rejected rather than displayed as analysis.');
+
+ctx.state.reader.currentPage=3;
+assert.match(ctx.relevantContext('980',30),/\[Page 3\]/);
+console.log('PASS: current reading page remains in a limited evidence budget.');

@@ -70,6 +70,9 @@ app.on('browser-window-created',(_e,win)=>{
  assert.match(request.input[1].content[0].text,/What wavelength was measured/);
  assert.match(request.input[1].content[0].text,/PREVIOUS CONVERSATION/);
  assert.equal(await win.webContents.executeJavaScript(`chatTurns.length`),2);
+ ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',async(_event,body)=>{request=body;await win.webContents.executeJavaScript(`state.reader.selectedText='A different selection'`);return 'Translated measurement';});
+ await win.webContents.executeJavaScript(`state.reader.selectedText='Original measurement 980 nm';translateSelection()`);
+ assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.translation-original').textContent`),'Original measurement 980 nm');
  let figureCalls=[];
  ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',(_event,body)=>{figureCalls.push(body);return body.text?.format?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':'TEST FIGURE RESPONSE [Page 1]';});
  await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
@@ -84,6 +87,12 @@ app.on('browser-window-created',(_e,win)=>{
  ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',()=>{throw Error('TEST: model quota exhausted');});
  await win.webContents.executeJavaScript(`explainSelection()`);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/model quota exhausted/);
+ await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(bytes)}).buffer,{id:'another-paper'},'another.pdf')`);
+ assert.equal(await win.webContents.executeJavaScript(`chatTurns.length`),0);
+ assert.equal(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),'');
+ assert.equal(await win.webContents.executeJavaScript(`document.getElementById('summaryOutput').textContent`),'');
+ await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(bytes)}).buffer,{},'geometry-fixture.pdf')`);
+ assert.equal(await win.webContents.executeJavaScript(`chatTurns.length`),2);
  console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors five-language AI routing and two-stage figure requests without retry on failure');
  clearTimeout(timer);app.quit();
  }catch(e){console.error(e);clearTimeout(timer);app.exit(1);}
