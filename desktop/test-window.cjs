@@ -53,6 +53,15 @@ app.on('browser-window-created',(_e,win)=>{
    assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
  }
  await win.webContents.executeJavaScript(`I18n.setLanguage('zh-Hant')`);
+ // All reader AI actions must reach the bridge with document evidence.
+ await win.webContents.executeJavaScript(`state.reader.selectedText='980 nm';translateSelection()`);
+ assert.match(request.input[0].content[0].text,/Translate the selected/);
+ await win.webContents.executeJavaScript(`researchFitSelection()`);
+ assert.match(request.input[0].content[0].text,/research usefulness/);
+ await win.webContents.executeJavaScript(`document.getElementById('aiSummaryBtn').click()`);
+ await new Promise(r=>setTimeout(r,100));assert.match(request.input[0].content[0].text,/Summarize this research paper/);
+ assert.match(request.input[1].content[0].text,/Page 1/);
+ assert.match(await win.webContents.executeJavaScript(`document.getElementById('summaryOutput').textContent`),/TEST RESPONSE/);
  let figureCalls=[];
  ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',(_event,body)=>{figureCalls.push(body);return body.text?.format?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':'TEST FIGURE RESPONSE [Page 1]';});
  await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);

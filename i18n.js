@@ -29,7 +29,7 @@ function t(text) {
   return text;
 }
 const originals = new WeakMap(), attrs = new WeakMap();
-const excluded = 'script,style,textarea,input,code,pre,.textLayer,.paper-title,.paper-abstract,.paper-meta,.library-card h3,.library-card>p,.note-card q,.note-card p,[data-tags]:not([data-ui-tag]),#selectedText,#figureExplainCaption,#targetInfo,#readerMeta,#citationInfo,#assistantOutput,#summaryOutput,.context,.comparison-table td,[data-i18n-skip]';
+const excluded = 'script,style,textarea,input,code,pre,.textLayer,.paper-title,.paper-abstract,.paper-meta,.library-card h3,.library-card>p,.note-card q,.note-card p,[data-tags]:not([data-ui-tag]),#selectedText,#figureExplainCaption,#targetInfo,#readerMeta,#citationInfo,#assistantOutput,#summaryOutput,.context,.comparison-table td,.comparison-table thead th:not(:first-child),.history-chip,[data-outline],[data-match] span,[data-i18n-skip]';
 function translate(root=document.body) {
   observer.disconnect();
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT,{acceptNode(node){if(node.nodeType===Node.ELEMENT_NODE){if(node.matches(excluded)&&!node.querySelector('.placeholder'))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_SKIP;}return NodeFilter.FILTER_ACCEPT;}});
