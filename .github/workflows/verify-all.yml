@@ -1,0 +1,52 @@
+name: Verify installed reader and live website
+on:
+  push:
+    paths: ['.github/workflows/verify-all.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-and-live-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check && node --check reader-tools.js && node --check i18n.js
+      - run: npm run test:logic && node tests/reader-lifecycle.cjs && node tests/partial-index.cjs && node tests/locales.cjs
+      - name: Test local website
+        run: npm test
+      - name: Test deployed website with controlled source and AI responses
+        run: npm test
+        env:
+          TEST_URL: https://guanbochen0622.github.io/freevpn-openscite/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-website-screenshots
+          path: /tmp/openscite-*.png
+  native-mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:window
