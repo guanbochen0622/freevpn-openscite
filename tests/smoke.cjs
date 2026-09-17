@@ -64,7 +64,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  assert.equal(await page.evaluate(()=>safeUrl('javascript:alert(1)')),'');
  assert.equal(await page.evaluate(()=>{try{validateBackup({format:'openscite-workspace',version:1,data:{openscite_library_v24:[{}]}});return false}catch{return true}}),true);
  await page.setViewportSize({width:390,height:844});await page.click('.nav-tab[data-view="search"]');await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.screenshot({path:'/tmp/openscite-mobile.png',fullPage:true});
- await page.click('#themeToggle');await page.screenshot({path:'/tmp/openscite-light.png',fullPage:true});
+ await page.click('#themeToggle');assert.ok(await page.evaluate(()=>{const style=getComputedStyle(document.getElementById('languageSelect'));const lum=rgb=>{const c=rgb.match(/[\d.]+/g).slice(0,3).map(x=>{const v=Number(x)/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};const a=lum(style.color),b=lum(style.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5;}),'Language selector text contrast');await page.screenshot({path:'/tmp/openscite-light.png',fullPage:true});
  // Language changes preserve research data, typed input, behavior and persistence.
  await page.evaluate(()=>{const paper=document.createElement('div');paper.id='languagePaper';paper.className='paper-title';paper.textContent='搜尋論文';document.body.append(paper);$('assistantOutput').textContent='搜尋論文';$('askInput').value='Keep my question 980 nm';});
  for(const [locale,label] of [['en','Academic search'],['zh-Hant','學術搜尋'],['zh-Hans','学术搜索'],['ja','論文検索'],['ko','논문 검색']]){

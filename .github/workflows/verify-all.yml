@@ -1,7 +1,7 @@
 name: Verify installed reader and live website
 on:
   push:
-    paths: ['.github/workflows/verify-all.yml']
+    paths: ['.github/workflows/verify-all.yml', 'workspace.css']
   workflow_dispatch:
 permissions:
   contents: read
