@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const code=fs.readFileSync('app.js','utf8'),workspace=fs.readFileSync('workspace.js','utf8');
 const ctx={URL,TextEncoder,crypto:require('node:crypto').webcrypto,console};vm.createContext(ctx);
-for(const name of ['queryTokens','esc','escRx','doiClean','safeUrl','estimateQuartile','classifyStance','citationContexts','relevantContext','summaryContext','responseText']){
+for(const name of ['queryTokens','esc','escRx','doiClean','safeUrl','estimateQuartile','classifyStance','citationContexts','relevantContext','summaryContext','responseText','figureDiscussionContext','parseJsonLoose','readableFigureExplanation']){
  const start=code.indexOf('function '+name+'('),next=code.indexOf('\nfunction ',start+1),asyncNext=code.indexOf('\nasync function ',start+1);let end=Math.min(...[next,asyncNext,code.indexOf('\n$(\'',start+1),code.indexOf('\n//',start+1)].filter(n=>n>start));if(!Number.isFinite(end))end=code.length;
  // Single-line utility functions end at their newline.
  const line=code.slice(start,code.indexOf('\n',start));const text=line.endsWith('}')?line:code.slice(start,code.indexOf('\n}',start)+2);vm.runInContext(text,ctx);
@@ -39,3 +39,13 @@ console.log('PASS: empty AI response rejected rather than displayed as analysis.
 ctx.state.reader.currentPage=3;
 assert.match(ctx.relevantContext('980',30),/\[Page 3\]/);
 console.log('PASS: current reading page remains in a limited evidence budget.');
+
+ctx.window={};
+ctx.state.reader.pageTexts=['Figure 10 contains unrelated data. Table 1 contains unrelated data.','This paragraph discusses Fig. 1 and controls. The outcome is limited.','Other results.','Figure 1 confirms the stated control.'];
+const discussion=ctx.figureDiscussionContext(2,'Figure 1');
+assert.match(discussion.mentions,/Page 2/);assert.match(discussion.mentions,/Page 4/);assert.doesNotMatch(discussion.mentions,/Page 1/);
+const answer=ctx.readableFigureExplanation(JSON.stringify({meaning:'Observed 980 nm.',context:'The authors discuss a control [Page 2].',evidence:'Supports that control only.',caveat:''}));
+assert.match(answer,/980 nm/);assert.doesNotMatch(answer,/"meaning"/);
+assert.throws(()=>ctx.readableFigureExplanation('{"panels":[]}'),/格式/);
+assert.throws(()=>ctx.readableFigureExplanation(JSON.stringify({meaning:'```python print(1)```',context:'c',evidence:'e',caveat:''})),/格式/);
+console.log('PASS: figure references distinguish Fig. 1, Fig. 10 and Table 1; readable prose only.');

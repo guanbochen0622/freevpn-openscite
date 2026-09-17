@@ -26,7 +26,7 @@ class Assistant {
  const onClose=e=>finish(e);
  const onEvent=({method,params:p})=>{if(p?.threadId!==job.threadId)return;
  if(method==='turn/started'){this.onProgress({stage:'thinking',model:model.model,message:'模型已收到問題，正在分析…'});job.turnId=p.turn.id;if(job.cancelled)this.cancelJob(job);}
- if(method==='item/agentMessage/delta'){deltas.set(p.itemId,(deltas.get(p.itemId)||'')+p.delta);this.onProgress({stage:'answering',model:model.model,message:'正在接收模型回答…',text:[...deltas.values()].join('\n\n')});}
+ if(method==='item/agentMessage/delta'){deltas.set(p.itemId,(deltas.get(p.itemId)||'')+p.delta);this.onProgress({stage:'answering',model:model.model,message:'正在接收模型回答…',...(body.text?.format?.schema?{}:{text:[...deltas.values()].join('\n\n')})});}
  if(method==='error'){job.error=p.error?.message;this.onProgress({stage:'error',message:job.error||'模型連線發生錯誤'});}
  if(method==='item/completed'&&p.item?.type==='agentMessage')items.set(p.item.id,p.item.text);
  if(method==='turn/completed'){const t=p.turn;const text=[...items.values()].join('\n\n')||[...deltas.values()].join('\n\n')||(t.items||[]).filter(i=>i.type==='agentMessage').map(i=>i.text).join('\n\n');finish(t.status==='completed'&&text?null:new Error(t.error?.message||job.error|| (t.status==='interrupted'?'已取消 AI 分析':'分析未產生回答')),text);}};

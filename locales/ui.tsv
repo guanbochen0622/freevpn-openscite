@@ -277,3 +277,14 @@ AI 未傳回可讀取的回答，請重試。|AI returned no readable answer. Pl
 助理寬度|Assistant width|助手宽度|アシスタントの幅|도우미 너비
 收合文件工具|Hide document tools|收起文档工具|文書ツールを隠す|문서 도구 숨기기
 展開文件工具|Show document tools|展开文档工具|文書ツールを表示|문서 도구 표시
+解釋長度|Explanation length|解释长度|説明の長さ|설명 길이
+精簡|Brief|精简|簡潔|간결
+詳細|Detailed|详细|詳細|자세히
+重新解釋|Explain again|重新解释|再度説明|다시 설명
+這張圖在說什麼|What the figure shows|这张图在说什么|図が示すこと|그림이 보여주는 것
+與前後文的關係|Connection to the surrounding text|与前后文的关系|前後の文章との関係|앞뒤 본문과의 관계
+能支持什麼|What it supports|能支持什么|裏付ける結論|뒷받침하는 결론
+需要注意|Caveat|需要注意|注意点|주의할 점
+圖片解釋|Figure explanation|图片解释|図の説明|그림 설명
+圖片解釋完成|Figure explanation complete|图片解释完成|図の説明が完了|그림 설명 완료
+圖片解釋格式不完整，請重新解釋。|The figure response is incomplete. Please try again.|图片解释格式不完整，请重试。|図の回答形式が不完全です。再試行してください。|그림 응답 형식이 불완전합니다. 다시 시도하세요.

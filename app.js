@@ -237,7 +237,7 @@ async function openPdfUrl(url,meta){
   }
 }
 async function loadPdfBuffer(buffer,meta,fileName='',url=''){
-  if(state.aiBusy){toast('請先完成或取消目前的 AI 分析，再切換文件。');return;}
+  if(state.aiBusy||state.reader.figureBusy){toast('請先完成或取消目前的 AI 分析，再切換文件。');return;}
   if(!window.pdfjsLib){ toast('PDF.js 載入失敗'); return; }
   const request=state.reader.loadRequest=(state.reader.loadRequest||0)+1;
   const task=pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:buffer.slice(0)});
@@ -490,14 +490,20 @@ function figureReferenceVariants(label=''){
   const n=m[1];return [`Fig. ${n}`,`Fig ${n}`,`Figure ${n}`,`figure ${n}`,`Table ${n}`,`table ${n}`];
 }
 function figureDiscussionContext(pageNo,label=''){
-  const variants=figureReferenceVariants(label).map(x=>x.toLowerCase()),pages=[];
-  for(let p=Math.max(1,pageNo-1);p<=Math.min(state.reader.pageTexts.length,pageNo+1);p++){const txt=state.reader.pageTexts[p-1]||'';if(txt)pages.push(`[Page ${p}] ${txt}`);}
-  const all=pages.join(' ').replace(/\s+/g,' '),sent=all.split(/(?<=[.!?])\s+/),hits=[];
-  for(let i=0;i<sent.length;i++){
-    const low=sent[i].toLowerCase();if(variants.length&&variants.some(v=>low.includes(v))){hits.push([sent[i-1],sent[i],sent[i+1]].filter(Boolean).join(' '));}
-  }
-  const nearby=pages.join('\n').slice(0,9000);
+  const match=String(label).match(/(fig(?:ure)?\.?|table)\s*([A-Za-z]?\d+[A-Za-z]?)/i);
+  const pattern=match?new RegExp('\\b'+(/^table/i.test(match[1])?'table':'fig(?:ure)?\\.?')+'\\s*'+escRx(match[2])+'(?![a-z0-9])','i'):null;
+  const pages=state.reader.pageTexts||[],hits=[];
+  const order=pages.map((_,i)=>i).sort((a,b)=>Math.abs(a+1-pageNo)-Math.abs(b+1-pageNo));
+  for(const index of order){const sentences=pages[index].replace(/\s+/g,' ').split(/(?<=[!?]|\.(?!\s*\d))\s+/);for(let i=0;i<sentences.length;i++){if(pattern?.test(sentences[i]))hits.push(`[Page ${index+1}] `+[sentences[i-1],sentences[i],sentences[i+1]].filter(Boolean).join(' '));}if(hits.join('\n').length>=6000)break;}
+  const nearby=[pageNo,pageNo-1,pageNo+1].filter(p=>p>=1&&p<=pages.length).map(p=>`[Page ${p}] ${pages[p-1].slice(0,3000)}`).join('\n');
   return {mentions:[...new Set(hits)].join('\n').slice(0,6000),nearby};
+}
+function figureExplanationSchema(){return {type:'object',additionalProperties:false,properties:Object.fromEntries(['meaning','context','evidence','caveat'].map(k=>[k,{type:'string',maxLength:1600}])),required:['meaning','context','evidence','caveat']};}
+function readableFigureExplanation(text){
+  const data=parseJsonLoose(text),keys=['meaning','context','evidence','caveat'];
+  if(!data||keys.some(k=>typeof data[k]!=='string'||data[k].length>1600||/```|<script|^\s*(?:const|let|import)\s|^\s*\{\s*"/i.test(data[k]))||keys.slice(0,3).some(k=>!data[k].trim()))throw new Error('圖片解釋格式不完整，請重新解釋。');
+  const labels=['這張圖在說什麼','與前後文的關係','能支持什麼','需要注意'];
+  return keys.map((k,i)=>data[k].trim()?`${window.I18n?.t(labels[i])||labels[i]}\n${data[k].trim()}`:'').filter(Boolean).join('\n\n');
 }
 function corePaperContext(){
   const t=state.reader.fullText||''; if(!t)return '';
@@ -518,6 +524,7 @@ function setFigureStage(text,mode='working'){
   const el=$('figureAnalysisStatus');if(!el)return;el.dataset.mode=mode;el.innerHTML=`<span class="figure-stage-dot"></span><span>${esc(text)}</span>`;
 }
 async function explainPdfFigure(pageNo,region,index=-1){
+  if(state.aiBusy||state.reader.figureBusy){toast('AI 正在處理另一個請求，請稍候。');return;}state.reader.figureBusy=true;
   const page=$('pdfPages').querySelector(`.pdf-page[data-page="${pageNo}"]`);page?.classList.add('image-explain-busy');
   try{
     clearNativePdfSelection();hideSelectionUi(false);const bundle=cropFigureBundle(pageNo,region),caption=bundle.captionBlock.text,label=bundle.captionBlock.label;
@@ -532,12 +539,13 @@ async function explainPdfFigure(pageNo,region,index=-1){
     setFigureStage('Stage 2/2 · Paper-grounded Interpretation（論文脈絡驗證）','working');setAssistant('Image Explanation（高精度圖片解釋）','Stage 2/2：正在把視覺事實與 caption、正文引用、摘要與結論逐項對照…');
 
     const interpretationPrompt=`PAPER TITLE:\n${paper}\n\nFIGURE:\nPage ${pageNo}; ${label||'label 未辨識'}\n\nFULL CAPTION:\n${caption||'未辨識'}\n\nSTAGE-1 VISUAL EXTRACTION (treat high-confidence visual observations as visual evidence; low-confidence items must remain uncertain):\n${summarizeExtractionForPrompt(extraction)}\n\nBODY SENTENCES THAT EXPLICITLY REFER TO THIS FIGURE:\n${discussion.mentions||'未找到明確 Figure 文字引用'}\n\nNEARBY PAGE CONTEXT:\n${discussion.nearby}\n\nPAPER-LEVEL CONTEXT:\n${corePaperContext()}\n\n請完成最終解釋。每個重要結論都要分清楚來源是【圖中直接看見】、【caption/正文作者明說】或【合理推論】。若三者衝突，以正文/caption 的明確陳述優先，但要指出衝突。不要把相關性寫成因果。不要估讀看不清楚的數字。`;
-    const out=await askAIWithImages(`You are a senior scientific-paper figure reviewer. Answer in Traditional Chinese. English technical terms must be followed by Traditional Chinese meaning in parentheses) when first introduced. Your job is not to merely describe the picture: reconstruct how to read it and how it functions as evidence in the paper.\n\nRequired structure:\n【一句話結論】\n【這張圖怎麼讀】— identify figure type, axes, encodings, groups and panels.\n【各 Panel 逐一解讀】— panel by panel; if no panels, say so.\n【最關鍵的 3–6 個證據】— each item must include evidence source tag: [圖中直接看見] / [作者正文] / [合理推論], plus confidence 高/中/低.\n【數值與比較】— include only values explicitly readable or present in caption/body; never estimate unreadable values.\n【作者用這張圖證明什麼】— grounded in caption/body.\n【它和整篇論文的關係】— connect to hypothesis/method/result/conclusion.\n【可以引用的結論】— conservative wording suitable for academic writing.\n【不能從這張圖證明／仍不確定】— explicitly list limitations and ambiguous labels.\n\nRules: Never fabricate labels or values. Never say a trend exists if Stage-1 confidence is low unless body text explicitly confirms it. Distinguish observation from interpretation and mechanism. If the crop appears incomplete, state that limitation.`,interpretationPrompt,[bundle.core,bundle.context],{model:figureModel(),reasoning:'high',verbosity:'medium'});
-    setAssistant('Image Explanation（高精度圖片解釋）',out);setFigureStage(`完成 · ${figureModel()} · 兩階段交叉驗證`,'done');
+    const detailed=$('figureDetail')?.value==='detailed';
+    const out=await askAIWithImages(`Explain this specific scientific figure in relation to its caption and the supplied surrounding paper text. Answer in Traditional Chinese. Return only the requested JSON. Values must be reader-friendly prose, never code, JSON excerpts or internal extraction fields. Fill meaning (what the figure shows), context (how the preceding/following discussion uses the figure), evidence (the narrow conclusion it supports, with [Page N] references), and caveat (only a material uncertainty; otherwise empty). ${detailed?'Use at most 350 English words or 700 CJK characters total. Explain important panels only.':'Be concise: at most 150 English words or 300 CJK characters total, with 1-2 short sentences per field.'} Preserve essential numerical values and units. Distinguish visible observations, authors statements and inference. Do not invent missing context or unreadable values. Mention conflicts between figure and text; do not silently override either. Do not repeat the same point under multiple fields.`,interpretationPrompt,[bundle.core,bundle.context],{model:figureModel(),reasoning:'medium',verbosity:'low',schema:figureExplanationSchema(),schemaName:'reader_figure_explanation'});
+    setAssistant('圖片解釋',readableFigureExplanation(out));setFigureStage('圖片解釋完成','done');
   }catch(e){
     activateAssistantTab();const msg=e.message==='NO_AI_KEY'?'圖片已完成高解析裁切與 caption 擷取，但兩階段 Figure Explanation 需要 AI Vision API。請按右上「AI 設定」加入 API key。建議 Figure Model 使用 gpt-5.6-terra 或更高階模型。':`圖片分析失敗：${e.message}`;
     setAssistant('Image Explanation（圖片解釋）',msg);setFigureStage('分析失敗','error');
-  }finally{page?.classList.remove('image-explain-busy');}
+  }finally{state.reader.figureBusy=false;page?.classList.remove('image-explain-busy');}
 }
 
 // Calibrate against DOM metrics after fonts load. Canvas measureText can differ

@@ -1,7 +1,7 @@
 name: Verify installed reader and live website
 on:
   push:
-    paths: ['.github/workflows/verify-all.yml', 'workspace.css']
+    paths: ['.github/workflows/verify-all.yml', 'workspace.css', 'app.js', 'desktop/assistant.cjs']
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,8 +25,8 @@ jobs:
         run: |
           node - <<'JS'
           const fs=require('node:fs');
-          (async()=>{const expected=fs.readFileSync('workspace.css','utf8');const deadline=Date.now()+180000;
-          while(Date.now()<deadline){const r=await fetch('https://guanbochen0622.github.io/freevpn-openscite/workspace.css?verify='+Date.now());if(r.ok&&(await r.text())===expected){console.log('Deployed stylesheet matches checked-out version');return;}await new Promise(r=>setTimeout(r,3000));}throw Error('GitHub Pages has not published the tested stylesheet yet');})().catch(e=>{console.error(e);process.exit(1)});
+          (async()=>{const assets=['workspace.css','app.js','index.html'],deadline=Date.now()+180000;
+          while(Date.now()<deadline){const matches=await Promise.all(assets.map(async file=>{const r=await fetch('https://guanbochen0622.github.io/freevpn-openscite/'+file+'?verify='+Date.now());return r.ok&&(await r.text())===fs.readFileSync(file,'utf8');}));if(matches.every(Boolean)){console.log('Deployed assets match checked-out version');return;}await new Promise(r=>setTimeout(r,3000));}throw Error('GitHub Pages has not published the tested assets yet');})().catch(e=>{console.error(e);process.exit(1)});
           JS
       - name: Test deployed website with controlled source and AI responses
         run: npm test

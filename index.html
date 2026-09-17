@@ -105,7 +105,7 @@
             <div class="assistant-intro"><b>研究助理</b><span>選取文字或圖片即可分析。</span></div>
             <div id="figureExplainBox" class="figure-explain-box hidden">
               <div class="figure-preview-wrap"><img id="figurePreview" alt="Selected PDF figure preview"></div>
-              <div class="figure-explain-meta"><span id="figureExplainLabel">Figure</span><button id="reanalyzeFigure" class="btn small">高精度重分析</button></div>
+              <div class="figure-explain-meta"><span id="figureExplainLabel">Figure</span><select id="figureDetail" class="control" aria-label="解釋長度"><option value="brief">精簡</option><option value="detailed">詳細</option></select><button id="reanalyzeFigure" class="btn small">重新解釋</button></div>
               <div id="figureAnalysisStatus" class="figure-analysis-status"><span class="figure-stage-dot"></span><span>等待分析</span></div>
               <div id="figureExplainCaption" class="figure-caption"></div>
             </div>
@@ -174,7 +174,7 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <footer><div class="shell">OpenScite · Research Workspace</div></footer>
-<script src="vendor/fflate.min.js?v=25.3.2"></script>
-<script type="module" src="boot.js?v=25.3.2"></script>
+<script src="vendor/fflate.min.js?v=25.3.3"></script>
+<script type="module" src="boot.js?v=25.3.3"></script>
 </body>
 </html>

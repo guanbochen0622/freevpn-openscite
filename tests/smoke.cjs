@@ -4,7 +4,7 @@ const fs=require('node:fs/promises');
 const assert=require('node:assert/strict');
 const http=require('node:http'),path=require('node:path');
 const siteBase=process.env.TEST_BASE||'';
-const testUrl=process.env.TEST_URL||('http://127.0.0.1:8765'+siteBase+'/');
+const testUrl=(process.env.TEST_URL?process.env.TEST_URL+'?verify='+Date.now():'')||('http://127.0.0.1:8765'+siteBase+'/');
 const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__dirname,'..','.'+new URL(req.url,'http://localhost').pathname.slice(siteBase.length).replace(/\/$/,'/index.html'));const data=await fs.readFile(file);res.setHeader('Content-Type',file.endsWith('.js')||file.endsWith('.mjs')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(data);}catch{res.writeHead(404);res.end('Not found')}});
 (async()=>{
  await new Promise(r=>server.listen(8765,'127.0.0.1',r));
@@ -45,6 +45,12 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  assert.match(JSON.stringify(followupBody),/What is the wavelength/);assert.match(JSON.stringify(followupBody),/980 nm/);
  assert.equal(await page.locator('.chat-turn').count(),2);
  await page.click('#toggleReaderTools');assert.equal(await page.locator('.reader-left').isVisible(),false);await page.click('#toggleReaderTools');
+ // Figure analysis renders reader prose, never its internal JSON.
+ const figureRequests=[];const figureRoute=async route=>{const body=JSON.parse(route.request().postData());figureRequests.push(body);await route.fulfill({json:{output_text:JSON.stringify(body.text.format.name==='scientific_figure_extraction'?{panels:[],unreadable_or_ambiguous:['Synthetic figure']}:{meaning:'A control measurement.',context:'The nearby text describes the sensor [Page 12].',evidence:'The measured wavelength is 980 nm.',caveat:'Synthetic test only.'})}});};
+ await page.route('https://api.openai.com/v1/responses',figureRoute);
+ await page.evaluate(()=>explainPdfFigure(12,{left:50,top:350,right:600,bottom:750,width:550,height:400,source:'test'}));
+ assert.equal(figureRequests.length,2);assert.match(await page.locator('#assistantOutput').textContent(),/nearby text/);assert.doesNotMatch(await page.locator('#assistantOutput').textContent(),/"meaning"|"panels"/);
+ await page.unroute('https://api.openai.com/v1/responses',figureRoute);
  // Export contains persisted notes/metadata but no credentials, restore merges safely.
  await page.click('.nav-tab[data-view="library"]');const dlPromise=page.waitForEvent('download');await page.click('#backupWorkspace');const dl=await dlPromise;const backup=JSON.parse(await fs.readFile(await dl.path(),'utf8'));assert.equal(backup.includesPdfFiles,false);assert.equal(backup.data.openscite_chat_v1[key].length,2);assert.ok(!JSON.stringify(backup).includes('test-key-not-a-real-credential'));
  await fs.writeFile('/tmp/openscite-backup.json',JSON.stringify(backup));await page.setInputFiles('#backupFile','/tmp/openscite-backup.json');await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已合併'));assert.equal(await page.evaluate(()=>state.library.length),2);

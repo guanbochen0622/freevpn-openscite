@@ -68,7 +68,7 @@ if (bridge) {
     const text = (progress.model ? progress.model + ' · ' : '') + progress.message;
     status.textContent = window.I18n?.t(text)||text;
     if (testing) el('desktopTestResult').textContent = text + (progress.text ? '\n' + progress.text : '');
-    else if (progress.stage === 'answering' && progress.text) {
+    else if (progress.stage === 'answering' && progress.text && !state.reader.figureBusy) {
       const output = document.getElementById('assistantOutput');
       output.textContent = progress.text;
     }

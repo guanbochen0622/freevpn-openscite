@@ -74,11 +74,14 @@ app.on('browser-window-created',(_e,win)=>{
  await win.webContents.executeJavaScript(`state.reader.selectedText='Original measurement 980 nm';translateSelection()`);
  assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.translation-original').textContent`),'Original measurement 980 nm');
  let figureCalls=[];
- ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',(_event,body)=>{figureCalls.push(body);return body.text?.format?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':'TEST FIGURE RESPONSE [Page 1]';});
+ ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',async(_event,body)=>{figureCalls.push(body);win.webContents.send('openscite:progress',{stage:'answering',message:'Testing',text:'INTERNAL_JSON_SHOULD_NOT_APPEAR'});await new Promise(r=>setTimeout(r,30));assert.doesNotMatch(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/INTERNAL_JSON_SHOULD_NOT_APPEAR/);return body.text?.format?.name==='scientific_figure_extraction'?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':JSON.stringify({meaning:'TEST FIGURE RESPONSE',context:'The nearby paragraph discusses the control [Page 1].',evidence:'A measured wavelength of 980 nm.',caveat:''});});
  await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
- assert.equal(figureCalls.length,2);assert.ok(figureCalls[0].text.format.schema);
+ assert.equal(figureCalls.length,2);assert.ok(figureCalls[0].text.format.schema);assert.equal(figureCalls[1].text.format.name,'reader_figure_explanation');assert.match(figureCalls[1].input[0].content[0].text,/at most 150 English words/);
  for(const call of figureCalls)assert.equal(call.input[1].content.filter(p=>p.type==='input_image'&&p.image_url.startsWith('data:image/png;base64,')).length,2);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST FIGURE RESPONSE/);
+ assert.doesNotMatch(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/"meaning"|"panels"/);
+ await win.webContents.executeJavaScript(`document.getElementById('figureDetail').value='detailed';explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
+ assert.match(figureCalls.at(-1).input[0].content[0].text,/at most 350 English words/);
  let failedCalls=0;
  ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',()=>{failedCalls++;throw Error('TEST: cancelled figure');});
  await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
