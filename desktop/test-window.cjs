@@ -6,7 +6,7 @@ const timer=setTimeout(()=>{console.error('Desktop window smoke timed out');app.
 app.on('browser-window-created',(_e,win)=>{
  win.webContents.once('did-finish-load',async()=>{
  try{
- await new Promise(r=>setTimeout(r,2500));
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+30000;while(document.getElementById('settingsBtn')?.textContent!=='ChatGPT 帳號'){if(Date.now()>end)throw Error('Desktop interface initialization timed out');await new Promise(r=>setTimeout(r,100));}})()`);
  const result=await win.webContents.executeJavaScript(`(async()=>({button:document.getElementById('settingsBtn')?.textContent,bridge:typeof window.opensciteDesktop?.ask,status:await window.opensciteDesktop.status(),pdf:!!window.pdfjsLib}))()`);
  assert.equal(result.button,'ChatGPT 帳號');assert.equal(result.bridge,'function');assert.equal(result.pdf,true);assert.equal(result.status.account,null);
  await win.webContents.executeJavaScript(`document.getElementById('settingsBtn').click()`);
@@ -41,7 +41,7 @@ app.on('browser-window-created',(_e,win)=>{
  assert.ok(request.input[1].content[0].text.includes('SELECTED PASSAGE:\n980'));
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
  await win.webContents.executeJavaScript(`document.getElementById('askInput').value='What wavelength was measured?';document.getElementById('askBtn').click()`);
- await new Promise(r=>setTimeout(r,100));
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+10000;while(state.aiBusy){if(Date.now()>end)throw Error('Reader action timed out');await new Promise(r=>setTimeout(r,50));}})()`);
  assert.ok(request.input[1].content[0].text.includes('What wavelength was measured?'));
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
  for(const [locale,label,name] of [['en','Academic search','English'],['zh-Hant','學術搜尋','Traditional Chinese'],['zh-Hans','学术搜索','Simplified Chinese'],['ja','論文検索','Japanese'],['ko','논문 검색','Korean']]){
@@ -59,7 +59,7 @@ app.on('browser-window-created',(_e,win)=>{
  await win.webContents.executeJavaScript(`researchFitSelection()`);
  assert.match(request.input[0].content[0].text,/research usefulness/);
  await win.webContents.executeJavaScript(`document.getElementById('aiSummaryBtn').click()`);
- await new Promise(r=>setTimeout(r,100));assert.match(request.input[0].content[0].text,/Summarize this research paper/);
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+10000;while(state.aiBusy){if(Date.now()>end)throw Error('Reader action timed out');await new Promise(r=>setTimeout(r,50));}})()`);assert.match(request.input[0].content[0].text,/Summarize this research paper/);
  assert.match(request.input[1].content[0].text,/Page 1/);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('summaryOutput').textContent`),/TEST RESPONSE/);
  const beforePreview=await win.webContents.executeJavaScript(`state.reader.currentPage`);
