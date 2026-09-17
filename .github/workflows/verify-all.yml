@@ -21,6 +21,13 @@ jobs:
       - run: npm run test:logic && node tests/reader-lifecycle.cjs && node tests/partial-index.cjs && node tests/locales.cjs
       - name: Test local website
         run: npm test
+      - name: Wait for the tested stylesheet to reach GitHub Pages
+        run: |
+          node - <<'JS'
+          const fs=require('node:fs');
+          (async()=>{const expected=fs.readFileSync('workspace.css','utf8');const deadline=Date.now()+180000;
+          while(Date.now()<deadline){const r=await fetch('https://guanbochen0622.github.io/freevpn-openscite/workspace.css?verify='+Date.now());if(r.ok&&(await r.text())===expected){console.log('Deployed stylesheet matches checked-out version');return;}await new Promise(r=>setTimeout(r,3000));}throw Error('GitHub Pages has not published the tested stylesheet yet');})().catch(e=>{console.error(e);process.exit(1)});
+          JS
       - name: Test deployed website with controlled source and AI responses
         run: npm test
         env:
