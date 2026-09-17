@@ -1,7 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const code=fs.readFileSync('app.js','utf8'),workspace=fs.readFileSync('workspace.js','utf8');
 const ctx={URL,TextEncoder,crypto:require('node:crypto').webcrypto,console};vm.createContext(ctx);
-for(const name of ['queryTokens','esc','escRx','doiClean','safeUrl','estimateQuartile','classifyStance','citationContexts','relevantContext','summaryContext']){
+for(const name of ['queryTokens','esc','escRx','doiClean','safeUrl','estimateQuartile','classifyStance','citationContexts','relevantContext','summaryContext','responseText']){
  const start=code.indexOf('function '+name+'('),next=code.indexOf('\nfunction ',start+1),asyncNext=code.indexOf('\nasync function ',start+1);let end=Math.min(...[next,asyncNext,code.indexOf('\n$(\'',start+1),code.indexOf('\n//',start+1)].filter(n=>n>start));if(!Number.isFinite(end))end=code.length;
  // Single-line utility functions end at their newline.
  const line=code.slice(start,code.indexOf('\n',start));const text=line.endsWith('}')?line:code.slice(start,code.indexOf('\n}',start)+2);vm.runInContext(text,ctx);
@@ -31,3 +31,7 @@ ctx.target={doi:'10.1234/test',title:'Unmatched target title'};
 assert.equal(vm.runInContext("citationContexts('[Page 1] We confirm the results [1].\\nReferences\\n[1] Other title 10.1234/testing',target).length",ctx),0);
 assert.equal(vm.runInContext("citationContexts('[Page 1] We confirm the results [1].\\nReferences\\n[1] Other title 10.1234/test.',target).length",ctx),1);
 console.log('PASS: negated support, double negation and exact DOI boundaries.');
+
+assert.equal(ctx.responseText({output:[{content:[{type:'output_text',text:'980 nm'}]}]}),'980 nm');
+assert.throws(()=>ctx.responseText({status:'incomplete',output:[]}),/AI/);
+console.log('PASS: empty AI response rejected rather than displayed as analysis.');

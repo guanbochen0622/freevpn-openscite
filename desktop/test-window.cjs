@@ -53,10 +53,21 @@ app.on('browser-window-created',(_e,win)=>{
    assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
  }
  await win.webContents.executeJavaScript(`I18n.setLanguage('zh-Hant')`);
+ let figureCalls=[];
+ ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',(_event,body)=>{figureCalls.push(body);return body.text?.format?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':'TEST FIGURE RESPONSE [Page 1]';});
+ await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
+ assert.equal(figureCalls.length,2);assert.ok(figureCalls[0].text.format.schema);
+ for(const call of figureCalls)assert.equal(call.input[1].content.filter(p=>p.type==='input_image'&&p.image_url.startsWith('data:image/png;base64,')).length,2);
+ assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST FIGURE RESPONSE/);
+ let failedCalls=0;
+ ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',()=>{failedCalls++;throw Error('TEST: cancelled figure');});
+ await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
+ assert.equal(failedCalls,1);assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/cancelled figure/);
+ await win.webContents.executeJavaScript(`state.reader.selectedText='980'`);
  ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',()=>{throw Error('TEST: model quota exhausted');});
  await win.webContents.executeJavaScript(`explainSelection()`);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/model quota exhausted/);
- console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors and five-language AI routing');
+ console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors five-language AI routing and two-stage figure requests without retry on failure');
  clearTimeout(timer);app.quit();
  }catch(e){console.error(e);clearTimeout(timer);app.exit(1);}
  });
