@@ -10,6 +10,7 @@ on:
       - 'index.html'
       - 'styles.css'
       - 'workspace.*'
+      - 'reader-tools.js'
       - 'vendor/**'
       - 'i18n.js'
       - 'locales/**'

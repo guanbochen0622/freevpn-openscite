@@ -268,3 +268,12 @@ AI 深度摘要處理中…|Generating detailed AI summary…|正在生成 AI �
 已取消 AI 分析。|AI analysis cancelled.|已取消 AI 分析。|AI 分析をキャンセルしました。|AI 분석이 취소되었습니다.
 AI 未傳回可讀取的回答，請重試。|AI returned no readable answer. Please retry.|AI 未返回可读取的回答，请重试。|AI から読み取れる回答がありません。再試行してください。|AI가 읽을 수 있는 답변을 반환하지 않았습니다. 다시 시도하세요.
 請開啟右上「ChatGPT 帳號」，按「測試模型回答」。該測試會實際發送一句話，顯示連線是否成功。|Open ChatGPT account above and select Test model response. This sends a real short request to verify the connection.|请打开右上角的 ChatGPT 账号，点击测试模型回答，以实际请求检查连接。|右上の ChatGPT アカウントからモデル応答テストを選択してください。短いリクエストで接続を確認します。|위의 ChatGPT 계정에서 모델 응답 테스트를 선택하세요. 짧은 실제 요청으로 연결을 확인합니다.
+本篇對話|Paper conversation|本篇对话|この論文の会話|이 논문의 대화
+清除對話|Clear conversation|清除对话|会話を消去|대화 지우기
+清除這篇論文的對話？|Clear this paper's conversation?|清除这篇论文的对话？|この論文の会話を消去しますか？|이 논문의 대화를 지울까요?
+查看回答|View answer|查看回答|回答を見る|답변 보기
+預覽|Preview|预览|プレビュー|미리보기
+前往此頁|Go to this page|前往此页|このページへ移動|이 페이지로 이동
+助理寬度|Assistant width|助手宽度|アシスタントの幅|도우미 너비
+收合文件工具|Hide document tools|收起文档工具|文書ツールを隠す|문서 도구 숨기기
+展開文件工具|Show document tools|展开文档工具|文書ツールを表示|문서 도구 표시

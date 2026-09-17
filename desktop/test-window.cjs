@@ -62,6 +62,14 @@ app.on('browser-window-created',(_e,win)=>{
  await new Promise(r=>setTimeout(r,100));assert.match(request.input[0].content[0].text,/Summarize this research paper/);
  assert.match(request.input[1].content[0].text,/Page 1/);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('summaryOutput').textContent`),/TEST RESPONSE/);
+ const beforePreview=await win.webContents.executeJavaScript(`state.reader.currentPage`);
+ await win.webContents.executeJavaScript(`previewReaderPage(1)`);
+ assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('#pagePreviewBody canvas')`),true);
+ assert.equal(await win.webContents.executeJavaScript(`state.reader.currentPage`),beforePreview);
+ await win.webContents.executeJavaScript(`closePagePreview();document.getElementById('askInput').value='Can you clarify your previous answer?';askPaperQuestion()`);
+ assert.match(request.input[1].content[0].text,/What wavelength was measured/);
+ assert.match(request.input[1].content[0].text,/PREVIOUS CONVERSATION/);
+ assert.equal(await win.webContents.executeJavaScript(`chatTurns.length`),2);
  let figureCalls=[];
  ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',(_event,body)=>{figureCalls.push(body);return body.text?.format?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':'TEST FIGURE RESPONSE [Page 1]';});
  await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);

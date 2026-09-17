@@ -36,6 +36,14 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  // An AI response is mocked; no real credentials or paid requests are used.
  await page.route('https://api.openai.com/v1/responses',async route=>{const payload=JSON.parse(route.request().postData());assert.equal(payload.store,false);assert.match(JSON.stringify(payload),/Page 12/);await route.fulfill({json:{output:[{content:[{type:'output_text',text:'The wavelength is 980 nm [Page 12].'}]}]}});});
  await page.evaluate(()=>sessionStorage.setItem(STORE.aiKey,'test-key-not-a-real-credential'));await page.fill('#askInput','What is the wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy);assert.match(await page.locator('#assistantOutput').textContent(),/980 nm/);await page.waitForSelector('.page-citation');await page.locator('.page-citation').click();assert.equal(await page.evaluate(()=>state.reader.currentPage),12);
+ // Preview does not move the document; follow-up includes prior conversation.
+ await page.locator('[data-preview-page]').click();await page.waitForSelector('#pagePreviewBody canvas');
+ assert.equal(await page.evaluate(()=>state.reader.currentPage),12);await page.click('#closePagePreview');
+ let followupBody;await page.route('https://api.openai.com/v1/responses',async route=>{followupBody=JSON.parse(route.request().postData());await route.fulfill({json:{output_text:'Follow-up verified [Page 12].'}});});
+ await page.fill('#askInput','Why that wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&chatTurns.length===2);
+ assert.match(JSON.stringify(followupBody),/What is the wavelength/);assert.match(JSON.stringify(followupBody),/980 nm/);
+ assert.equal(await page.locator('.chat-turn').count(),2);
+ await page.click('#toggleReaderTools');assert.equal(await page.locator('.reader-left').isVisible(),false);await page.click('#toggleReaderTools');
  // Export contains persisted notes/metadata but no credentials, restore merges safely.
  await page.click('.nav-tab[data-view="library"]');const dlPromise=page.waitForEvent('download');await page.click('#backupWorkspace');const dl=await dlPromise;const backup=JSON.parse(await fs.readFile(await dl.path(),'utf8'));assert.equal(backup.includesPdfFiles,false);assert.ok(!JSON.stringify(backup).includes('test-key-not-a-real-credential'));
  await fs.writeFile('/tmp/openscite-backup.json',JSON.stringify(backup));await page.setInputFiles('#backupFile','/tmp/openscite-backup.json');await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已合併'));assert.equal(await page.evaluate(()=>state.library.length),2);
