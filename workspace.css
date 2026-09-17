@@ -28,3 +28,4 @@ body[data-view="reader"] .workspace-hero{display:none}
 @media(max-width:1199px){.assistant-width-control{display:none}body.reader-tools-hidden .reader-left{display:none}}
 
 body.reader-focus .reader-grid{grid-template-columns:minmax(0,1fr)}
+.figure-explain-meta{flex-wrap:wrap}#figureDetail{width:auto;max-width:110px;min-height:32px;padding:4px 6px;font-size:12px}

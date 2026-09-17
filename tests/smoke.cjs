@@ -50,7 +50,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await page.route('https://api.openai.com/v1/responses',figureRoute);
  await page.evaluate(()=>explainPdfFigure(12,{left:50,top:350,right:600,bottom:750,width:550,height:400,source:'test'}));
  assert.equal(figureRequests.length,2);assert.match(await page.locator('#assistantOutput').textContent(),/nearby text/);assert.doesNotMatch(await page.locator('#assistantOutput').textContent(),/"meaning"|"panels"/);
- await page.unroute('https://api.openai.com/v1/responses',figureRoute);
+ await page.screenshot({path:'/tmp/openscite-figure.png',fullPage:true});await page.unroute('https://api.openai.com/v1/responses',figureRoute);
  // Export contains persisted notes/metadata but no credentials, restore merges safely.
  await page.click('.nav-tab[data-view="library"]');const dlPromise=page.waitForEvent('download');await page.click('#backupWorkspace');const dl=await dlPromise;const backup=JSON.parse(await fs.readFile(await dl.path(),'utf8'));assert.equal(backup.includesPdfFiles,false);assert.equal(backup.data.openscite_chat_v1[key].length,2);assert.ok(!JSON.stringify(backup).includes('test-key-not-a-real-credential'));
  await fs.writeFile('/tmp/openscite-backup.json',JSON.stringify(backup));await page.setInputFiles('#backupFile','/tmp/openscite-backup.json');await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已合併'));assert.equal(await page.evaluate(()=>state.library.length),2);
