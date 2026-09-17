@@ -25,6 +25,8 @@ jobs:
         run: npm test
         env:
           TEST_URL: https://guanbochen0622.github.io/freevpn-openscite/
+      - name: Search real bibliographic services from the deployed website
+        run: node tests/live-services.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
