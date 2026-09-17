@@ -31,8 +31,8 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await page.setInputFiles('#readerFile','/tmp/openscite-fixture.pdf');await page.waitForFunction(()=>document.querySelector('#readerProgress').textContent.includes('全文索引完成')&&state.reader.highlights.length===1);assert.equal(await page.evaluate(()=>readerKey()),key);
 
  // Library reopening must preserve the hash-based annotation identity.
- await page.click('.nav-tab[data-view="library"]');await page.fill('#libraryQuery','');await page.waitForTimeout(200);await page.locator('[data-lib-action="open"]').first().click();
- await page.waitForFunction(()=>state.reader.pdf&&state.reader.indexReady&&state.reader.highlights.length===1);assert.equal(await page.evaluate(()=>readerKey()),key);
+ await page.click('.nav-tab[data-view="library"]');await page.fill('#libraryQuery','');await page.waitForTimeout(200);const previousDocumentToken=await page.evaluate(()=>state.reader.renderToken);await page.locator('[data-lib-action="open"]').first().click();
+ await page.waitForFunction(previous=>state.reader.renderToken>previous&&state.reader.pdf&&state.reader.indexReady&&state.reader.highlights.length===1,previousDocumentToken);assert.equal(await page.evaluate(()=>readerKey()),key);
  // An AI response is mocked; no real credentials or paid requests are used.
  await page.route('https://api.openai.com/v1/responses',async route=>{const payload=JSON.parse(route.request().postData());assert.equal(payload.store,false);assert.match(JSON.stringify(payload),/Page 12/);await route.fulfill({json:{output:[{content:[{type:'output_text',text:'The wavelength is 980 nm [Page 12].'}]}]}});});
  await page.evaluate(()=>sessionStorage.setItem(STORE.aiKey,'test-key-not-a-real-credential'));await page.fill('#askInput','What is the wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy);assert.match(await page.locator('#assistantOutput').textContent(),/980 nm/);await page.waitForSelector('.page-citation');await page.locator('.page-citation').click();assert.equal(await page.evaluate(()=>state.reader.currentPage),12);

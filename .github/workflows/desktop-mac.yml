@@ -35,6 +35,9 @@ jobs:
       - run: node tests/partial-index.cjs
       - run: node tests/locales.cjs
       - run: npm test
+      - run: npm test
+        env:
+          TEST_BASE: /freevpn-openscite
   build:
     strategy:
       fail-fast: false
