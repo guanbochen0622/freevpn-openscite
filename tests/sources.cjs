@@ -6,6 +6,7 @@ vm.createContext(ctx);vm.runInContext(code.slice(code.indexOf('function estimate
 (async()=>{
  const work={source:'Test Journal',sourceId:'',issns:['1234-567X'],q:'Q?'};await ctx.enrichSources([work],new Map());assert.equal(work.q,'Q1');assert.equal(calls[0].args.filter,'issn:1234-567X');
  calls=[];const cached={sourceId:'S1',q:'Q?'};ctx.oa=async()=>{throw Error('Network unavailable');};await ctx.enrichSources([cached],new Map());assert.equal(cached.q,'Q1');assert.equal(calls.length,0);
+ const cachedCrossref={source:'Test Journal',sourceId:'',issns:['1234-567X'],q:'Q?'};await ctx.enrichSources([cachedCrossref],new Map());assert.equal(cachedCrossref.q,'Q1');
  const missing={q:'Q?'};ctx.applySourceEstimate(missing,{...journal,summary_stats:{}});assert.equal(missing.q,'Q?');ctx.applySourceEstimate(missing,{...journal,type:'repository'});assert.equal(missing.q,'Q?');
  const partial={};ctx.applySourceEstimate(partial,{...journal,summary_stats:{h_index:130}});assert.equal(partial.q,'Q1');assert.match(partial.qReason,/N\/A/);
  stored={};ctx.oa=async()=>({results:[{...journal,display_name:'Similar but wrong journal'}]});const wrong={source:'Test Journal',sourceId:'',q:'Q?'};await ctx.enrichSources([wrong],new Map());assert.equal(wrong.q,'Q?');

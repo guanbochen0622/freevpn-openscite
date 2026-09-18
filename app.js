@@ -76,7 +76,7 @@ function workFromOpenAlex(w){
     authors: authorsFromOpenAlex(w),
     source: sourceFromOpenAlex(w),
     sourceId: stripOpenAlex(([w.primary_location?.source,...(w.locations||[]).map(l=>l.source)].find(s=>s?.type==='journal')||w.primary_location?.source)?.id||''),
-    issns: (w.primary_location?.source?.issn||[]),
+    issns: (([w.primary_location?.source,...(w.locations||[]).map(l=>l.source)].find(s=>s?.type==='journal')||w.primary_location?.source)?.issn||[]),
     citations: w.cited_by_count || 0,
     doi: doiClean(w.doi||''),
     isOA: !!w.open_access?.is_oa,
@@ -129,6 +129,7 @@ function applySourceEstimate(work,source){
 async function enrichSources(works,sourceMap){
   const cached=loadJSON('openscite_sources_v1',{}),now=Date.now();
   for(const [id,entry] of Object.entries(cached))if(entry?.source&&now-entry.saved<7*86400000)sourceMap.set(id,entry.source);
+  for(const w of works)if(!sourceMap.has(w.sourceId)){const match=[...sourceMap.values()].find(s=>s.type==='journal'&&((w.issns||[]).some(x=>(s.issn||[]).includes(x))||(journalNameKey(w.source)&&journalNameKey(w.source)===journalNameKey(s.display_name))));if(match)w.sourceId=stripOpenAlex(match.id);}
   const ids=[...new Set(works.map(w=>w.sourceId).filter(id=>id&&!sourceMap.has(id)))].slice(0,100);
   if(ids.length)try{const data=await oa('/sources',{filter:`openalex_id:${ids.join('|')}`,'per-page':ids.length});for(const source of data.results||[])sourceMap.set(stripOpenAlex(source.id),source);}catch(e){console.warn('Source batch lookup failed',e);}
   const unresolved=new Map();
