@@ -126,3 +126,10 @@ insertTools('.ask-row','<div class="reader-prompts"><button class="btn small" da
 document.querySelector('.reader-prompts').addEventListener('click',e=>{const b=e.target.closest('[data-reader-prompt]');if(!b||state.aiBusy)return;$('askInput').value=readerText(b.dataset.readerPrompt);$('askInput').focus();});
 
 document.addEventListener('research:language',()=>{if($('copyReaderAnswer'))$('copyReaderAnswer').textContent=readerText('複製回答');if($('saveReaderAnswer'))$('saveReaderAnswer').textContent=readerText($('saveReaderAnswer').disabled?'已儲存':'存成筆記');});
+
+// Copy the same scientific text that explanation and translation receive.
+$('pdfViewport').addEventListener('copy',event=>{
+ const selection=window.getSelection();if(!selectionIsInsidePdf(selection)||!selection?.rangeCount)return;
+ if(event.clipboardData){event.clipboardData.setData('text/plain',PdfText.selection(selection.getRangeAt(0)));event.preventDefault();}
+});
+

@@ -61,7 +61,7 @@ function reconstructAbstract(inv) {
   return arr.filter(Boolean).join(' ');
 }
 function authorsFromOpenAlex(w){ return (w.authorships||[]).slice(0,8).map(a=>a.author?.display_name).filter(Boolean).join(', '); }
-function sourceFromOpenAlex(w){ return w.primary_location?.source?.display_name || w.best_oa_location?.source?.display_name || ''; }
+function sourceFromOpenAlex(w){ return ([w.primary_location?.source,...(w.locations||[]).map(l=>l.source)].find(s=>s?.type==='journal')||w.primary_location?.source||w.best_oa_location?.source)?.display_name||''; }
 function bestPdfOpenAlex(w){
   return w.best_oa_location?.pdf_url || (w.locations||[]).find(x=>x.pdf_url)?.pdf_url || '';
 }
@@ -75,7 +75,8 @@ function workFromOpenAlex(w){
     year: w.publication_year || '',
     authors: authorsFromOpenAlex(w),
     source: sourceFromOpenAlex(w),
-    sourceId: stripOpenAlex(w.primary_location?.source?.id || ''),
+    sourceId: stripOpenAlex(([w.primary_location?.source,...(w.locations||[]).map(l=>l.source)].find(s=>s?.type==='journal')||w.primary_location?.source)?.id||''),
+    issns: (w.primary_location?.source?.issn||[]),
     citations: w.cited_by_count || 0,
     doi: doiClean(w.doi||''),
     isOA: !!w.open_access?.is_oa,
@@ -91,7 +92,7 @@ function workFromCrossref(w){
   const title=Array.isArray(w.title)?w.title[0]:(w.title||'Untitled');
   const cont=Array.isArray(w['container-title'])?w['container-title'][0]:(w['container-title']||'');
   const authors=(w.author||[]).slice(0,8).map(a=>[a.given,a.family].filter(Boolean).join(' ')).join(', ');
-  return { id:'',title,abstract:String(w.abstract||'').replace(/<[^>]+>/g,' '),year:yearOf(w),authors,source:cont,sourceId:'',citations:w['is-referenced-by-count']||0,doi:w.DOI||'',isOA:false,pdfUrl:'',landingUrl:w.URL||'',raw:w,q:'Q?',sourceScore:0 };
+  return { id:'',title,abstract:String(w.abstract||'').replace(/<[^>]+>/g,' '),year:yearOf(w),authors,source:cont,sourceId:'',issns:w.ISSN||[],citations:w['is-referenced-by-count']||0,doi:w.DOI||'',isOA:false,pdfUrl:'',landingUrl:w.URL||'',raw:w,q:'Q?',sourceScore:0 };
 }
 
 function oaKey(){ return localStorage.getItem(STORE.oaKey)||''; }
@@ -115,22 +116,31 @@ async function crossrefSearch(query, rows=20, offset=0, filters={}){
   const res=await fetch(url.toString(),{signal:AbortSignal.timeout(20000)}); if(!res.ok) throw new Error(`Crossref ${res.status}`); const d=await res.json();
   return {results:(d.message?.items||[]).map(workFromCrossref), total:d.message?.['total-results']||0};
 }
-async function enrichSources(works, sourceMap){
-  const ids=[...new Set(works.map(w=>w.sourceId).filter(Boolean))].slice(0,100);
-  if(!ids.length) return;
-  try{
-    const data=await oa('/sources',{filter:`openalex_id:${ids.join('|')}`,'per-page':Math.min(100,ids.length)});
-    for(const s of data.results||[]){ sourceMap.set(stripOpenAlex(s.id),s); }
-    for(const w of works){
-      const s=sourceMap.get(w.sourceId); if(!s) continue;
-      const h=Number(s.summary_stats?.h_index||0), m=Number(s.summary_stats?.['2yr_mean_citedness']||0), c=Number(s.cited_by_count||0);
-      const {score,q}=estimateQuartile(h,m,c);
-      w.sourceMetrics={hIndex:h, mean2y:m, worksCount:s.works_count||0,citedBy:s.cited_by_count||0,type:s.type||''}; w.sourceScore=score;
-      // Transparent heuristic only. This is deliberately labelled as an estimate in the UI.
-      w.q=s.type==='journal'&&s.summary_stats?.h_index!=null&&s.summary_stats?.['2yr_mean_citedness']!=null?q:'Q?';
-      w.qReason=`OpenAlex h-index ${h}、2 年平均引用 ${m.toFixed(2)}、累積引用 ${fmtNum(c)}；估計分數 ${Math.round(score)}`;
-    }
-  }catch(e){ console.warn('source enrichment failed',e); }
+function journalNameKey(name){return String(name||'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');}
+function applySourceEstimate(work,source){
+  if(!source||source.type!=='journal')return;
+  const stats=source.summary_stats||{},valid=x=>x!==null&&x!==undefined&&Number.isFinite(Number(x))&&Number(x)>=0;
+  if(!valid(stats.h_index)&&!valid(stats['2yr_mean_citedness']))return;
+  const h=valid(stats.h_index)?Number(stats.h_index):0,m=valid(stats['2yr_mean_citedness'])?Number(stats['2yr_mean_citedness']):0,c=valid(source.cited_by_count)?Number(source.cited_by_count):0;
+  const result=estimateQuartile(h,m,c);work.sourceId=stripOpenAlex(source.id||work.sourceId);work.source=source.display_name||work.source;
+  work.sourceMetrics={hIndex:h,mean2y:m,citedBy:c,type:source.type,worksCount:source.works_count||0};work.sourceScore=result.score;work.q=result.q;
+  work.qReason=`OpenAlex · h-index ${valid(stats.h_index)?h:'N/A'} · 2yr ${valid(stats['2yr_mean_citedness'])?m.toFixed(2):'N/A'} · citations ${c} · score ${Math.round(result.score)}; heuristic estimate, NOT official JCR/SJR quartile; partial metrics may underestimate.`;
+}
+async function enrichSources(works,sourceMap){
+  const cached=loadJSON('openscite_sources_v1',{}),now=Date.now();
+  for(const [id,entry] of Object.entries(cached))if(entry?.source&&now-entry.saved<7*86400000)sourceMap.set(id,entry.source);
+  const ids=[...new Set(works.map(w=>w.sourceId).filter(id=>id&&!sourceMap.has(id)))].slice(0,100);
+  if(ids.length)try{const data=await oa('/sources',{filter:`openalex_id:${ids.join('|')}`,'per-page':ids.length});for(const source of data.results||[])sourceMap.set(stripOpenAlex(source.id),source);}catch(e){console.warn('Source batch lookup failed',e);}
+  const unresolved=new Map();
+  for(const w of works){if(sourceMap.has(w.sourceId))continue;const key=(w.issns||[])[0]||journalNameKey(w.source);if(key&&!unresolved.has(key))unresolved.set(key,w);}
+  const queue=[...unresolved.values()];
+  await Promise.all(Array.from({length:Math.min(3,queue.length)},async()=>{while(queue.length){const work=queue.shift();try{
+    let source;if(work.sourceId){try{source=await oa('/sources/'+encodeURIComponent(work.sourceId));}catch{}}
+    if(!source){const issn=(work.issns||[]).find(x=>/^\d{4}-[\dXx]{4}$/.test(x));const data=await oa('/sources',issn?{filter:'issn:'+issn,'per-page':5}:{search:work.source,'per-page':5});source=(data.results||[]).find(s=>s.type==='journal'&&(issn?(s.issn||[]).includes(issn):journalNameKey(s.display_name)===journalNameKey(work.source)));}
+    if(source?.id){sourceMap.set(stripOpenAlex(source.id),source);for(const w of works)if((work.sourceId&&w.sourceId===work.sourceId)||((w.issns||[]).some(x=>(source.issn||[]).includes(x)))||journalNameKey(w.source)===journalNameKey(source.display_name))w.sourceId=stripOpenAlex(source.id);}
+  }catch(e){console.warn('Journal metrics unavailable',e);}}}));
+  for(const w of works)applySourceEstimate(w,sourceMap.get(w.sourceId));
+  const entries=[...sourceMap].slice(-300);saveJSON('openscite_sources_v1',Object.fromEntries(entries.map(([id,source])=>[id,{saved:cached[id]?.saved||now,source}])));
 }
 
 function showView(name){
@@ -161,7 +171,7 @@ async function runSearch(resetPage=true){
   try{
     let works,total,provider;
     try{const d=await oa('/works',params);works=(d.results||[]).map(workFromOpenAlex);total=d.meta?.count||0;provider='OpenAlex';await enrichSources(works,state.search.sourceMap);}
-    catch(err){if(oaOnly)throw new Error('OpenAlex 暫時無法使用；Crossref 無法可靠套用 OA 篩選，請稍後重試或切換全部文獻。');const d=await crossrefSearch(query,per,(page-1)*per,{y1,y2,sort});works=d.results;total=d.total;provider='Crossref（備援）';}
+    catch(err){if(oaOnly)throw new Error('OpenAlex 暫時無法使用；Crossref 無法可靠套用 OA 篩選，請稍後重試或切換全部文獻。');const d=await crossrefSearch(query,per,(page-1)*per,{y1,y2,sort});works=d.results;total=d.total;provider='Crossref（備援）';await enrichSources(works,state.search.sourceMap);}
     if(request!==state.search.request)return;
     const seen=new Set();works=works.filter(w=>{const k=(w.doi||w.id||w.title).toLowerCase();if(seen.has(k))return false;seen.add(k);return true;});
     Object.assign(state.search,{works,total,provider});renderSearch();
@@ -300,12 +310,14 @@ async function renderPdfPages(token=state.reader.renderToken){
       wrap.replaceChildren(canvas);
       const task=page.render({canvasContext:ctx,viewport,transform:ratio!==1?[ratio,0,0,ratio,0,0]:null});
       renderTasks.add(task);try{await task.promise;}finally{renderTasks.delete(task);}if(!active())return;
-      let tc;try{tc=await page.getTextContent();}catch(e){tc={items:[],styles:{}};wrap.dataset.textError=String(e.message);}
+      let tc;try{tc=await page.getTextContent({disableNormalization:true});}catch(e){tc={items:[],styles:{}};wrap.dataset.textError=String(e.message);}
       if(!active())return;
+      tc={...tc,...{items:PdfText.analyze(tc,page.getViewport({scale:1}).width).items}};
       const textLayer=document.createElement('div');textLayer.className='textLayer';textLayer.dataset.page=n;wrap.appendChild(textLayer);
       try{const layer=new pdfjsLib.TextLayer({textContentSource:tc,container:textLayer,viewport});await layer.render();await document.fonts.ready;calibrateTextLayer(layer.textDivs,tc,viewport);}catch{ textLayer.replaceChildren();textLayer.classList.add('manual-text-layer');textLayer.removeAttribute('data-main-rotation');textLayer.style.width=viewport.width+'px';textLayer.style.height=viewport.height+'px';manualTextLayer(tc,textLayer,viewport);}
       if(!active())return;
-      $$('span',textLayer).forEach((span,i)=>span.dataset.textIndex=String(i));applyTextMarks(textLayer);renderSavedHighlights(wrap,n);
+      const semanticItems=tc.items.filter(x=>typeof x.str==='string'&&x.str.length);
+      $$('span',textLayer).filter(span=>span.textContent.length).forEach((span,i)=>{span.dataset.textIndex=String(i);const item=semanticItems[i];if(item&&item.str===span.textContent&&item.readerLine!==undefined){span.dataset.readerLine=String(item.readerLine);span.dataset.readerScript=item.readerScript||'';span.dataset.readerPrefix=item.readerPrefix||'';}});applyTextMarks(textLayer);renderSavedHighlights(wrap,n);
       const fig=document.createElement('div');fig.className='figureLayer';wrap.appendChild(fig);
       try{const regions=await detectPdfVisualRegions(page,viewport,textLayer);if(!active())return;state.reader.figureRegions.set(n,regions);renderFigureHotspots(wrap,fig,regions,n);}catch{}
       if(!wrap.dataset.fallback){installFigureFallbackClick(wrap,n);wrap.dataset.fallback='1';}
@@ -331,11 +343,12 @@ async function renderPdfPages(token=state.reader.renderToken){
 }
 async function indexPdfText(token){
   const pdf=state.reader.pdf;if(!pdf)return;
-  const errors=[];
+  const errors=[];state.reader.unmappedPages=[];
   for(let n=1;n<=pdf.numPages;n++){
     if(token!==state.reader.renderToken)return;
-    try{const page=await pdf.getPage(n),tc=await page.getTextContent();if(token!==state.reader.renderToken)return;
-      state.reader.pageTexts[n-1]=tc.items.filter(x=>typeof x.str==='string').map(x=>x.str+(x.hasEOL?'\n':' ')).join('');
+    try{const page=await pdf.getPage(n),tc=await page.getTextContent({disableNormalization:true});if(token!==state.reader.renderToken)return;
+      state.reader.pageTexts[n-1]=PdfText.analyze(tc,page.getViewport? page.getViewport({scale:1}).width:600).text;
+      if(/[\uFFFD\uE000-\uF8FF]/.test(state.reader.pageTexts[n-1]))state.reader.unmappedPages.push(n);
     }catch(e){if(token!==state.reader.renderToken)return;state.reader.pageTexts[n-1]='';errors.push({page:n,message:String(e.message)});}
     if($('readerProgress'))$('readerProgress').textContent=`建立全文索引 ${n} / ${pdf.numPages} 頁`;
     await new Promise(resolve=>setTimeout(resolve,0));
@@ -662,7 +675,7 @@ function selectionPageFromEndpoint(sel,direction){
   return Number(nodeElement(node)?.closest?.('.pdf-page')?.dataset.page||state.reader.currentPage||1);
 }
 function sanitizeSelectionText(text=''){
-  return String(text).replace(/\u00ad/g,'').replace(/-\s*\n\s*/g,'').replace(/[\t\r\n ]+/g,' ').trim();
+  return PdfText.clean(text).replace(/[\t\r\n ]+/g,' ').trim();
 }
 function hideSelectionUi(clear=false){
   $('selectionToolbar').classList.add('hidden'); $('selectionToolbar').classList.remove('is-below','selection-moving');
@@ -704,7 +717,7 @@ function syncPdfSelection(){
   if(selectionPointerActive) return;
   const sel=window.getSelection();
   if(!selectionIsInsidePdf(sel)){ hideSelectionUi(false); return; }
-  const raw=sanitizeSelectionText(sel.toString()); if(!raw){ hideSelectionUi(false); return; }
+  const raw=sanitizeSelectionText(PdfText.selection(sel.getRangeAt(0))); if(!raw){ hideSelectionUi(false); return; }
   const range=sel.getRangeAt(0), direction=selectionDirection(sel,range), geometry=selectionGeometry(range,direction,lastSelectionPointer);
   if(!geometry){ hideSelectionUi(false); return; }
   state.reader.selectedText=raw.slice(0,12000); state.reader.selectionPage=selectionPageFromEndpoint(sel,direction);
@@ -914,7 +927,7 @@ $('stanceFilter').addEventListener('change',renderEvidence);$('evidenceSort').ad
 async function pdfTextFromFile(file){
   if(!window.pdfjsLib)throw new Error('PDF 引擎尚未載入');
   const b=await file.arrayBuffer(),task=pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:b});
-  try{const pdf=await task.promise;let t='';for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),tc=await p.getTextContent();t+=`\n[Page ${i}]\n`+tc.items.map(x=>x.str).join(' ');}return t;}
+  try{const pdf=await task.promise;let t='';for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),tc=await p.getTextContent({disableNormalization:true});t+=`\n[Page ${i}]\n`+PdfText.analyze(tc,p.getViewport({scale:1}).width).text;}return t;}
   finally{await task.destroy().catch(()=>{});}
 }
 function targetAnchors(target){const titleTokens=queryTokens(target.title).filter(x=>x.length>=5).slice(0,12), surname=(target.authors||'').split(',')[0].trim().split(/\s+/).pop()||'',year=String(target.year||'');return{titleTokens,surname,year};}

@@ -6,6 +6,7 @@ on:
     paths:
       - 'desktop/**'
       - 'app.js'
+      - 'pdf-text.js'
       - 'boot.js'
       - 'index.html'
       - 'styles.css'
@@ -35,6 +36,7 @@ jobs:
       - run: node tests/reader-lifecycle.cjs
       - run: node tests/partial-index.cjs
       - run: node tests/locales.cjs
+      - run: node tests/pdf-text.cjs && node tests/sources.cjs
       - run: npm test
       - run: npm test
         env:

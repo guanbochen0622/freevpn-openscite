@@ -10,8 +10,8 @@ const assert=require('node:assert/strict');
   await page.waitForSelector('#toggleReaderTools',{state:'attached'});
   await page.fill('#searchQuery','optical fiber sensor');await page.click('#searchBtn');
   await page.waitForFunction(()=>document.querySelector('#searchResults').getAttribute('aria-busy')==='false',null,{timeout:120000});
-  const result=await page.evaluate(()=>({provider:state.search.provider,count:state.search.works.length,title:state.search.works[0]?.title,doi:state.search.works[0]?.doi,status:document.getElementById('searchStatus').textContent,error:document.querySelector('#searchResults .empty-card')?.textContent}));
-  console.log('LIVE SEARCH',JSON.stringify({result,services}));assert.ok(result.count>0,'Live search returned no papers: '+JSON.stringify(result));assert.ok(result.title);assert.deepEqual(errors,[]);
+  const result=await page.evaluate(()=>({estimated:state.search.works.filter(w=>/^Q[1-4]$/.test(w.q)).length,provider:state.search.provider,count:state.search.works.length,title:state.search.works[0]?.title,doi:state.search.works[0]?.doi,status:document.getElementById('searchStatus').textContent,error:document.querySelector('#searchResults .empty-card')?.textContent}));
+  console.log('LIVE SEARCH',JSON.stringify({result,services}));assert.ok(result.count>0,'Live search returned no papers: '+JSON.stringify(result));assert.ok(result.title);assert.ok(result.estimated>0,'No journal quartiles were estimated');assert.deepEqual(errors,[]);
   await page.screenshot({path:'/tmp/openscite-live-search.png',fullPage:true});
   console.log('PASS: deployed site, real bibliographic service, nonempty paper results, no uncaught page errors.');
  }finally{await browser.close();}

@@ -108,5 +108,17 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await page.selectOption('#languageSelect','en');await page.reload();await page.waitForSelector('#themeToggle');
  assert.equal(await page.locator('#languageSelect').inputValue(),'en');
  assert.equal(await page.locator('.nav-tab[data-view="search"]').textContent(),'Academic search');
+ await page.selectOption('#languageSelect','zh-Hant');await page.click('.nav-tab[data-view="reader"]');
+ await page.setInputFiles('#readerFile',path.join(__dirname,'fixtures/scientific.pdf'));
+ await page.waitForFunction(()=>state.reader.indexReady&&state.reader.pages===2&&state.reader.fullText.includes('Scientific notation'));
+ const scientificText=await page.evaluate(()=>state.reader.fullText);
+ assert.ok(scientificText.indexOf('LEFT column sentence 6')<scientificText.indexOf('RIGHT column sentence 1'),scientificText);
+ for(const value of ['10⁻¹⁴','H₂O','Δλ','α','β','μ','µ','Ω','±','×','≤','≥','∞','−14','10–20'])assert.ok(scientificText.includes(value),'Missing '+value+': '+scientificText);
+ for(const scale of [.8,1.25,1.8]){
+  await page.evaluate(async scale=>{state.reader.scale=scale;await renderPdfPages();goPdfPage(2);await state.reader.paintPage(2);},scale);
+  const selected=await page.evaluate(()=>{const layer=document.querySelector('.textLayer[data-page="2"]'),spans=[...layer.querySelectorAll('span[data-reader-line]')];const first=spans.find(s=>s.textContent.startsWith('Concentration:')),last=spans.find(s=>s.dataset.readerScript==='super');const range=document.createRange();range.setStart(first.firstChild,0);range.setEnd(last.firstChild,last.textContent.length);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);syncPdfSelection();return state.reader.selectedText;});
+  assert.equal(selected,'Concentration: 10⁻¹⁴');
+ }
+ await page.screenshot({path:'/tmp/openscite-scientific.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('PASS: failure paths, request races, mocked AI page links, backup roundtrip, library reopen,  search, comparison, library filters, PDF text, bounded canvases, find, navigation, bookmarks, zoom, stable annotations, citation binding, backup validation, mobile layout.');await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});

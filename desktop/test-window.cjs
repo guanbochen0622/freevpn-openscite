@@ -96,6 +96,15 @@ app.on('browser-window-created',(_e,win)=>{
  assert.equal(await win.webContents.executeJavaScript(`document.getElementById('summaryOutput').textContent`),'');
  await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(bytes)}).buffer,{},'geometry-fixture.pdf')`);
  assert.equal(await win.webContents.executeJavaScript(`chatTurns.length`),2);
+ const scientificBytes=[...fs.readFileSync(path.join(__dirname,'../tests/fixtures/scientific.pdf'))];
+ await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(scientificBytes)}).buffer,{},'scientific.pdf')`);
+ const scientific=await win.webContents.executeJavaScript(`state.reader.fullText`);
+ assert.ok(scientific.indexOf('LEFT column sentence 6')<scientific.indexOf('RIGHT column sentence 1'),scientific);
+ for(const text of ['10⁻¹⁴','H₂O','Δλ','α','β','μ','µ','Ω','±','×','≤','≥','∞'])assert.ok(scientific.includes(text),text+' missing: '+scientific);
+ for(const scale of [.75,1.25,2]){
+ const selected=await win.webContents.executeJavaScript(`(async()=>{state.reader.scale=${scale};await renderPdfPages();goPdfPage(2);await state.reader.paintPage(2);const spans=[...document.querySelectorAll('.textLayer[data-page="2"] span[data-reader-line]')],first=spans.find(s=>s.textContent.startsWith('Concentration:')),last=spans.find(s=>s.dataset.readerScript==='super');const range=document.createRange();range.setStart(first.firstChild,0);range.setEnd(last.firstChild,last.textContent.length);getSelection().removeAllRanges();getSelection().addRange(range);syncPdfSelection();return state.reader.selectedText;})()`);
+ assert.equal(selected,'Concentration: 10⁻¹⁴');
+ }
  console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors five-language AI routing and two-stage figure requests without retry on failure');
  clearTimeout(timer);app.quit();
  }catch(e){console.error(e);clearTimeout(timer);app.exit(1);}
