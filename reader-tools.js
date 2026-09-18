@@ -39,7 +39,7 @@ renderReaderHistory();
 
 // Preserve the selected original alongside its translation without rewriting it.
 const readingSetAssistant=setAssistant;
-let currentReaderAnswer=null;
+let currentReaderAnswer=null,pendingReaderSource=null;
 function answerMarkup(text){
   // Escape everything first. Only a small, non-executable formatting subset is supported.
   const inline=s=>esc(s).replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>').replace(/\[Page (\d+)\]/g,(m,n)=>Number(n)>=1&&Number(n)<=state.reader.pages?`<button class="page-citation" data-page-link="${Number(n)}">${esc(readerText(`第 ${Number(n)} 頁`))} ↗</button>`:m);
@@ -50,6 +50,7 @@ setAssistant=function(title,body){
   readingSetAssistant(title,body);
   const pending=body==='處理中…'||/^Stage [12]\/2/.test(body);
   const failed=/未完成|失敗/.test(title)||/^圖片分析失敗/.test(body);
+  if(pending)pendingReaderSource={key:readerKey(),page:state.reader.selectionPage||state.reader.currentPage,quote:state.reader.selectedText||''};
   currentReaderAnswer=null;
   if(!pending){
     $('assistantOutput').lastElementChild.innerHTML=answerMarkup(body);
@@ -57,9 +58,11 @@ setAssistant=function(title,body){
   }
   if(!pending&&!failed&&state.reader.pdf){
     const figure=/圖片|Image Explanation/.test(title)?state.reader.activeFigure:null;
-    currentReaderAnswer={title,body:String(body),key:readerKey(),page:figure?.pageNo||state.reader.selectionPage||state.reader.currentPage,quote:figure?.caption||state.reader.selectedText||''};
+    const source=pendingReaderSource?.key===readerKey()?pendingReaderSource:{page:state.reader.selectionPage||state.reader.currentPage,quote:state.reader.selectedText||''};
+    currentReaderAnswer={title,body:String(body),key:readerKey(),page:figure?.pageNo||source.page,quote:figure?.caption||source.quote};
     $('assistantOutput').insertAdjacentHTML('beforeend',`<div class="answer-actions"><button id="copyReaderAnswer" class="btn small">${esc(readerText('複製回答'))}</button><button id="saveReaderAnswer" class="btn small">${esc(readerText('存成筆記'))}</button></div>`);
   }
+  if(!pending)pendingReaderSource=null;
   $('assistantOutput').setAttribute('aria-busy',String(pending));
   if(!pending)$('assistantOutput').scrollIntoView({block:'nearest',behavior:'instant'});
 };
@@ -105,7 +108,7 @@ $('assistantOutput').addEventListener('click',async e=>{
     if(!saveJSON(STORE.notes,all))return;state.reader.notes=all.filter(n=>n.paperKey===answer.key);renderNotes();save.disabled=true;save.textContent=readerText('已儲存');toast('筆記已儲存');
   }
 });
-document.addEventListener('research:document',()=>{currentReaderAnswer=null;hideSelectionUi(true);$('conversationHistory').open=false;});
+document.addEventListener('research:document',()=>{currentReaderAnswer=null;pendingReaderSource=null;hideSelectionUi(true);$('conversationHistory').open=false;});
 
 // A reading trail makes evidence detours reversible without moving browser history.
 insertTools('.reader-commandbar','<button id="readerBack" class="btn small" disabled>返回閱讀位置</button>');
