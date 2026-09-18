@@ -64,7 +64,11 @@ setAssistant=function(title,body){
   }
   if(!pending)pendingReaderSource=null;
   $('assistantOutput').setAttribute('aria-busy',String(pending));
-  if(!pending)$('assistantOutput').scrollIntoView({block:'nearest',behavior:'instant'});
+  if(!pending){
+    const panel=document.querySelector('.reader-right'),output=$('assistantOutput');
+    if(innerWidth>=1200)panel.scrollTop+=output.getBoundingClientRect().top-panel.getBoundingClientRect().top-16;
+    else output.scrollIntoView({block:'nearest',behavior:'instant'});
+  }
 };
 function setTranslationResult(original,answer){setAssistant('Translation（翻譯）',answer);const block=document.createElement('blockquote');block.className='translation-original';block.dataset.i18nSkip='';block.textContent=original;$('assistantOutput').prepend(block);}
 
@@ -120,3 +124,5 @@ document.addEventListener('research:document',()=>{readingTrail=[];$('readerBack
 
 insertTools('.ask-row','<div class="reader-prompts"><button class="btn small" data-reader-prompt="這篇論文的主要貢獻是什麼？">主要貢獻</button><button class="btn small" data-reader-prompt="這篇論文有哪些限制與未驗證的假設？">限制與假設</button><button class="btn small" data-reader-prompt="請用白話解釋目前選取的內容，並說明它與論文的關係。">白話解釋</button></div>');
 document.querySelector('.reader-prompts').addEventListener('click',e=>{const b=e.target.closest('[data-reader-prompt]');if(!b||state.aiBusy)return;$('askInput').value=readerText(b.dataset.readerPrompt);$('askInput').focus();});
+
+document.addEventListener('research:language',()=>{if($('copyReaderAnswer'))$('copyReaderAnswer').textContent=readerText('複製回答');if($('saveReaderAnswer'))$('saveReaderAnswer').textContent=readerText($('saveReaderAnswer').disabled?'已儲存':'存成筆記');});

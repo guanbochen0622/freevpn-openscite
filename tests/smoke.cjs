@@ -52,8 +52,10 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  assert.equal(await page.locator('#selectionBox').isVisible(),false);
  assert.equal(await page.evaluate(()=>answerMarkup('<img src=x onerror=alert(1)> [Page 0] [Page 999] **verified**').includes('<img')),false);
  assert.equal(await page.evaluate(()=>answerMarkup('[Page 0] [Page 999]').includes('data-page-link')),false);
+ const readingWindowY=await page.evaluate(()=>window.scrollY);
  // Source metadata must belong to the request, even when selection changes while waiting.
  await page.evaluate(()=>{state.reader.selectedText='Original measurement';state.reader.selectionPage=12;setAssistant('Paper Q&A','處理中…');state.reader.selectedText='A different passage';state.reader.selectionPage=3;setAssistant('Paper Q&A','Source stays on [Page 12].');});
+ assert.equal(await page.evaluate(()=>window.scrollY),readingWindowY);
  assert.equal(await page.evaluate(()=>currentReaderAnswer.page),12);
  assert.equal(await page.evaluate(()=>currentReaderAnswer.quote),'Original measurement');
  await page.evaluate(()=>hideSelectionUi(true));
