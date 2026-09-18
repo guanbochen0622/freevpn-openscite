@@ -98,6 +98,8 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  for(const [locale,label] of [['en','Academic search'],['zh-Hant','學術搜尋'],['zh-Hans','学术搜索'],['ja','論文検索'],['ko','논문 검색']]){
    await page.selectOption('#languageSelect',locale);
    await page.waitForFunction(([locale,label])=>document.documentElement.lang===locale&&document.querySelector('.nav-tab[data-view="search"]').textContent===label,[locale,label]);
+   assert.equal(await page.locator('#readerBack').textContent(),({'en':'Back to reading position','zh-Hant':'返回閱讀位置','zh-Hans':'返回阅读位置','ja':'元のページに戻る','ko':'읽던 위치로 돌아가기'})[locale]);
+   assert.equal(await page.locator('[data-reader-prompt]').first().textContent(),({'en':'Key contribution','zh-Hant':'主要貢獻','zh-Hans':'主要贡献','ja':'主な貢献','ko':'주요 기여'})[locale]);
    assert.equal(await page.locator('#languagePaper').textContent(),'搜尋論文');
    assert.equal(await page.locator('#assistantOutput').textContent(),'搜尋論文');
    assert.equal(await page.locator('#askInput').inputValue(),'Keep my question 980 nm');

@@ -2,7 +2,9 @@
 const languages = {'en':'English','zh-Hant':'繁體中文','zh-Hans':'简体中文','ja':'日本語','ko':'한국어'};
 const languageNames = {'en':'English','zh-Hant':'Traditional Chinese','zh-Hans':'Simplified Chinese','ja':'Japanese','ko':'Korean'};
 const catalog = new Map();
-const response = await fetch(new URL('locales/ui.tsv', document.baseURI));
+const catalogUrl = new URL('locales/ui.tsv', document.baseURI);
+catalogUrl.search = new URL(import.meta.url).search;
+const response = await fetch(catalogUrl);
 if (!response.ok) throw new Error('Language catalog could not load');
 for (const line of (await response.text()).split('\n')) {
   if (!line.trim()) continue;
