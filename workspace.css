@@ -29,3 +29,19 @@ body[data-view="reader"] .workspace-hero{display:none}
 
 body.reader-focus .reader-grid{grid-template-columns:minmax(0,1fr)}
 .figure-explain-meta{flex-wrap:wrap}#figureDetail{width:auto;max-width:110px;min-height:32px;padding:4px 6px;font-size:12px}
+
+
+/* Keep the latest answer readable while preserving history on demand. */
+#conversationHistory{margin:12px 0;border-top:1px solid var(--line);padding-top:12px;color:var(--muted)}
+#conversationHistory>summary{cursor:pointer;font-size:12px;padding:6px 0}
+#assistantOutput{scroll-margin:16px;line-height:1.8;overflow-wrap:anywhere}
+#assistantOutput p{margin:0 0 14px}#assistantOutput p:last-child{margin-bottom:0}
+.answer-actions{display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--line);margin-top:16px}
+.clear-selection{float:right}.selection-box blockquote{max-height:120px;overflow:auto}
+.reader-prompts{display:flex;flex-wrap:wrap;gap:6px;grid-column:1/-1;order:-1}
+.reader-prompts .btn{font-size:11px;padding:5px 8px}
+.ask-row{display:flex;flex-direction:column;gap:8px}
+#figureExplainBox .figure-preview-wrap{max-height:180px;overflow:auto}
+#figureExplainBox .figure-preview-wrap img{max-height:170px;object-fit:contain}
+@media(min-width:1200px){.reader-side-body{scroll-padding:16px}.reader-commandbar{gap:6px}}
+@media(max-width:560px){.answer-actions .btn{min-height:40px}.reader-prompts .btn{min-height:36px}}

@@ -288,3 +288,16 @@ AI 未傳回可讀取的回答，請重試。|AI returned no readable answer. Pl
 圖片解釋|Figure explanation|图片解释|図の説明|그림 설명
 圖片解釋完成|Figure explanation complete|图片解释完成|図の説明が完了|그림 설명 완료
 圖片解釋格式不完整，請重新解釋。|The figure response is incomplete. Please try again.|图片解释格式不完整，请重试。|図の回答形式が不完全です。再試行してください。|그림 응답 형식이 불완전합니다. 다시 시도하세요.
+複製回答|Copy answer|复制回答|回答をコピー|답변 복사
+存成筆記|Save as note|存为笔记|ノートに保存|노트로 저장
+回答已複製|Answer copied|回答已复制|回答をコピーしました|답변을 복사했습니다
+無法複製，請選取回答文字|Unable to copy; select the answer text instead|无法复制，请选取回答文字|コピーできません。回答のテキストを選択してください|복사할 수 없습니다. 답변 텍스트를 선택하세요
+已儲存|Saved|已保存|保存済み|저장됨
+清除選取|Clear selection|清除选择|選択を解除|선택 해제
+返回閱讀位置|Back to reading position|返回阅读位置|元のページに戻る|읽던 위치로 돌아가기
+主要貢獻|Key contribution|主要贡献|主な貢献|주요 기여
+限制與假設|Limits and assumptions|限制与假设|限界と仮定|한계와 가정
+白話解釋|Explain simply|通俗解释|わかりやすく説明|쉽게 설명
+這篇論文的主要貢獻是什麼？|What is the main contribution of this paper?|这篇论文的主要贡献是什么？|この論文の主な貢献は何ですか？|이 논문의 주요 기여는 무엇인가요?
+這篇論文有哪些限制與未驗證的假設？|What are the limitations and unverified assumptions of this paper?|这篇论文有哪些限制与未验证的假设？|この論文の限界と未検証の仮定は何ですか？|이 논문의 한계와 검증되지 않은 가정은 무엇인가요?
+請用白話解釋目前選取的內容，並說明它與論文的關係。|Explain the selected passage simply and how it relates to the paper.|请用通俗语言解释当前选择的内容，并说明它与论文的关系。|選択した内容をわかりやすく説明し、論文との関係を示してください。|선택한 내용을 쉽게 설명하고 논문과의 관계를 알려주세요.

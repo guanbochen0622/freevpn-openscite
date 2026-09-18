@@ -37,13 +37,28 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  // An AI response is mocked; no real credentials or paid requests are used.
  await page.route('https://api.openai.com/v1/responses',async route=>{const payload=JSON.parse(route.request().postData());assert.equal(payload.store,false);assert.match(JSON.stringify(payload),/Page 12/);await route.fulfill({json:{output:[{content:[{type:'output_text',text:'The wavelength is 980 nm [Page 12].'}]}]}});});
  await page.evaluate(()=>sessionStorage.setItem(STORE.aiKey,'test-key-not-a-real-credential'));await page.fill('#askInput','What is the wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy);assert.match(await page.locator('#assistantOutput').textContent(),/980 nm/);await page.waitForSelector('.page-citation');await page.locator('.page-citation').click();assert.equal(await page.evaluate(()=>state.reader.currentPage),12);
+
+ // Reading detours return exactly to the original page; invalid references remain plain text.
+ await page.evaluate(()=>goPdfPage(4));await page.locator('.page-citation').click();
+ assert.equal(await page.evaluate(()=>state.reader.currentPage),12);
+ await page.click('#readerBack');assert.equal(await page.evaluate(()=>state.reader.currentPage),4);
+ await page.evaluate(()=>goPdfPage(12));
+ await page.click('#saveReaderAnswer');assert.equal(await page.locator('#saveReaderAnswer').isDisabled(),true);
+ assert.ok(await page.evaluate(()=>state.reader.notes.some(n=>n.note.includes('980 nm')&&n.page===12)));
+ assert.equal(await page.locator('#conversationHistory').getAttribute('open'),null);
+ await page.locator('[data-reader-prompt]').first().click();assert.match(await page.inputValue('#askInput'),/主要貢獻/);
+ await page.evaluate(()=>{state.reader.selectedText='stale selection';state.reader.selectionPage=12;$('selectionBox').classList.remove('hidden');});
+ await page.click('#clearReaderSelection');assert.equal(await page.evaluate(()=>state.reader.selectedText),'');
+ assert.equal(await page.locator('#selectionBox').isVisible(),false);
+ assert.equal(await page.evaluate(()=>answerMarkup('<img src=x onerror=alert(1)> [Page 0] [Page 999] **verified**').includes('<img')),false);
+ assert.equal(await page.evaluate(()=>answerMarkup('[Page 0] [Page 999]').includes('data-page-link')),false);
  // Preview does not move the document; follow-up includes prior conversation.
  await page.locator('[data-preview-page]').click();await page.waitForSelector('#pagePreviewBody canvas');
- assert.equal(await page.evaluate(()=>state.reader.currentPage),12);await page.click('#closePagePreview');
+ assert.equal(await page.evaluate(()=>state.reader.currentPage),12);await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>state.reader.currentPage),12);await page.click('#closePagePreview');
  let followupBody;await page.route('https://api.openai.com/v1/responses',async route=>{followupBody=JSON.parse(route.request().postData());await route.fulfill({json:{output_text:'Follow-up verified [Page 12].'}});});
  await page.fill('#askInput','Why that wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&chatTurns.length===2);
  assert.match(JSON.stringify(followupBody),/What is the wavelength/);assert.match(JSON.stringify(followupBody),/980 nm/);
- assert.equal(await page.locator('.chat-turn').count(),2);
+ assert.equal(await page.locator('.chat-turn').count(),2);assert.equal(await page.locator('#conversationHistory').getAttribute('open'),null);
  await page.click('#toggleReaderTools');assert.equal(await page.locator('.reader-left').isVisible(),false);await page.click('#toggleReaderTools');
  // Figure analysis renders reader prose, never its internal JSON.
  const figureRequests=[];const figureRoute=async route=>{const body=JSON.parse(route.request().postData());figureRequests.push(body);await route.fulfill({json:{output_text:JSON.stringify(body.text.format.name==='scientific_figure_extraction'?{panels:[],unreadable_or_ambiguous:['Synthetic figure']}:{meaning:'A control measurement.',context:'The nearby text describes the sensor [Page 12].',evidence:'The measured wavelength is 980 nm.',caveat:'Synthetic test only.'})}});};
