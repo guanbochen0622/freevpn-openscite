@@ -6,7 +6,7 @@ const catalogUrl = new URL('locales/ui.tsv', document.baseURI);
 catalogUrl.search = new URL(import.meta.url).search;
 const response = await fetch(catalogUrl);
 if (!response.ok) throw new Error('Language catalog could not load');
-for (const line of (await response.text()).split('\n')) {
+for (const line of (await response.text()).replace(/^\uFEFF/,'').split(/\r?\n/)) {
   if (!line.trim()) continue;
   const [source,en,hans,ja,ko] = line.split('|');
   if ([source,en,hans,ja,ko].some(value => !value)) throw new Error('Invalid language catalog entry');

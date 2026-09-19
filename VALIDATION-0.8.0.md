@@ -6,7 +6,7 @@ Provider-neutral text/image/schema adapters for OpenAI Responses, Gemini generat
 
 Single-provider mode is the default. Mixed mode asks 2–3 distinct services, then asks the primary service to synthesize with the original paper evidence and schema still present. Drafts are explicitly untrusted; disagreements must remain visible when unresolved. With fewer than two successful reviews, synthesis fails explicitly. Cancel stops subsequent reviews and synthesis. No automatic retry, silent provider substitution or automatic paid request occurs. Each operation shows provider/model execution records; new saved Q&A includes that provenance. Original quote matching still validates final grounded claims; model agreement is not evidence.
 
-A unified model dialog, collapsible connection cards, clearer reading steps/tabs, larger answer text and grouped secondary reader tools reduce visual clutter. Five-language interface catalog retained and expanded.
+A unified model dialog, collapsible connection cards, clearer reading steps/tabs, larger answer text and grouped secondary reader tools reduce visual clutter. Five-language interface catalog retained and expanded. Windows-native testing caught CRLF leaking into Korean labels; the catalog parser now normalizes CRLF and UTF-8 BOM input, with an explicit regression test.
 
 Desktop API credentials live in the main process, using session memory by default and optional OS-encrypted persistence. They never return to the renderer after saving. The app refuses to persist without secure encryption. Gemini/Claude browser credentials are session-only. Workspace exports exclude credentials.
 

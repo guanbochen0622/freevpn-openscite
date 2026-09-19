@@ -1,6 +1,6 @@
-try{await import('./i18n.js?v=25.8.0');}catch(e){console.error('Language setup failed',e);}
+try{await import('./i18n.js?v=25.8.1');}catch(e){console.error('Language setup failed',e);}
 // Keep search and the library usable even if the PDF engine cannot initialize.
-const ASSET_VERSION = '25.8.0';
+const ASSET_VERSION = '25.8.1';
 try {
   const inflate = async (url) => {
     const response = await fetch(url);
