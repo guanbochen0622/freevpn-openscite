@@ -252,12 +252,12 @@ async function loadPdfBuffer(buffer,meta,fileName='',url=''){
   if(!window.pdfjsLib){ toast('PDF.js 載入失敗'); return; }
   const request=state.reader.loadRequest=(state.reader.loadRequest||0)+1;
   const task=pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:buffer.slice(0)});
-  let pdf;
-  try{pdf=await task.promise;}catch(e){
+  let pdf,loadTimer;
+  try{pdf=await Promise.race([task.promise,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error('PDF 解析逾時，請檢查檔案或重試')),45000);})]);}catch(e){
     await task.destroy().catch(()=>{});
     if(request===state.reader.loadRequest)toast(`PDF 無法開啟：${e.message}。原文件已保留。`,6000);
     return;
-  }
+  }finally{clearTimeout(loadTimer);}
   if(request!==state.reader.loadRequest){await task.destroy().catch(()=>{});return;}
   state.reader.indexReady=false;if($('readerProgress'))$('readerProgress').textContent='正在載入文件與建立全文索引…';
   window.DocumentUnderstanding?.reset();const token=++state.reader.renderToken; state.reader.paintEpoch=(state.reader.paintEpoch||0)+1;state.reader.observer?.disconnect();const previous=state.reader.pdf;state.reader.pdf=pdf;previous?.destroy().catch(e=>console.warn('Previous PDF cleanup',e)); state.reader.buffer=buffer.slice(0); state.reader.meta=meta||{}; state.reader.fileName=fileName; state.reader.url=url; state.reader.fullText=''; state.reader.pageTexts=[]; state.reader.selectedText=''; state.reader.currentPage=1; state.reader.figureRegions=new Map(); state.reader.activeFigure=null; $('figureExplainBox')?.classList.add('hidden');
@@ -337,7 +337,7 @@ async function renderPdfPages(token=state.reader.renderToken){
     container.appendChild(wrap);entries.push({page,viewport,wrap,n,busy:false});
   }
   if(!active())return;
-  state.reader.paintPage=n=>{const e=entries.find(x=>x.n===n);if(e)queue=queue.then(()=>paint(e));return queue;};
+  const pendingPages=new Map();state.reader.paintPage=n=>{const e=entries.find(x=>x.n===n);if(!e||e.wrap.dataset.ready)return Promise.resolve();if(pendingPages.has(n))return pendingPages.get(n);const task=queue.catch(()=>{}).then(()=>paint(e)).finally(()=>pendingPages.delete(n));pendingPages.set(n,task);queue=task;return task;};
   state.reader.observer=new IntersectionObserver(items=>{for(const i of items)if(i.isIntersecting)state.reader.paintPage(Number(i.target.dataset.page));},{root:$('pdfViewport'),rootMargin:'700px 0px'});
   entries.forEach(e=>state.reader.observer.observe(e.wrap));restorePdfScrollAnchor(anchor);
   await state.reader.paintPage(anchor.page||1);
@@ -883,7 +883,9 @@ $('askBtn').addEventListener('click',()=>askPaperQuestion());
 // ---------------- Library ----------------
 function openDb(){ return new Promise((resolve,reject)=>{const req=indexedDB.open('openscite-pdfs',1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains('pdfs'))req.result.createObjectStore('pdfs')};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)}); }
 async function idbPut(key,buf){const db=await openDb();try{await new Promise((resolve,reject)=>{const tx=db.transaction('pdfs','readwrite');tx.objectStore('pdfs').put(buf,key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});}finally{db.close();}}
-async function idbGet(key){try{const db=await openDb();return await new Promise((resolve,reject)=>{const tx=db.transaction('pdfs','readonly');const r=tx.objectStore('pdfs').get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});}catch{return null;} }
+async function idbGet(key){return (await idbGetMany([key]))[0];}
+async function idbGetMany(keys){let db;try{db=await openDb();return await new Promise((resolve,reject)=>{const tx=db.transaction('pdfs','readonly'),values=Array(keys.length);keys.forEach((key,i)=>{const request=tx.objectStore('pdfs').get(key);request.onsuccess=()=>{values[i]=request.result;};});tx.oncomplete=()=>resolve(values);tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});}catch{return Array(keys.length).fill(null);}finally{db?.close();}}
+
 async function addToLibrary(w=state.reader.meta){
   if(!w){toast('目前沒有論文可加入');return;}const key=w.doi||w.id||w.title;if(!key)return;
   const old=loadJSON(STORE.library,[]).find(x=>x.key===key);

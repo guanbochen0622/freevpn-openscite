@@ -53,3 +53,35 @@ body.reader-focus .reader-grid{grid-template-columns:minmax(0,1fr)}
 .structure-card{padding:12px;margin:12px 0;border:1px solid var(--line);border-radius:10px}.formula-display,.table-scroll{overflow:auto;max-width:100%}.formula-display{padding:8px}.table-scroll table{border-collapse:collapse;width:100%}.table-scroll th,.table-scroll td{padding:8px;border:1px solid var(--line);text-align:left;white-space:pre-wrap}.structure-warning{color:var(--muted);font-size:12px}
 .answer-evidence{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.evidence-claim{margin:10px 0}.evidence-claim .btn{margin:3px}.evidence-quote{white-space:pre-wrap;border-left:3px solid var(--accent);padding:12px;margin:8px 0;max-height:180px;overflow:auto}
 .ocr-text-layer{z-index:4;pointer-events:auto}.ocr-text-layer span{position:absolute;white-space:pre;color:transparent;cursor:text;user-select:text}.ocr-text-layer span::selection{background:rgba(80,130,255,.4)}
+
+/* Third reader revision: shared mobile assistant, viewport-sized reading and evidence map. */
+.mobile-reader-control{display:none}
+#mobileAssistant{position:fixed;inset:auto 0 0;margin:0;width:100%;max-width:none;max-height:85dvh;height:min(760px,calc(var(--reading-height,100dvh)*.85));padding:0;border:1px solid var(--line);border-radius:18px 18px 0 0;background:var(--panel);color:var(--text);overflow:hidden}
+#mobileAssistant::backdrop,#knowledgeMapDialog::backdrop{background:#0008}
+.sheet-heading{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line);gap:12px}
+#mobileAssistantBody{height:calc(100% - 59px);overflow:auto;overscroll-behavior:contain;padding-bottom:env(safe-area-inset-bottom)}
+#mobileAssistant .reader-right{display:block!important;border:0;border-radius:0;max-height:none;width:100%;min-width:0;position:static}
+#mobileAssistant .reader-side-body{max-height:none;overflow:visible}#mobileAssistant .ask-row{position:sticky;bottom:0;background:var(--panel);padding-top:8px}
+#knowledgeMapDialog{width:min(900px,calc(100vw - 24px));max-height:85dvh;overflow:auto;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:16px;padding:20px}
+.knowledge-root{font-weight:700;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow-wrap:anywhere}
+.knowledge-overview{display:block;width:100%;max-height:600px}.knowledge-overview rect{fill:var(--panel);stroke:var(--accent);stroke-width:1.5}.knowledge-overview path{stroke:var(--line);fill:none;stroke-width:2}.knowledge-overview text{fill:var(--text);font-size:15px}.knowledge-overview g{cursor:pointer}.knowledge-overview g:focus rect{stroke-width:4}
+.knowledge-page{border-left:2px solid var(--accent);padding-left:12px;margin:20px 0}.knowledge-card{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px 0;overflow-wrap:anywhere}.knowledge-card small{color:var(--muted)}.knowledge-card blockquote{margin:8px 0;border-left:2px solid var(--line);padding:8px;white-space:pre-wrap}
+@media(max-width:900px){
+ .mobile-reader-control{display:inline-flex}
+ body.mobile-reading{overflow:hidden}
+ .mobile-reading>.topbar,.mobile-reading main>.workspace-hero,.mobile-reading footer,.mobile-reading #view-reader>.section-head{display:none!important}
+ .mobile-reading .app-shell{padding:0!important;margin:0!important;width:100%!important;max-width:none}
+ .mobile-reading #view-reader{position:fixed;inset:0;height:var(--reading-height,100dvh);z-index:90;background:var(--panel)}
+ .mobile-reading .reader-grid{display:block;height:100%;margin:0}
+ .mobile-reading .reader-left,.mobile-reading .reader-grid>.reader-right{display:none!important}
+ .mobile-reading .pdf-panel{display:flex;flex-direction:column;height:100%;border:0;border-radius:0;min-height:0}
+ .mobile-reading .reader-commandbar{flex:none;padding:8px;gap:6px;max-height:25%;overflow:auto}
+ .mobile-reading #readerProgress{flex:none;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .mobile-reading .pdf-viewport{flex:1;min-height:0;height:auto!important;max-height:none;padding-bottom:env(safe-area-inset-bottom);overscroll-behavior:contain}
+ .mobile-reading .document-tools{flex:none;max-height:45%;overflow:auto}
+ .mobile-reading .selection-toolbar{z-index:100}
+ #knowledgeMapDialog{padding:12px}
+}
+
+.mobile-page-nav{align-items:center;gap:4px}.mobile-page-nav .tiny{width:48px;min-height:32px;padding:5px}
+@media(max-width:900px){#focusReader{display:none}}

@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict'),R=require('../reader-core.js'),D=require('../document-core.js');
+const pages=['Measured concentration 10⁻¹⁴ g/mL.','低濃度引起明顯紅移，溫度保持固定。'];
+const record=R.snapshot('doc-a',[{text:'At low concentration.',kind:'author_claim',sources:[{page:1,quote:'concentration 10⁻¹⁴ g/mL.'}]}]);
+assert.equal(R.restore(record,'doc-b',pages),null);
+assert.equal(R.restore(record,'doc-a',pages)[0].sources.length,1);
+assert.equal(R.restore(record,'doc-a',['Measured concentration 10−14 g/mL.'])[0].sources.length,0);
+assert.equal(R.restore({...record,claims:[{...record.claims[0],sources:[{page:900,quote:'made up quote'}]}]},'doc-a',pages)[0].rejected,1);
+const map=R.knowledgeMap({key:'doc-a',pages,turns:[{answer:'old unverified [Page 1]'},{evidence:record}],notes:[{paperKey:'doc-b',page:1,note:'wrong document'},{paperKey:'doc-a',page:2,note:'temperature control'}],highlights:[]});
+assert.equal(map.groups.length,2);assert.equal(map.groups[0].items[0].verified,true);assert.equal(map.groups[1].items[0].verified,false);assert.equal(map.unlinked.length,1);
+assert.equal(R.knowledgeMap({key:'doc-a',pages,turns:Array(100).fill({answer:'legacy'}),limit:4}).count,4);
+const retrieved=D.segments([...Array(25).fill('An unrelated control measurement.'),pages[1]],'低濃度紅移',1);assert.equal(retrieved[0].page,26);
+const longPage=Array.from({length:30},(_,i)=>'Background '+i+' '+'.'.repeat(670)).join('\n')+'\nSelected measurement is 980 nm.';
+const snippets=D.segments([longPage,...Array(25).fill('optical sensor measurement')],'optical sensor measurement',1,'Selected measurement is 980 nm.');
+assert.ok(snippets.some(s=>s.text.includes('Selected measurement is 980 nm.')));assert.ok(snippets.every(s=>s.text.length<=700));assert.ok(snippets.length<=16);
+assert.throws(()=>D.validateStructure({formulas:[],tables:[{title:'X',headers:['A'.repeat(1001)],rows:[],uncertainty:''}],notes:''}));
+console.log('PASS persistent evidence revalidation, exponent integrity, document isolation, bounded knowledge map, Chinese retrieval and selected tail anchoring');

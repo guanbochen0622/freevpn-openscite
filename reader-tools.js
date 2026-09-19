@@ -24,14 +24,14 @@ async function askPaperQuestion(){
     setAssistant('Paper Q&A','處理中…');
     const answer=await DocumentUnderstanding.groundedAnswer(question,selected,previous);
     if(readerKey()!==key)return;
-    chatTurns.push({question,answer});chatTurns=chatTurns.slice(-20);
+    chatTurns.push({question,answer,evidence:DocumentUnderstanding.evidenceSnapshot()});chatTurns=chatTurns.slice(-20);
     const all=loadJSON(CHAT_STORE,{});all[key]=chatTurns;saveJSON(CHAT_STORE,all);
     renderReaderHistory();setAssistant('Paper Q&A',answer);DocumentUnderstanding.appendEvidence();$('askInput').value='';
   }catch(e){if(readerKey()===key)setAssistant('問答未完成',aiErrorMessage(e));}
 }
 $('assistantOutput').insertAdjacentHTML('afterend','<details id="conversationHistory"><summary>本篇對話</summary><div class="chat-history-head"><button id="clearReaderChat" class="btn small">清除對話</button></div><div id="readerHistory"></div></details>');
 $('clearReaderChat').onclick=()=>{if(state.aiBusy)return;if(!confirm(readerText('清除這篇論文的對話？')))return;const all=loadJSON(CHAT_STORE,{});delete all[readerKey()];saveJSON(CHAT_STORE,all);chatTurns=[];renderReaderHistory();$('assistantOutput').innerHTML='';};
-$('readerHistory').onclick=e=>{const b=e.target.closest('[data-chat-restore]');if(b){const turn=chatTurns[Number(b.dataset.chatRestore)];if(turn)setAssistant('Paper Q&A',turn.answer);}};
+$('readerHistory').onclick=async e=>{const b=e.target.closest('[data-chat-restore]');if(b){const turn=chatTurns[Number(b.dataset.chatRestore)];if(turn){const token=state.reader.renderToken;await DocumentUnderstanding.ready();if(token!==state.reader.renderToken)return;const claims=ReaderCore.restore(turn.evidence,readerKey(),state.reader.pageTexts);const answer=claims?ReaderCore.answerText(claims):turn.answer;setAssistant('Paper Q&A',answer,{verifiedPages:claims?[...new Set(claims.flatMap(c=>c.sources.map(s=>s.page)))]:[]});if(claims)DocumentUnderstanding.appendEvidence(turn.evidence);}}};
 $('askInput').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();askPaperQuestion();}});
 document.addEventListener('research:document',resetReaderConversation);
 document.addEventListener('research:language',renderReaderHistory);
@@ -40,12 +40,12 @@ renderReaderHistory();
 // Preserve the selected original alongside its translation without rewriting it.
 const readingSetAssistant=setAssistant;
 let currentReaderAnswer=null,pendingReaderSource=null;
-function answerMarkup(text){
+function answerMarkup(text,verifiedPages=null){
   // Escape everything first. Only a small, non-executable formatting subset is supported.
-  const inline=s=>esc(s).replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>').replace(/\[Page (\d+)\]/g,(m,n)=>Number(n)>=1&&Number(n)<=state.reader.pages?`<button class="page-citation" data-page-link="${Number(n)}">${esc(readerText(`第 ${Number(n)} 頁`))} ↗</button>`:m);
+  const inline=s=>esc(s).replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>').replace(/\[Page (\d+)\]/g,(m,n)=>Number(n)>=1&&Number(n)<=state.reader.pages&&(!verifiedPages||verifiedPages.includes(Number(n)))?`<button class="page-citation" data-page-link="${Number(n)}">${esc(readerText(`第 ${Number(n)} 頁`))} ↗</button>`:m);
   return String(text).split(/\n\s*\n/).map(part=>`<p>${part.split('\n').map(line=>/^#{1,4}\s/.test(line)?`<strong>${inline(line.replace(/^#{1,4}\s+/,''))}</strong>`:inline(line)).join('<br>')}</p>`).join('');
 }
-setAssistant=function(title,body){
+setAssistant=function(title,body,options={}){
   if(document.body.classList.contains('reader-focus')){document.body.classList.remove('reader-focus');$('focusReader').textContent=readerText('專注閱讀');}
   readingSetAssistant(title,body);
   const pending=body==='處理中…'||/^Stage [12]\/2/.test(body);
@@ -53,7 +53,7 @@ setAssistant=function(title,body){
   if(pending)pendingReaderSource={key:readerKey(),page:state.reader.selectionPage||state.reader.currentPage,quote:state.reader.selectedText||''};
   currentReaderAnswer=null;
   if(!pending){
-    $('assistantOutput').lastElementChild.innerHTML=answerMarkup(body);
+    $('assistantOutput').lastElementChild.innerHTML=answerMarkup(body,options.verifiedPages);
     for(const button of $$('.page-citation',$('assistantOutput'))){const preview=document.createElement('button');preview.className='btn small page-preview';preview.dataset.previewPage=button.dataset.pageLink;preview.textContent=readerText('預覽');button.after(preview);}
   }
   if(!pending&&!failed&&state.reader.pdf){
@@ -64,6 +64,7 @@ setAssistant=function(title,body){
   }
   if(!pending)pendingReaderSource=null;
   $('assistantOutput').setAttribute('aria-busy',String(pending));
+  document.dispatchEvent(new CustomEvent('research:answer',{detail:{pending,failed}}));
   if(!pending){
     const panel=document.querySelector('.reader-right'),output=$('assistantOutput');
     if(innerWidth>=1200)panel.scrollTop+=output.getBoundingClientRect().top-panel.getBoundingClientRect().top-16;

@@ -12,7 +12,7 @@ on:
       - 'index.html'
       - 'styles.css'
       - 'workspace.*'
-      - 'reader-tools.js'
+      - 'reader-*.js'
       - 'vendor/**'
       - 'i18n.js'
       - 'locales/**'
@@ -37,7 +37,7 @@ jobs:
       - run: node tests/reader-lifecycle.cjs
       - run: node tests/partial-index.cjs
       - run: node tests/locales.cjs
-      - run: node tests/pdf-text.cjs && node tests/sources.cjs && node tests/document-core.cjs
+      - run: node tests/pdf-text.cjs && node tests/sources.cjs && node tests/document-core.cjs && node tests/reader-core.cjs
       - run: npm test
       - run: npm test
         env:

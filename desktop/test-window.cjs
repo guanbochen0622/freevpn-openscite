@@ -96,6 +96,13 @@ app.on('browser-window-created',(_e,win)=>{
  assert.equal(await win.webContents.executeJavaScript(`document.getElementById('summaryOutput').textContent`),'');
  await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(bytes)}).buffer,{},'geometry-fixture.pdf')`);
  assert.equal(await win.webContents.executeJavaScript(`chatTurns.length`),2);
+ // Restored native conversations retain independently checked evidence and map provenance.
+ await win.webContents.executeJavaScript(`(async()=>{await DocumentUnderstanding.ready();document.querySelector('[data-chat-restore="0"]').click();await new Promise(r=>setTimeout(r,50));})()`);
+ assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('[data-evidence-link]').length`),1);
+ assert.equal(await win.webContents.executeJavaScript(`ReaderExperience.buildMap().groups[0].items[0].verified`),true);
+ await win.webContents.executeJavaScript(`document.getElementById('knowledgeMapOpen').click()`);
+ assert.equal(await win.webContents.executeJavaScript(`document.getElementById('knowledgeMapDialog').open`),true);
+ await win.webContents.executeJavaScript(`document.getElementById('closeKnowledgeMap').click()`);
  const scientificBytes=[...fs.readFileSync(path.join(__dirname,'../tests/fixtures/scientific.pdf'))];
  await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(scientificBytes)}).buffer,{},'scientific.pdf')`);
  const scientific=await win.webContents.executeJavaScript(`state.reader.fullText`);
@@ -116,6 +123,12 @@ app.on('browser-window-created',(_e,win)=>{
  await win.webContents.executeJavaScript(`DocumentUnderstanding.analyzeStructure()`);
  assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('#structureResults .katex').length`),1);
  assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('#structureResults tbody tr').length`),1);
+ await win.webContents.executeJavaScript(`(async()=>{document.getElementById('ocrTranscript').value='Draft remains separate from index';document.getElementById('ocrTranscript').dispatchEvent(new Event('input'));await DocumentUnderstanding.flush();await loadPdfBuffer(new Uint8Array(${JSON.stringify(scanBytes)}).buffer,{},'scanned.pdf');await DocumentUnderstanding.ready();})()`);
+ assert.equal(await win.webContents.executeJavaScript(`document.getElementById('ocrTranscript').value`),'Draft remains separate from index');
+ assert.match(await win.webContents.executeJavaScript(`state.reader.pageTexts[0]`),/980\s*nm/i);
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+10000;while(!document.querySelector('#structureResults .katex')){if(Date.now()>end)throw Error('Cached formula not restored');await new Promise(r=>setTimeout(r,50));}})()`);
+ assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('#structureResults tbody tr').length`),1);
+ console.log('PASS native evidence history/map and durable OCR draft/formula/table recovery');
  console.log('PASS native offline English OCR, selectable scan text, formula rendering and structured table through account bridge');
  console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors five-language AI routing and two-stage figure requests without retry on failure');
  clearTimeout(timer);app.quit();

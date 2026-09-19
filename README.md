@@ -4,6 +4,8 @@ A browser-based academic research workspace: discover papers, inspect PDFs, coll
 
 ## This release
 
+Reader revision 3 (desktop 0.7.0 / web 25.7): mobile full-screen reading and shared AI bottom sheet, a page-linked evidence map, durable OCR drafts/formula-table results, saved-answer source revalidation, Chinese-aware evidence retrieval and document-index retry. See [the verification scope](VALIDATION-0.7.0.md).
+
 - Search: OpenAlex with Crossref fallback, validated year ranges, provider-side date/citation sorting, deduplication within a page, stale-request protection, recent searches, individual keyword highlighting including hyphenated words.
 - Compare up to three papers; inspect and export source metadata as BibTeX. The journal score sort is **within the current page**. Arbitrary metrics are never labeled official Q1–Q4 rankings.
 - Reader: self-hosted PDF.js 5.6.205, lazy page rendering with a nine-canvas retention budget, independent full-text indexing, outline, full-document search, page navigation, bookmarks, resume position, focus mode, text selection, notes, four-color position-anchored highlights, figure analysis and original PDF download.
@@ -21,7 +23,7 @@ Runtime files: `index.html`, `styles.css`, `workspace.css`, `boot.js`, `app.js`,
 
 ## Verification
 
-Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION.md` for the tests actually run for this change.
+Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION-0.7.0.md` for current verification. Optional real-file regression: `node tests/real-papers.cjs /absolute/paper.pdf [...]`; files stay local and no model service is called.
 
 ## Product limits and commercial readiness
 
@@ -29,7 +31,7 @@ This is a local-first browser application, not a hosted multi-tenant subscriptio
 
 - OpenAlex/Crossref availability, API entitlements and rate limits are external. OA-only search fails explicitly if OpenAlex is unavailable, because Crossref cannot provide an equivalent verified filter.
 - Bibliographic totals are provider totals, not deduplicated corpus counts. Search results and author lists can be incomplete. Verify citations against the publisher.
-- Scanned PDFs have no searchable text unless they already contain OCR. OCR is not included. Layouts without numbered reference entries are not automatically bound.
+- Scanned PDFs support explicit local page OCR; adopted/corrected text becomes searchable. OCR drafts require checking against the original. Layouts without numbered reference entries are not automatically bound.
 - Direct remote PDF loading requires the publisher to allow CORS and access. The app does not bypass publisher login or subscription access.
 - The reader limits rasterized canvases, not all PDF parsing/index memory. Very large documents may still consume considerable browser memory.
 - AI answers and figure readings can be wrong. Inspect the cited page and original visual before relying on them. Page links are not proof that the model's claim is supported. Context selection uses lexical ranking, not semantic retrieval; summaries use excerpts.
