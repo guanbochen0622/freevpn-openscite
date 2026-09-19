@@ -13,7 +13,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await fs.writeFile('/tmp/openscite-fixture.pdf',await pdf.save());
  const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH,args:["--no-sandbox"]}:{})});const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>d.accept('Important measurement'));
  await page.route('https://api.openalex.org/**',async route=>{const u=new URL(route.request().url());if(u.pathname==='/works')return route.fulfill({json:{meta:{count:2},results:[{id:'https://openalex.org/W1',title:'Fiber-to-silicon coupling with evanescent waves',publication_year:2025,cited_by_count:42,doi:'https://doi.org/10.1234/test',authorships:[{author:{display_name:'A. Researcher'}}],abstract_inverted_index:{Evanescent:[0],wave:[1],coupling:[2],demonstrates:[3],improved:[4],efficiency:[5]},primary_location:{source:{display_name:'Optics Research'},landing_page_url:'https://doi.org/10.1234/test'},open_access:{is_oa:true}},{id:'https://openalex.org/W2',title:'Optical fiber sensor characterization',publication_year:2024,cited_by_count:10,primary_location:{source:{display_name:'Photonics Letters'}},abstract_inverted_index:{Sensor:[0],response:[1],is:[2],measured:[3]}}]}});return route.fulfill({json:{results:[]}});});
- await page.goto(testUrl);await page.waitForSelector('#themeToggle');
+ await page.goto(testUrl);await page.waitForSelector('#documentToolsToggle');
  assert.deepEqual(await page.evaluate(()=>queryTokens('Fiber-to–Silicon')),['silicon','fiber','to']);
  await page.fill('#searchQuery','Fiber-to-silicon');await page.click('#searchBtn');await page.waitForSelector('[data-compare]');assert.equal(await page.locator('.paper-card').count(),2);
  await page.locator('[data-compare]').first().click();await page.locator('[data-compare]').last().click();await page.click('#compareOpen');assert.equal(await page.locator('.comparison-table th').count()>0,true);await page.click('#dialogClose');
@@ -35,8 +35,8 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await page.click('.nav-tab[data-view="library"]');await page.fill('#libraryQuery','');await page.waitForTimeout(200);const previousDocumentToken=await page.evaluate(()=>state.reader.renderToken);await page.locator('[data-lib-action="open"]').first().click();
  await page.waitForFunction(previous=>state.reader.renderToken>previous&&state.reader.pdf&&state.reader.indexReady&&state.reader.highlights.length===1,previousDocumentToken);assert.equal(await page.evaluate(()=>readerKey()),key);
  // An AI response is mocked; no real credentials or paid requests are used.
- await page.route('https://api.openai.com/v1/responses',async route=>{const payload=JSON.parse(route.request().postData());assert.equal(payload.store,false);assert.match(JSON.stringify(payload),/Page 12/);await route.fulfill({json:{output:[{content:[{type:'output_text',text:'The wavelength is 980 nm [Page 12].'}]}]}});});
- await page.evaluate(()=>sessionStorage.setItem(STORE.aiKey,'test-key-not-a-real-credential'));await page.fill('#askInput','What is the wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy);assert.match(await page.locator('#assistantOutput').textContent(),/980 nm/);await page.waitForSelector('.page-citation');await page.locator('.page-citation').click();assert.equal(await page.evaluate(()=>state.reader.currentPage),12);
+ await page.route('https://api.openai.com/v1/responses',async route=>{const payload=JSON.parse(route.request().postData());assert.equal(payload.store,false);assert.match(JSON.stringify(payload),/Page 12/);await route.fulfill({json:{output:[{content:[{type:'output_text',text:JSON.stringify({claims:[{text:'The wavelength is 980 nm.',kind:'observation',sources:[{id:'p12s1',quote:'The measured wavelength is 980 nm.'}]}]})}]}]}});});
+ await page.evaluate(()=>sessionStorage.setItem(STORE.aiKey,'test-key-not-a-real-credential'));await page.fill('#askInput','What is the wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&!state.reader.understandingBusy);assert.match(await page.locator('#assistantOutput').textContent(),/980 nm/);await page.waitForSelector('.page-citation');await page.locator('.page-citation').click();assert.equal(await page.evaluate(()=>state.reader.currentPage),12);
 
  // Reading detours return exactly to the original page; invalid references remain plain text.
  await page.evaluate(()=>goPdfPage(4));await page.locator('.page-citation').click();
@@ -62,8 +62,8 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  // Preview does not move the document; follow-up includes prior conversation.
  await page.locator('[data-preview-page]').click();await page.waitForSelector('#pagePreviewBody canvas');
  assert.equal(await page.evaluate(()=>state.reader.currentPage),12);await page.keyboard.press('ArrowRight');assert.equal(await page.evaluate(()=>state.reader.currentPage),12);await page.click('#closePagePreview');
- let followupBody;await page.route('https://api.openai.com/v1/responses',async route=>{followupBody=JSON.parse(route.request().postData());await route.fulfill({json:{output_text:'Follow-up verified [Page 12].'}});});
- await page.fill('#askInput','Why that wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&chatTurns.length===2);
+ let followupBody;await page.route('https://api.openai.com/v1/responses',async route=>{followupBody=JSON.parse(route.request().postData());await route.fulfill({json:{output_text:JSON.stringify({claims:[{text:'Follow-up verified.',kind:'observation',sources:[{id:'p12s1',quote:'The measured wavelength is 980 nm.'}]}]})}});});
+ await page.fill('#askInput','Why that wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&!state.reader.understandingBusy&&chatTurns.length===2);
  assert.match(JSON.stringify(followupBody),/What is the wavelength/);assert.match(JSON.stringify(followupBody),/980 nm/);
  assert.equal(await page.locator('.chat-turn').count(),2);assert.equal(await page.locator('#conversationHistory').getAttribute('open'),null);
  await page.click('#toggleReaderTools');assert.equal(await page.locator('.reader-left').isVisible(),false);await page.click('#toggleReaderTools');
@@ -105,7 +105,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
    assert.equal(await page.locator('#askInput').inputValue(),'Keep my question 980 nm');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
  }
- await page.selectOption('#languageSelect','en');await page.reload();await page.waitForSelector('#themeToggle');
+ await page.selectOption('#languageSelect','en');await page.reload();await page.waitForSelector('#documentToolsToggle');
  assert.equal(await page.locator('#languageSelect').inputValue(),'en');
  assert.equal(await page.locator('.nav-tab[data-view="search"]').textContent(),'Academic search');
  await page.selectOption('#languageSelect','zh-Hant');await page.click('.nav-tab[data-view="reader"]');
@@ -120,5 +120,35 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
   assert.equal(selected,'Concentration: 10⁻¹⁴');
  }
  await page.screenshot({path:'/tmp/openscite-scientific.png',fullPage:true});
+ // Real local OCR on an image-only PDF: no mocked recognition service.
+ await page.setViewportSize({width:1440,height:1000});
+ await page.setInputFiles('#readerFile',path.join(__dirname,'fixtures/scanned.pdf'));
+ await page.waitForFunction(()=>state.reader.indexReady&&state.reader.pages===1&&state.reader.fileName==='scanned.pdf');
+ assert.equal(await page.evaluate(()=>state.reader.pageTexts[0].trim()),'');
+ await page.evaluate(()=>DocumentUnderstanding.runOcr());
+ const ocr=await page.evaluate(()=>({text:state.reader.pageTexts[0],status:document.getElementById('documentStatus').textContent}));
+ assert.match(ocr.text,/980\s*nm/i,JSON.stringify(ocr));
+ assert.ok(await page.locator('.ocr-text-layer span').count()>5);
+ await page.fill('#pdfFind','980');await page.waitForFunction(()=>document.getElementById('findCount').textContent.includes('2'));
+ await page.fill('#ocrTranscript','Measured wavelength is 980 nm. Concentration is 10⁻¹⁴.');await page.click('#applyOcr');
+ assert.match(await page.evaluate(()=>state.reader.fullText),/10⁻¹⁴/);
+ const structure={formulas:[{latex:'10^{-14}',meaning:'A concentration exponent.',uncertainty:''}],tables:[{title:'Measured wavelengths',headers:['Sample','Wavelength (nm)'],rows:[['Control','980'],['Treatment','985']],uncertainty:''}],notes:'Synthetic model response; OCR above is real.'};
+ await page.route('https://api.openai.com/v1/responses',async route=>{const payload=JSON.parse(route.request().postData());assert.equal(payload.text.format.name,'document_structure');assert.ok(payload.input[1].content.some(x=>x.type==='input_image'));await route.fulfill({json:{output_text:JSON.stringify(structure)}});});
+ await page.evaluate(()=>DocumentUnderstanding.analyzeStructure());await page.waitForSelector('#structureResults .katex');assert.equal(await page.locator('#structureResults tbody tr').count(),2);
+ assert.doesNotMatch(await page.locator('#structureResults').innerText(),/"latex"|"headers"/);
+ const downloadPromise=page.waitForEvent('download');await page.click('[data-export-table]');const download=await downloadPromise;assert.match(download.suggestedFilename(),/table-page-1/);
+ await page.route('https://api.openai.com/v1/responses',async route=>{await route.fulfill({json:{output_text:JSON.stringify({claims:[{text:'The wavelength is 980 nm.',kind:'observation',sources:[{id:'p1s1',quote:'Measured wavelength is 980 nm.'}]},{text:'Unverified claim.',kind:'inference',sources:[{id:'p999s1',quote:'Invented supporting quote'}]}]})}});});
+ await page.fill('#askInput','What does the scan show?');await page.evaluate(()=>askPaperQuestion());
+ await page.locator('.answer-evidence summary').click();assert.equal(await page.locator('[data-evidence-link]').count(),1);
+ await page.click('[data-evidence-link]');assert.match(await page.locator('.evidence-quote').textContent(),/980 nm/);await page.click('#closePagePreview');
+ await page.screenshot({path:'/tmp/openscite-understanding.png',fullPage:true});
+ // Original text is recoverable and model JSON errors never become prose.
+ await page.click('#restoreNativeText');assert.equal(await page.evaluate(()=>state.reader.pageTexts[0]),'');
+ await page.route('https://api.openai.com/v1/responses',r=>r.fulfill({json:{output_text:'invalid structured data'}}));
+ await page.evaluate(()=>DocumentUnderstanding.analyzeStructure());assert.match(await page.locator('#documentStatus').textContent(),/解析未完成/);
+ await page.evaluate(async()=>{const pending=DocumentUnderstanding.runOcr();DocumentUnderstanding.cancel();await pending;});
+ assert.equal(await page.locator('#ocrPage').isDisabled(),false);
+ console.log('PASS real image-only OCR, searchable index, corrections, structured formulas/tables, CSV, exact evidence links, invalid citations and cancellation');
+
  assert.deepEqual(errors,[]);console.log('PASS: failure paths, request races, mocked AI page links, backup roundtrip, library reopen,  search, comparison, library filters, PDF text, bounded canvases, find, navigation, bookmarks, zoom, stable annotations, citation binding, backup validation, mobile layout.');await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});

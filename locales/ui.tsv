@@ -302,3 +302,37 @@ AI 未傳回可讀取的回答，請重試。|AI returned no readable answer. Pl
 這篇論文有哪些限制與未驗證的假設？|What are the limitations and unverified assumptions of this paper?|这篇论文有哪些限制与未验证的假设？|この論文の限界と未検証の仮定は何ですか？|이 논문의 한계와 검증되지 않은 가정은 무엇인가요?
 請用白話解釋目前選取的內容，並說明它與論文的關係。|Explain the selected passage simply and how it relates to the paper.|请用通俗语言解释当前选择的内容，并说明它与论文的关系。|選択した内容をわかりやすく説明し、論文との関係を示してください。|선택한 내용을 쉽게 설명하고 논문과의 관계를 알려주세요.
 部分符號缺少字元對應，請核對原頁|Some symbols lack character mappings; check the original page|部分符号缺少字符映射，请核对原页|一部の記号に文字対応がありません。原文を確認してください|일부 기호의 문자 매핑이 없습니다. 원문을 확인하세요
+文字與公式辨識|Text and formula recognition|文字与公式识别|文字・数式認識|텍스트 및 수식 인식
+OCR 語言|OCR language|OCR 语言|OCR 言語|OCR 언어
+OCR 目前頁|OCR current page|OCR 当前页|現在のページを OCR|현재 페이지 OCR
+取消辨識|Cancel recognition|取消识别|認識を中止|인식 취소
+解析公式／表格|Read formulas / tables|解析公式／表格|数式・表を解析|수식 / 표 분석
+OCR 在本機執行；公式與表格解析會將目前頁影像傳給你設定的 AI。|OCR runs locally; formula and table analysis sends the current page image to your configured AI.|OCR 在本机执行；公式与表格解析会将当前页图像发送给你设置的 AI。|OCR は端末内で実行します。数式・表の解析では現在のページ画像を設定済みの AI に送信します。|OCR은 기기에서 실행됩니다. 수식 및 표 분석은 현재 페이지 이미지를 설정된 AI로 전송합니다.
+辨識草稿（可修正）|Recognition draft (editable)|识别草稿（可修正）|認識結果の下書き（編集可）|인식 초안 (수정 가능)
+OCR 可能誤讀次方與符號，採用前請核對原頁。|OCR may misread exponents and symbols. Check the original before applying.|OCR 可能误读次方与符号，采用前请核对原页。|OCR は指数や記号を誤認識する場合があります。適用前に原文を確認してください。|OCR이 지수와 기호를 잘못 읽을 수 있습니다. 적용 전에 원본을 확인하세요.
+採用修正文字|Apply corrected text|采用修正文字|修正した文字を適用|수정한 텍스트 적용
+還原原始文字層|Restore original text layer|还原原始文字层|元のテキスト層に戻す|원본 텍스트 레이어 복원
+已取消辨識|Recognition cancelled|已取消识别|認識を中止しました|인식이 취소되었습니다
+正在辨識目前頁…|Recognizing current page…|正在识别当前页…|現在のページを認識中…|현재 페이지 인식 중…
+辨識逾時，請重試|Recognition timed out. Please retry.|识别超时，请重试|認識がタイムアウトしました。再試行してください|인식 시간이 초과되었습니다. 다시 시도하세요
+辨識元件載入逾時|Recognition component loading timed out|识别组件加载超时|認識コンポーネントの読み込みがタイムアウトしました|인식 구성 요소 로딩 시간 초과
+辨識元件無法載入|Unable to load recognition component|识别组件无法加载|認識コンポーネントを読み込めません|인식 구성 요소를 로드할 수 없습니다
+此頁未辨識出文字|No text recognized on this page|此页未识别出文字|このページで文字を認識できませんでした|이 페이지에서 텍스트를 인식하지 못했습니다
+OCR 完成，請核對草稿|OCR complete. Review the draft.|OCR 完成，请核对草稿|OCR 完了。下書きを確認してください|OCR 완료. 초안을 확인하세요
+辨識已完成，但無法儲存快取|Recognition complete, but cache could not be saved|识别已完成，但无法保存缓存|認識は完了しましたがキャッシュを保存できません|인식은 완료되었지만 캐시를 저장할 수 없습니다
+OCR 辨識草稿|OCR draft|OCR 识别草稿|OCR の下書き|OCR 초안
+已採用修正文字；選取位置仍對應原始 OCR 草稿|Corrected text applied; selection positions still follow the original OCR draft|已采用修正文字；选取位置仍对应原始 OCR 草稿|修正文を適用しました。選択位置は元の OCR 下書きに対応します|수정 텍스트를 적용했습니다. 선택 위치는 원래 OCR 초안을 따릅니다
+已還原原始文字層|Original text layer restored|已还原原始文字层|元のテキスト層に戻しました|원본 텍스트 레이어를 복원했습니다
+原頁解析草稿|Page analysis draft|原页解析草稿|ページ解析の下書き|페이지 분석 초안
+請核對原頁，AI 解析可能有誤|Check the original page; AI analysis may contain errors|请核对原页，AI 解析可能有误|原文を確認してください。AI の解析には誤りがありえます|원본 페이지를 확인하세요. AI 분석에 오류가 있을 수 있습니다
+公式無法排版，請核對原頁|Unable to typeset formula. Check the original.|公式无法排版，请核对原页|数式を表示できません。原文を確認してください|수식을 표시할 수 없습니다. 원본을 확인하세요
+下載 CSV|Download CSV|下载 CSV|CSV をダウンロード|CSV 다운로드
+正在解析原頁公式與表格…|Analyzing page formulas and tables…|正在解析原页公式与表格…|ページの数式と表を解析中…|페이지 수식 및 표 분석 중…
+解析完成，請核對原頁|Analysis complete. Check the original page.|解析完成，请核对原页|解析完了。原文を確認してください|분석 완료. 원본 페이지를 확인하세요
+解析未完成|Analysis incomplete|解析未完成|解析未完了|분석 미완료
+文件已變更|Document changed|文档已更改|文書が変更されました|문서가 변경되었습니다
+逐句核對原文|Check each claim against the source|逐句核对原文|各文を原文と照合|각 문장을 원문과 대조
+連結表示原文存在，不代表推論已獲證實|A link confirms the quoted text exists, not that an inference is proven|链接表示原文存在，不代表推论已获证实|リンクは引用文の存在を示します。推論の正しさを証明するものではありません|링크는 인용문이 존재함을 나타내며 추론이 입증되었음을 의미하지 않습니다
+查看原文片段|View source passage|查看原文片段|原文の該当箇所を見る|원문 구절 보기
+缺少可核對的文字證據，請查閱原頁|No verifiable text quotation. Check the original page.|缺少可核对的文字证据，请查阅原页|照合可能な引用文がありません。原文を確認してください|대조 가능한 텍스트 인용이 없습니다. 원본을 확인하세요
+這份文件缺少文字層，請執行 OCR 目前頁|This document has no text layer. Run OCR on the current page.|这份文档缺少文字层，请执行 OCR 当前页|この文書にはテキスト層がありません。現在のページを OCR してください|이 문서에는 텍스트 레이어가 없습니다. 현재 페이지 OCR을 실행하세요

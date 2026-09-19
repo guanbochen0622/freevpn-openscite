@@ -13,7 +13,7 @@ function renderReaderHistory(){
   $('clearReaderChat').disabled=!chatTurns.length;
 }
 async function askPaperQuestion(){
-  if(state.aiBusy||state.reader.figureBusy)return;
+  if(state.aiBusy||state.reader.figureBusy||state.reader.understandingBusy)return;
   const question=$('askInput').value.trim();if(!question){toast('請先輸入問題');return;}
   if(!state.reader.pdf){toast('請先載入 PDF');return;}
   if(chatDocument!==readerKey())resetReaderConversation();
@@ -22,11 +22,11 @@ async function askPaperQuestion(){
     const evidence=relevantContext(question+' '+selected+' '+(chatTurns.at(-1)?.question||''));
     const previous=chatTurns.slice(-4).map(t=>({question:t.question.slice(0,3000),answer:t.answer.slice(0,5000)}));
     setAssistant('Paper Q&A','處理中…');
-    const answer=await askAI('Answer questions about an academic paper using only supplied paper evidence. Respond in Traditional Chinese. Use the conversation only to understand follow-up questions, never as verified evidence. Cite [Page N] markers for claims. Distinguish observations, author claims and inference. Say when evidence is insufficient. Start with the direct answer in one sentence, then at most three short evidence points. Use no more than 220 words unless the user explicitly requests detail. Avoid repeating the question or adding generic introductions.',`PAPER EVIDENCE:\n${evidence}\n\nPREVIOUS CONVERSATION (unverified):\n${JSON.stringify(previous)}\n\nSELECTED PASSAGE:\n${selected}\n\nQUESTION:\n${question}`);
+    const answer=await DocumentUnderstanding.groundedAnswer(question,selected,previous);
     if(readerKey()!==key)return;
     chatTurns.push({question,answer});chatTurns=chatTurns.slice(-20);
     const all=loadJSON(CHAT_STORE,{});all[key]=chatTurns;saveJSON(CHAT_STORE,all);
-    renderReaderHistory();setAssistant('Paper Q&A',answer);$('askInput').value='';
+    renderReaderHistory();setAssistant('Paper Q&A',answer);DocumentUnderstanding.appendEvidence();$('askInput').value='';
   }catch(e){if(readerKey()===key)setAssistant('問答未完成',aiErrorMessage(e));}
 }
 $('assistantOutput').insertAdjacentHTML('afterend','<details id="conversationHistory"><summary>本篇對話</summary><div class="chat-history-head"><button id="clearReaderChat" class="btn small">清除對話</button></div><div id="readerHistory"></div></details>');

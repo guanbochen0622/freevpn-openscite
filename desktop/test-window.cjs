@@ -2,7 +2,7 @@
 const {app,ipcMain}=require('electron');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'openscite-window-'));app.setPath('userData',profile);
 require('./main.cjs');
-const timer=setTimeout(()=>{console.error('Desktop window smoke timed out');app.exit(1);},90000);
+const timer=setTimeout(()=>{console.error('Desktop window smoke timed out');app.exit(1);},180000);
 app.on('browser-window-created',(_e,win)=>{
  win.webContents.once('did-finish-load',async()=>{
  try{
@@ -30,7 +30,7 @@ app.on('browser-window-created',(_e,win)=>{
  }
  let request;
  ipcMain.removeHandler('openscite:ask');
- ipcMain.handle('openscite:ask',(_event,body)=>{request=body;return 'TEST RESPONSE: wavelength is 980 nm [Page 1]';});
+ ipcMain.handle('openscite:ask',(_event,body)=>{request=body;return body.text?.format?.name==='evidence_answer'?JSON.stringify({claims:[{text:'TEST RESPONSE: wavelength is 980 nm.',kind:'observation',sources:[{id:'p1s1',quote:'Precise selection 980 nm'}]}]}):'TEST RESPONSE: wavelength is 980 nm [Page 1]';});
  await win.webContents.executeJavaScript(`(async()=>{
    const span=[...document.querySelectorAll('.textLayer span')].find(s=>s.textContent==='Precise selection 980 nm');
    const range=document.createRange();range.setStart(span.firstChild,18);range.setEnd(span.firstChild,21);
@@ -41,7 +41,7 @@ app.on('browser-window-created',(_e,win)=>{
  assert.ok(request.input[1].content[0].text.includes('SELECTED PASSAGE:\n980'));
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
  await win.webContents.executeJavaScript(`document.getElementById('askInput').value='What wavelength was measured?';document.getElementById('askBtn').click()`);
- await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+10000;while(state.aiBusy){if(Date.now()>end)throw Error('Reader action timed out');await new Promise(r=>setTimeout(r,50));}})()`);
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+10000;while(state.aiBusy||state.reader.understandingBusy){if(Date.now()>end)throw Error('Reader action timed out');await new Promise(r=>setTimeout(r,50));}})()`);
  assert.ok(request.input[1].content[0].text.includes('What wavelength was measured?'));
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
  for(const [locale,label,name] of [['en','Academic search','English'],['zh-Hant','學術搜尋','Traditional Chinese'],['zh-Hans','学术搜索','Simplified Chinese'],['ja','論文検索','Japanese'],['ko','논문 검색','Korean']]){
@@ -59,7 +59,7 @@ app.on('browser-window-created',(_e,win)=>{
  await win.webContents.executeJavaScript(`researchFitSelection()`);
  assert.match(request.input[0].content[0].text,/research usefulness/);
  await win.webContents.executeJavaScript(`document.getElementById('aiSummaryBtn').click()`);
- await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+10000;while(state.aiBusy){if(Date.now()>end)throw Error('Reader action timed out');await new Promise(r=>setTimeout(r,50));}})()`);assert.match(request.input[0].content[0].text,/Summarize this research paper/);
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+10000;while(state.aiBusy||state.reader.understandingBusy){if(Date.now()>end)throw Error('Reader action timed out');await new Promise(r=>setTimeout(r,50));}})()`);assert.match(request.input[0].content[0].text,/Summarize this research paper/);
  assert.match(request.input[1].content[0].text,/Page 1/);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('summaryOutput').textContent`),/TEST RESPONSE/);
  const beforePreview=await win.webContents.executeJavaScript(`state.reader.currentPage`);
@@ -105,6 +105,18 @@ app.on('browser-window-created',(_e,win)=>{
  const selected=await win.webContents.executeJavaScript(`(async()=>{state.reader.scale=${scale};await renderPdfPages();goPdfPage(2);await state.reader.paintPage(2);const spans=[...document.querySelectorAll('.textLayer[data-page="2"] span[data-reader-line]')],first=spans.find(s=>s.textContent.startsWith('Concentration:')),last=spans.find(s=>s.dataset.readerScript==='super');const range=document.createRange();range.setStart(first.firstChild,0);range.setEnd(last.firstChild,last.textContent.length);getSelection().removeAllRanges();getSelection().addRange(range);syncPdfSelection();return state.reader.selectedText;})()`);
  assert.equal(selected,'Concentration: 10⁻¹⁴');
  }
+
+ const scanBytes=[...fs.readFileSync(path.join(__dirname,'../tests/fixtures/scanned.pdf'))];
+ await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(scanBytes)}).buffer,{},'scanned.pdf')`);
+ await win.webContents.executeJavaScript(`DocumentUnderstanding.runOcr()`);
+ const scan=await win.webContents.executeJavaScript(`({text:state.reader.pageTexts[0],status:document.getElementById('documentStatus').textContent})`);
+ assert.match(scan.text,/980\s*nm/i,JSON.stringify(scan));
+ assert.ok(await win.webContents.executeJavaScript(`document.querySelectorAll('.ocr-text-layer span').length>5`));
+ ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',(_event,body)=>{assert.equal(body.text.format.name,'document_structure');assert.ok(body.input[1].content.some(x=>x.type==='input_image'));return JSON.stringify({formulas:[{latex:'10^{-14}',meaning:'Exponent',uncertainty:''}],tables:[{title:'Results',headers:['Sample','nm'],rows:[['Control','980']],uncertainty:''}],notes:''});});
+ await win.webContents.executeJavaScript(`DocumentUnderstanding.analyzeStructure()`);
+ assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('#structureResults .katex').length`),1);
+ assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('#structureResults tbody tr').length`),1);
+ console.log('PASS native offline English OCR, selectable scan text, formula rendering and structured table through account bridge');
  console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors five-language AI routing and two-stage figure requests without retry on failure');
  clearTimeout(timer);app.quit();
  }catch(e){console.error(e);clearTimeout(timer);app.exit(1);}
