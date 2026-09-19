@@ -11,7 +11,7 @@ html[data-theme=light] :is(.brand,.section-head h2,.panel-head h3,.library-card 
 html[data-theme=light] :is(.assistant-output h4,.rich-output h4,.assistant-intro b){color:#253f74}
 html[data-theme=light] :is(.note-card,.context){background:#edf2fa;border-color:#c0cfe5;color:#324969}
 html[data-theme=light] :is(.note-card p,.note-card q){color:#324969}
-@media(max-width:900px){.nav-tabs{flex:0 0 100%;order:3;width:100%;justify-content:flex-start}.nav-inner{height:auto;flex-wrap:wrap}.topbar{height:auto}.nav-actions{margin-left:auto}.nav-tab{flex:1;text-align:center}.nav-tabs{overflow:visible}.desktop-only{display:none!important}}
+@media(max-width:900px){.nav-tabs{flex:0 0 100%;order:3;width:100%;justify-content:flex-start}.nav-inner{height:auto;flex-wrap:wrap}.topbar{height:auto}.nav-actions{margin-left:auto}.nav-tab{flex:1;min-width:0;text-align:center;white-space:normal;overflow-wrap:anywhere}.nav-tabs{overflow:visible}.desktop-only{display:none!important}}
 @media(max-width:560px){.nav-tab{font-size:12px;padding:8px 5px}.reader-left .panel-body{gap:8px}.reader-left .document-nav{max-height:130px}}
 
 body[data-view="reader"] .workspace-hero{display:none}
