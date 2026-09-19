@@ -63,7 +63,7 @@ function reconstructAbstract(inv) {
 function authorsFromOpenAlex(w){ return (w.authorships||[]).slice(0,8).map(a=>a.author?.display_name).filter(Boolean).join(', '); }
 function sourceFromOpenAlex(w){ return ([w.primary_location?.source,...(w.locations||[]).map(l=>l.source)].find(s=>s?.type==='journal')||w.primary_location?.source||w.best_oa_location?.source)?.display_name||''; }
 function bestPdfOpenAlex(w){
-  return w.best_oa_location?.pdf_url || (w.locations||[]).find(x=>x.pdf_url)?.pdf_url || '';
+  return w.best_oa_location?.pdf_url || w.primary_location?.pdf_url || (w.locations||[]).find(x=>x.pdf_url)?.pdf_url || '';
 }
 function landingOpenAlex(w){ return w.primary_location?.landing_page_url || w.doi || w.id || ''; }
 function workFromOpenAlex(w){
@@ -198,11 +198,11 @@ function paperCard(w, query, context='search', index=0){
   else if(w.landingUrl) actions.push(`<a class="btn small" href="${esc(safeUrl(w.landingUrl))}" target="_blank" rel="noreferrer">論文頁面 ↗</a>`);
   actions.push(`<button class="btn small" data-action="library" data-context="${context}" data-index="${index}">加入 Library</button>`);
   if(context==='search') actions.push(`<button class="btn small" data-action="evidence" data-context="search" data-index="${index}">分析引用證據</button>`);
-  if(context==='evidence') actions.push(`<button class="btn small" data-action="citingpdf" data-context="evidence" data-index="${index}">加入 citing PDF</button><input type="file" accept="application/pdf,.pdf" class="hidden citing-file" data-index="${index}">`);
-  const stance=w.stance?`<span class="badge ${w.stance}" title="僅依綁定段落規則判讀，需人工核對">${esc(({unknown:'尚未驗證',supporting:'可能支持 · 待核對',contrasting:'可能反駁 · 待核對',mentioning:'提及 · 待核對'})[w.stance]||w.stance)}</span>`:'';
+  if(context==='evidence') actions.push(`<button class="btn small" data-action="infercitation" data-context="evidence" data-index="${index}">AI 解讀（推論）</button><button class="btn small" data-action="verifycitation" data-context="evidence" data-index="${index}">取得全文並判讀</button><button class="btn small" data-action="citingpdf" data-context="evidence" data-index="${index}">加入 citing PDF</button><input type="file" accept="application/pdf,.pdf" class="hidden citing-file" data-index="${index}">`);
+  const stance=w.stance?`<span class="badge ${w.stance}" title="原文定位與結論判讀分開；推論不等於已證實">${esc(({unknown:'方向未定',supporting:'推論：支持',contrasting:'推論：反駁',mentioning:'引用／提及'})[w.stance]||w.stance)}</span>`:'';
   const qBadge=w.q&&w.q!=='Q?'?`<span class="badge ${qCls}" title="${esc(w.qReason||'依 OpenAlex 公開指標推估；不是官方 JCR／SJR／中科院分區')}">推估 ${esc(w.q)}</span>`:`<span class="badge" title="資料不足，無法使用 OpenAlex 指標推估">分區無法推估</span>`;
   const evidence=w.contexts?.length?`<div class="context-box"><h4>FULL-TEXT CITATION CONTEXT · ${w.contexts.length} passages</h4>${w.contexts.slice(0,4).map(c=>`<div class="context">${highlightHtml(c,query)}</div>`).join('')}</div>`:'';
-  return `<article class="paper-card"><div class="paper-top"><div><div class="paper-title">${highlightHtml(w.title,query)}</div><div class="paper-meta">${esc(w.authors||'Unknown authors')} · ${esc(w.year||'n.d.')} · ${esc(venue)}</div></div><div class="paper-badges">${stance}${qBadge}<span class="badge">${fmtNum(w.citations)} cites</span>${w.isOA?'<span class="badge">OA</span>':''}</div></div>${w.abstract?`<div class="paper-abstract">${highlightHtml(w.abstract,query)}</div>`:''}<div class="paper-actions">${actions.join('')}</div>${evidence}</article>`;
+  return `<article class="paper-card"><div class="paper-top"><div><div class="paper-title">${highlightHtml(w.title,query)}</div><div class="paper-meta">${esc(w.authors||'Unknown authors')} · ${esc(w.year||'n.d.')} · ${esc(venue)}</div></div><div class="paper-badges">${stance}${qBadge}<span class="badge">${fmtNum(w.citations)} cites</span>${w.isOA?'<span class="badge">OA</span>':''}</div></div>${w.abstract?`<div class="paper-abstract">${highlightHtml(w.abstract,query)}</div>`:''}<div class="paper-actions">${actions.join('')}</div>${w.evidenceBasis?`<p class="paper-meta">${esc(w.evidenceBasis)}</p>`:''}${evidence}</article>`;
 }
 function renderSearch(){
   const works=sortedSearchWorks(); const per=Number($('perPage').value||20), page=state.search.page, pages=Math.max(1,Math.ceil(state.search.total/per));
@@ -221,6 +221,8 @@ async function handlePaperAction(e){
   if(action==='read'){ await openRemotePaper(w); }
   else if(action==='library'){ await addToLibrary(w); }
   else if(action==='evidence'){ let target=w; if(!target.id){ try{ target=await resolveTarget(target.doi||target.title); }catch(err){ toast(err.message); return; } } state.evidence.target=target; fillTarget(target); showView('evidence'); await runCitationAnalysis(target); }
+  else if(action==='infercitation'){btn.disabled=true;try{await inferCitation(w,state.evidence.target);}catch(err){toast(err.message,6000);}finally{btn.disabled=false;}}
+  else if(action==='verifycitation'){btn.disabled=true;try{await verifyCitation(w,state.evidence.target);}finally{btn.disabled=false;}}
   else if(action==='citingpdf'){ const input=$('evidenceResults').querySelector(`.citing-file[data-index="${index}"]`); if(input) input.click(); }
 }
 $('evidenceResults').addEventListener('change',async e=>{ if(!e.target.matches('.citing-file')) return; const index=Number(e.target.dataset.index), file=e.target.files?.[0]; if(file) await analyzeCitingPdf(index,file); e.target.value=''; });
@@ -231,21 +233,38 @@ $('readerFile').addEventListener('change',async e=>{ const f=e.target.files?.[0]
 const drop=$('readerDrop'); ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag')})); ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag')})); drop.addEventListener('drop',async e=>{const f=[...e.dataTransfer.files].find(x=>x.type==='application/pdf'||x.name.toLowerCase().endsWith('.pdf')); if(f) await openLocalPaper(f)});
 $('loadPdfUrl').addEventListener('click',()=>{const url=$('pdfUrl').value.trim(); if(url) openPdfUrl(url,{title:url.split('/').pop()||'Remote PDF',pdfUrl:url,landingUrl:url}); else toast('請貼上 PDF URL')});
 
-async function openLocalPaper(file){
+async function openLocalPaper(file){remotePdfRequest++;
   showView('reader'); toast('正在讀取本機 PDF…'); const buf=await file.arrayBuffer();
   const meta={id:`local-${await documentHash(buf)}`,title:file.name.replace(/\.pdf$/i,''),authors:'',source:'Local PDF',year:'',citations:0,doi:'',pdfUrl:'',landingUrl:'',isLocal:true,fileName:file.name};
   await loadPdfBuffer(buf,meta,file.name,'');
 }
-async function openRemotePaper(w){ showView('reader'); await openPdfUrl(w.pdfUrl,w); }
-async function openPdfUrl(url,meta){
-  if(!url){ toast('這筆結果沒有可直接取得的 PDF'); return; }
-  $('pdfUrl').value=url; toast('正在載入 Open Access PDF…');
-  try{ if(!safeUrl(url))throw new Error('僅支援 HTTP / HTTPS PDF 網址'); const res=await fetch(url,{signal:AbortSignal.timeout(30000)}); if(!res.ok) throw new Error(`HTTP ${res.status}`); const buf=await res.arrayBuffer(); await loadPdfBuffer(buf,{...meta,pdfUrl:url},meta.title||'Remote PDF',url); }
-  catch(e){
-    // Preserve the currently open document on a failed replacement.
-    $('assistantOutput').innerHTML=`<h4>PDF 無法直接載入</h4><p>檔案可能無法連線、需要登入、不是 PDF，或有跨網域讀取限制。你可開啟原始 PDF，再下載後拖進這個 Reader。</p><p><a class="btn small" href="${esc(safeUrl(url))}" target="_blank" rel="noreferrer">開啟原始 PDF ↗</a></p>`;
-    toast('PDF 來源限制跨網域載入，請下載後上傳');
-  }
+let remotePdfRequest=0;
+function pdfCandidates(w={}){
+ const urls=[w.pdfUrl,w.raw?.primary_location?.pdf_url,w.raw?.best_oa_location?.pdf_url,...(w.raw?.locations||[]).map(x=>x.pdf_url)];
+ const landing=w.landingUrl||'';if(/^https:\/\/(?:www\.)?arxiv\.org\/abs\//.test(landing))urls.push(landing.replace('/abs/','/pdf/'));
+ return [...new Set(urls.filter(u=>safeUrl(u)))].slice(0,5);
+}
+async function fetchPdfBytes(url){
+ if(!safeUrl(url))throw Error('僅支援 HTTP / HTTPS PDF 網址');
+ if(window.opensciteDesktop?.downloadPdf)return window.opensciteDesktop.downloadPdf({url});
+ const res=await fetch(url,{signal:AbortSignal.timeout(20000),credentials:'omit'});if(!res.ok)throw Error('HTTP '+res.status);
+ const limit=80*1024*1024;if(Number(res.headers.get('content-length'))>limit){await res.body?.cancel();throw Error('PDF 超過 80 MB');}
+ const reader=res.body.getReader(),parts=[];let size=0;
+ try{while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit)throw Error('PDF 超過 80 MB');parts.push(value);}}catch(e){await reader.cancel().catch(()=>{});throw e;}
+ const bytes=new Uint8Array(size);let offset=0;for(const part of parts){bytes.set(part,offset);offset+=part.length;}
+ if(!new TextDecoder().decode(bytes.slice(0,1024)).includes('%PDF-'))throw Error('来源回傳登入頁或 HTML，並非 PDF');return bytes.buffer;
+}
+async function openRemotePaper(w){await openPdfUrl(w.pdfUrl,w);}
+async function openPdfUrl(url,meta={}){
+ if(state.aiBusy||state.reader.figureBusy){toast('請先完成或取消目前的 AI 分析，再切換文件。');return;}
+ showView('reader');const request=++remotePdfRequest,candidates=pdfCandidates({...meta,pdfUrl:url});
+ if(!candidates.length){toast('這筆結果沒有可直接取得的 PDF');return;}
+ $('pdfUrl').value=url;toast('正在取得 PDF…');let failure;
+ for(const candidate of candidates){if(request!==remotePdfRequest)return;try{const buf=await fetchPdfBytes(candidate);if(request!==remotePdfRequest)return;const loaded=await loadPdfBuffer(buf,{...meta,pdfUrl:candidate},meta.title||'Remote PDF',candidate);if(loaded===false)throw Error('PDF 格式損毀或無法解析');return;}catch(e){failure=e;}}
+ if(request!==remotePdfRequest)return;
+ const hint=window.opensciteDesktop?'來源可能需要登入或限制下載。':'此來源可能限制瀏覽器跨網域讀取；桌面版可直接下載公開 PDF。';
+ $('assistantOutput').innerHTML=`<h4>PDF 尚未載入</h4><p>${esc(hint)} ${esc(failure?.message||'沒有可用來源')}</p><p>原文件已保留。可下載原始 PDF，再按「上傳 PDF」開啟。</p><p><a class="btn small" href="${esc(safeUrl(url))}" target="_blank" rel="noreferrer">開啟原始 PDF ↗</a> <button class="btn small" id="retryPdfUpload">上傳 PDF</button></p>`;
+ $('retryPdfUpload').onclick=()=>$('readerFile').click();toast('PDF 未載入，詳見閱讀區的原因與替代方式');
 }
 async function loadPdfBuffer(buffer,meta,fileName='',url=''){
   if(state.aiBusy||state.reader.figureBusy){toast('請先完成或取消目前的 AI 分析，再切換文件。');return;}
@@ -256,7 +275,7 @@ async function loadPdfBuffer(buffer,meta,fileName='',url=''){
   try{pdf=await Promise.race([task.promise,new Promise((_,reject)=>{loadTimer=setTimeout(()=>reject(new Error('PDF 解析逾時，請檢查檔案或重試')),45000);})]);}catch(e){
     await task.destroy().catch(()=>{});
     if(request===state.reader.loadRequest)toast(`PDF 無法開啟：${e.message}。原文件已保留。`,6000);
-    return;
+    return false;
   }finally{clearTimeout(loadTimer);}
   if(request!==state.reader.loadRequest){await task.destroy().catch(()=>{});return;}
   state.reader.indexReady=false;if($('readerProgress'))$('readerProgress').textContent='正在載入文件與建立全文索引…';
@@ -923,7 +942,7 @@ function classifyStance(text=''){
 
 async function runCitationAnalysis(target=state.evidence.target){
   if(!target?.id){toast('目標論文沒有 OpenAlex ID');return;} const request=state.evidence.request=(state.evidence.request||0)+1;state.evidence.works=[];renderEvidence(); $('evidenceResults').innerHTML='<div class="empty-card"><span class="spinner"></span> 正在取得後續引用…</div>';
-  try{const d=await oa('/works',{filter:`cites:${target.id}`,'per-page':50,sort:'cited_by_count:desc'});const works=(d.results||[]).map(workFromOpenAlex);await enrichSources(works,state.evidence.sourceMap);if(request!==state.evidence.request)return;works.forEach(w=>Object.assign(w,{stance:'unknown',confidence:0,contexts:[],evidenceBasis:'尚未綁定全文引用段落'}));state.evidence.works=works;renderEvidence();}catch(e){if(request!==state.evidence.request)return;$('evidenceResults').innerHTML=`<div class="empty-card">引用查詢失敗：${esc(e.message)}</div>`;toast('引用分析失敗');}
+  try{const d=await oa('/works',{filter:`cites:${target.id}`,'per-page':50,sort:'cited_by_count:desc'});const works=(d.results||[]).map(workFromOpenAlex);await enrichSources(works,state.evidence.sourceMap);if(request!==state.evidence.request)return;works.forEach(w=>Object.assign(w,{stance:'mentioning',confidence:0,contexts:[],evidenceBasis:'引用關係：OpenAlex 已列出。推論：'+(w.abstract?'摘要提供研究內容，但未取得目標引用段落，尚不能判定支持或反駁。':'只有書目資料，尚不能判定支持或反駁。')}));state.evidence.works=works;renderEvidence();await autoVerifyCitations(works,target,request);}catch(e){if(request!==state.evidence.request)return;$('evidenceResults').innerHTML=`<div class="empty-card">引用查詢失敗：${esc(e.message)}</div>`;toast('引用分析失敗');}
 }
 function sortedEvidence(){ let list=state.evidence.works.map((w,i)=>({w,i}));const filter=$('stanceFilter').value,q=$('evidenceFilter').value.trim(),mode=$('evidenceSort').value;if(filter!=='all')list=list.filter(x=>x.w.stance===filter);if(q)list=list.filter(x=>overlapScore(x.w,q)>0);if(mode==='journal')list.sort((a,b)=>(b.w.sourceScore||0)-(a.w.sourceScore||0));else if(mode==='citations')list.sort((a,b)=>b.w.citations-a.w.citations);else if(mode==='year')list.sort((a,b)=>(b.w.year||0)-(a.w.year||0));else if(mode==='evidence')list.sort((a,b)=>(b.w.contexts?.length||0)-(a.w.contexts?.length||0));else list.sort((a,b)=>stanceWeight(b.w.stance)-stanceWeight(a.w.stance)||(b.w.citations||0)-(a.w.citations||0));return list; }
 function stanceWeight(s){return s==='supporting'?4:s==='contrasting'?3:s==='mentioning'?2:1}
@@ -932,8 +951,9 @@ $('stanceFilter').addEventListener('change',renderEvidence);$('evidenceSort').ad
 async function pdfTextFromFile(file){
   if(!window.pdfjsLib)throw new Error('PDF 引擎尚未載入');
   const b=await file.arrayBuffer(),task=pdfjsLib.getDocument({isEvalSupported:false,cMapUrl:new URL('vendor/cmaps/',document.baseURI).href,cMapPacked:true,standardFontDataUrl:new URL('vendor/standard_fonts/',document.baseURI).href,wasmUrl:new URL('vendor/wasm/',document.baseURI).href,data:b});
-  try{const pdf=await task.promise;let t='';for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),tc=await p.getTextContent({disableNormalization:true});t+=`\n[Page ${i}]\n`+PdfText.analyze(tc,p.getViewport({scale:1}).width).text;}return t;}
-  finally{await task.destroy().catch(()=>{});}
+  let timer;const deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{task.destroy().catch(()=>{});reject(Error('全文解析逾時'));},30000);});
+  try{return await Promise.race([(async()=>{const pdf=await task.promise;if(pdf.numPages>500)throw Error('引用全文超過 500 頁，請改用閱讀器檢視');let t='';for(let i=1;i<=pdf.numPages;i++){const p=await pdf.getPage(i),tc=await p.getTextContent({disableNormalization:true});t+=`\n[Page ${i}]\n`+PdfText.analyze(tc,p.getViewport({scale:1}).width).text;if(t.length>2000000)throw Error('引用全文過長，請改用閱讀器檢視');}return t;})(),deadline]);}
+  finally{clearTimeout(timer);await task.destroy().catch(()=>{});}
 }
 function targetAnchors(target){const titleTokens=queryTokens(target.title).filter(x=>x.length>=5).slice(0,12), surname=(target.authors||'').split(',')[0].trim().split(/\s+/).pop()||'',year=String(target.year||'');return{titleTokens,surname,year};}
 function citationContexts(text,target){
@@ -951,7 +971,36 @@ function citationContexts(text,target){
   return [...new Set(hits)].slice(0,12);
 }
 
-async function analyzeCitingPdf(index,file){const w=state.evidence.works[index],target=state.evidence.target;if(!w)return;toast('正在從 citing PDF 尋找引用上下文…');try{const text=await pdfTextFromFile(file);if(target!==state.evidence.target||!state.evidence.works.includes(w))return;const ctx=citationContexts(text,target);w.contexts=ctx;w.stance='unknown';w.confidence=0;if(ctx.length){const cls=classifyStance(ctx.join(' '));w.stance=cls.stance;w.confidence=cls.confidence;toast(`找到 ${ctx.length} 個 citation contexts`);}else{toast('PDF 已解析，但沒有可靠綁定到目標論文的引用段落');}renderEvidence();}catch(e){toast(`PDF 解析失敗：${e.message}`);} }
+function applyCitationText(w,text,target){
+ const ctx=citationContexts(text,target);w.contexts=ctx;w.confidence=0;
+ if(ctx.length){const cls=classifyStance(ctx.join(' '));w.stance=cls.stance;w.confidence=cls.confidence;
+ w.evidenceBasis=`已定位 ${ctx.length} 個全文引用段落。`+(cls.stance==='supporting'?'推論：措辭傾向支持，非獨立證實。':cls.stance==='contrasting'?'推論：措辭傾向反駁，須比較實驗條件。':cls.stance==='unknown'?'推論：有歧義或同時出現不同立場，方向未定。':'該段落提及目標研究，沒有足夠措辭判定支持或反駁。');
+ }else{w.stance='mentioning';w.evidenceBasis='已讀取全文，但未可靠定位目標引用段落。推論：只能確認書目引用關係，支持／反駁方向未定。';}
+}
+async function verifyCitation(w,target){
+ const active=()=>target===state.evidence.target&&state.evidence.works.includes(w);if(w.verifying||!active())return;w.verifying=true;
+ const urls=pdfCandidates(w);if(!urls.length){w.evidenceBasis='沒有公開 PDF。推論僅基於引用關係'+(w.abstract?'與摘要':'')+'，方向未定；可加入引用論文 PDF 判讀。';w.verifying=false;renderEvidence();return;}
+ let error;try{for(const url of urls){if(!active())return;try{w.evidenceBasis='正在取得全文、比對参考文獻及引用段落…';renderEvidence();const bytes=await fetchPdfBytes(url);if(!active())return;const text=await pdfTextFromFile(new Blob([bytes]));if(!active())return;applyCitationText(w,text,target);return;}catch(e){error=e;}}
+ if(active())w.evidenceBasis='全文未取得：'+String(error?.message||'來源無法使用')+'。推論只能確認引用關係，方向未定；可下載後加入 PDF。';
+ }finally{w.verifying=false;if(active())renderEvidence();}
+}
+async function inferCitation(w,target){
+ if(!w||!target)return;const contexts=w.contexts||[],abstract=w.abstract||'';if(!contexts.length&&!abstract){toast('沒有全文段落或摘要可供推論；請先取得全文或加入 PDF。');return;}
+ const schema={type:'object',additionalProperties:false,required:['stance','reason','quote'],properties:{stance:{type:'string',enum:['supporting','contrasting','mentioning','unknown']},reason:{type:'string'},quote:{type:'string'}}};
+ const raw=await askAIWithImages('Interpret the citation relationship in Traditional Chinese. Always describe your reasoning as inference, not verified truth. Separate the authors conclusion from your inference. For supporting/contrasting, require an exact quote from the supplied TARGET-BOUND CITATION PASSAGES, and explain what specific claim is supported or challenged and any experimental-condition differences. If only abstracts are supplied, discuss possible relevance but set stance=unknown and quote="". Do not infer support from citation counts or shared vocabulary. Mixed or ambiguous stance must be unknown. Keep reason under 200 Chinese characters.',JSON.stringify({target:{title:target.title,abstract:target.abstract||''},citing:{title:w.title,abstract},'TARGET-BOUND CITATION PASSAGES':contexts}),[],{schema,schemaName:'citation_inference'});
+ if(target!==state.evidence.target||!state.evidence.works.includes(w))return;
+ const value=parseJsonLoose(raw);if(!value||!schema.properties.stance.enum.includes(value.stance)||typeof value.reason!=='string'||!value.reason.trim()||value.reason.length>3000||typeof value.quote!=='string')throw Error('引用推論格式不完整，原判讀已保留');
+ const quote=value.quote.replace(/\s+/g,' ').trim(),bound=quote.length>=12&&contexts.some(c=>c.replace(/\s+/g,' ').includes(quote));
+ w.stance=['supporting','contrasting'].includes(value.stance)&&!bound?'unknown':value.stance;w.confidence=0;
+ w.evidenceBasis=(contexts.length?'全文段落推論：':'摘要推論（未定位引用段落）：')+value.reason+(value.quote&&!bound?' 引用片段未能匹配，方向未定。':'');
+ if(value.quote&&!bound)w.stance='unknown';w.inferenceQuote=bound?value.quote:'';w.inferenceModels=window.AIConnections?.lastReport();renderEvidence();
+}
+async function autoVerifyCitations(works,target,request){
+ // Bounded automatic work; remaining rows retain an explicit per-paper action.
+ const queue=works.filter(w=>pdfCandidates(w).length).slice(0,12);let cursor=0;
+ await Promise.all(Array.from({length:Math.min(3,queue.length)},async()=>{while(cursor<queue.length&&request===state.evidence.request){const w=queue[cursor++];await verifyCitation(w,target);}}));
+}
+async function analyzeCitingPdf(index,file){const w=state.evidence.works[index],target=state.evidence.target;if(!w)return;toast('正在定位全文引用段落…');try{const text=await pdfTextFromFile(file);if(target!==state.evidence.target||!state.evidence.works.includes(w))return;applyCitationText(w,text,target);renderEvidence();toast(w.contexts.length?'全文引用段落已定位':'全文已讀取；引用方向未定');}catch(e){toast(`PDF 解析失敗：${e.message}`);}}
 $('exportJson').addEventListener('click',()=>{downloadText(`openscite-${safeFile(state.evidence.target?.title||'report')}.json`,JSON.stringify({target:state.evidence.target,works:state.evidence.works,exportedAt:new Date().toISOString()},null,2),'application/json')});
 $('exportMd').addEventListener('click',()=>{const t=state.evidence.target;let md=`# OpenScite Citation Evidence Report\n\n## Target\n${t?`**${t.title}**\n\n${t.authors||''} · ${t.source||''} · ${t.year||''}\n\n`:''}`;for(const w of state.evidence.works){md+=`## ${w.stance.toUpperCase()} — ${w.title}\n\n- Year: ${w.year||''}\n- Venue: ${w.source||''}\n- Citations: ${w.citations||0}\n- Estimated quartile: ${w.q||'Q?'}\n- DOI: ${w.doi||''}\n\n${w.abstract||''}\n\n`;if(w.contexts?.length)md+=w.contexts.map(c=>`> ${c}`).join('\n\n')+'\n\n';}downloadText(`openscite-${safeFile(t?.title||'report')}.md`,md,'text/markdown')});
 

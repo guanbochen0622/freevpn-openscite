@@ -155,5 +155,6 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  console.log('PASS real image-only OCR, searchable index, corrections, structured formulas/tables, CSV, exact evidence links, invalid citations and cancellation');
 
  await require('./multi-model.cjs')(page);
+ await require('./account-reader-fixes.cjs')(page);
  assert.deepEqual(errors,[]);console.log('PASS: failure paths, request races, mocked AI page links, backup roundtrip, library reopen,  search, comparison, library filters, PDF text, bounded canvases, find, navigation, bookmarks, zoom, stable annotations, citation binding, backup validation, mobile layout.');await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -1,6 +1,6 @@
-try{await import('./i18n.js?v=25.8.1');}catch(e){console.error('Language setup failed',e);}
+try{await import('./i18n.js?v=25.9.0');}catch(e){console.error('Language setup failed',e);}
 // Keep search and the library usable even if the PDF engine cannot initialize.
-const ASSET_VERSION = '25.8.1';
+const ASSET_VERSION = '25.9.0';
 try {
   const inflate = async (url) => {
     const response = await fetch(url);
@@ -29,7 +29,7 @@ try {
   console.error('PDF engine could not initialize', error);
   window.pdfEngineError = error instanceof Error ? error.message : String(error);
 }
-for (const src of [`ai-providers.js?v=${ASSET_VERSION}`, `pdf-text.js?v=${ASSET_VERSION}`, `app.js?v=${ASSET_VERSION}`, `workspace.js?v=${ASSET_VERSION}`, `reader-core.js?v=${ASSET_VERSION}`, `reader-tools.js?v=${ASSET_VERSION}`, `document-core.js?v=${ASSET_VERSION}`, `document-understanding.js?v=${ASSET_VERSION}`, `reader-experience.js?v=${ASSET_VERSION}`, `ai-connections.js?v=${ASSET_VERSION}`, `reader-layout.js?v=${ASSET_VERSION}`]) {
+for (const src of [`ai-providers.js?v=${ASSET_VERSION}`, `pdf-text.js?v=${ASSET_VERSION}`, `app.js?v=${ASSET_VERSION}`, `workspace.js?v=${ASSET_VERSION}`, `reader-core.js?v=${ASSET_VERSION}`, `reader-tools.js?v=${ASSET_VERSION}`, `document-core.js?v=${ASSET_VERSION}`, `document-understanding.js?v=${ASSET_VERSION}`, `reader-experience.js?v=${ASSET_VERSION}`, `ai-handoff.js?v=${ASSET_VERSION}`, `ai-connections.js?v=${ASSET_VERSION}`, `reader-layout.js?v=${ASSET_VERSION}`]) {
   try {
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');

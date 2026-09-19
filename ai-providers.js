@@ -44,7 +44,7 @@ async function run(body,config,call,{signal,onProgress=()=>{}}={}){
  validateBody(body);const primary=config.primary,participants=config.mixed?[...new Set([primary,...(config.reviewers||[])])]:[primary];
  if(!labels[primary]||participants.some(p=>!labels[p])||participants.length>3||config.mixed&&participants.length<2)throw Error('混合統整需選擇 2–3 個不同服務');
  const check=()=>signal?.throwIfAborted();const records=[],answers=[];check();
- for(const provider of participants){check();onProgress({stage:'review',provider,participants});try{const text=await call(provider,body);check();answers.push({provider,text});records.push({provider,model:config.models?.[provider]||'',status:'success'});}catch(e){check();records.push({provider,model:config.models?.[provider]||'',status:'failed'});if(!config.mixed)throw e;}}
+ for(const provider of participants){check();onProgress({stage:'review',provider,participants});try{const text=await call(provider,body);check();answers.push({provider,text});records.push({provider,model:config.models?.[provider]||'',status:'success'});}catch(e){check();if(e.name==='AbortError')throw e;records.push({provider,model:config.models?.[provider]||'',status:'failed'});if(!config.mixed)throw e;}}
  if(!answers.length)throw Error('所有模型均未完成回答，請檢查連線與額度');
  if(!config.mixed)return {text:answers[0].text,report:{mode:'single',records}};
  if(answers.length<2)throw Error('只有一個模型成功，混合統整未完成；請關閉混合模式或修正其他連線後重試。');

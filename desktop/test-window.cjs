@@ -138,13 +138,24 @@ app.on('browser-window-created',(_e,win)=>{
  assert.equal(fs.readFileSync(path.join(profile,'provider-keys.json'),'utf8').includes('native-test-key'),false);
  let providerCalls=[];
  ipcMain.removeHandler('openscite:providerAsk');ipcMain.handle('openscite:providerAsk',(_event,body)=>{providerCalls.push(body.provider);assert.ok(body.body.input.some(m=>m.content.some(p=>p.type==='input_image')));return JSON.stringify({claims:[{text:'Verified scan.',kind:'observation',sources:[{id:'p1s1',quote:'Measured wavelength is 980 nm.'}]}]});});
- await win.webContents.executeJavaScript(`(async()=>{saveJSON('openscite_ai_connections_v1',{primary:'gemini',mixed:true,reviewers:['claude'],models:{gemini:'gemini-test',claude:'claude-test'}});document.getElementById('askInput').value='Compare model evidence';await askPaperQuestion();})()`);
+ await win.webContents.executeJavaScript(`(async()=>{saveJSON('openscite_ai_connections_v1',{modes:{gemini:'api',claude:'api'},primary:'gemini',mixed:true,reviewers:['claude'],models:{gemini:'gemini-test',claude:'claude-test'}});document.getElementById('askInput').value='Compare model evidence';await askPaperQuestion();})()`);
  assert.deepEqual(providerCalls,['gemini','claude','gemini']);
  assert.equal(await win.webContents.executeJavaScript(`chatTurns.at(-1).models.mode`),'mixed');
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('modelRunStatus').textContent`),/混合統整完成/);
  await win.webContents.executeJavaScript(`(async()=>{await opensciteDesktop.providerSet({provider:'gemini',key:''});await opensciteDesktop.providerSet({provider:'claude',key:''});})()`);
  assert.equal(await win.webContents.executeJavaScript(`(async()=>!(await opensciteDesktop.providerStatus()).gemini.configured)()`),true);
  console.log('PASS native encrypted/session provider accounts, Gemini/Claude mixed image requests, result provenance and credential removal');
+ // Exercise the real native reader route and device-login UI via isolated transport fixtures.
+ ipcMain.removeHandler('openscite:downloadPdf');ipcMain.handle('openscite:downloadPdf',(_event,{url})=>{assert.equal(url,'https://papers.example/native.pdf');return new Uint8Array(bytes).buffer;});
+ await win.webContents.executeJavaScript(`(async()=>{showView('search');await openRemotePaper({title:'Native search PDF',pdfUrl:'https://papers.example/native.pdf'});})()`);
+ assert.equal(await win.webContents.executeJavaScript(`state.reader.meta.title`),'Native search PDF');
+ assert.equal(await win.webContents.executeJavaScript(`document.getElementById('pdfViewport').getBoundingClientRect().height>0`),true);
+ ipcMain.removeHandler('openscite:login');ipcMain.handle('openscite:login',(_event,b)=>{assert.equal(b.device,true);return {url:'https://auth.openai.com/codex/device',userCode:'TEST-1234',opened:true};});
+ await win.webContents.executeJavaScript(`openChatGPTSettings();document.getElementById('desktopDeviceLogin').click()`);
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+5000;while(!document.getElementById('desktopLoginHelp').textContent.includes('TEST-1234')){if(Date.now()>end)throw Error('Device code missing');await new Promise(r=>setTimeout(r,30));}})()`);
+ win.webContents.send('openscite:login',{success:false,error:'Native login failure fixture'});
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+5000;while(!document.getElementById('desktopStatus').textContent.includes('Native login failure fixture')){if(Date.now()>end)throw Error('Login failure missing');await new Promise(r=>setTimeout(r,30));}})()`);
+ console.log('PASS native search-to-PDF IPC, official device code UI and login failure notification');
  clearTimeout(timer);app.quit();
  }catch(e){console.error(e);clearTimeout(timer);app.exit(1);}
  });

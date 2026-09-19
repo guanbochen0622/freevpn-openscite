@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node tests/smoke.cjs",
     "test:logic": "node tests/logic.cjs",
-    "check": "node --check app.js && node --check workspace.js && node --check boot.js && node --check reader-tools.js && node --check document-core.js && node --check document-understanding.js && node --check reader-core.js && node --check reader-experience.js && node --check ai-providers.js && node --check ai-connections.js && node --check reader-layout.js"
+    "check": "node --check app.js && node --check workspace.js && node --check boot.js && node --check reader-tools.js && node --check document-core.js && node --check document-understanding.js && node --check reader-core.js && node --check reader-experience.js && node --check ai-providers.js && node --check ai-connections.js && node --check reader-layout.js && node --check ai-handoff.js"
   },
   "devDependencies": {
     "pdf-lib": "1.17.1",

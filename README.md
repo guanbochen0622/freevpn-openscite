@@ -4,9 +4,13 @@ A browser-based academic research workspace: discover papers, inspect PDFs, coll
 
 ## This release
 
-Reader revision 4 (desktop 0.8.0 / web 25.8): Gemini and Claude API connections alongside the existing ChatGPT desktop sign-in and OpenAI API. Optional 2–3-provider synthesis, compact reader tools and Windows x64 installers. See [the verification scope](VALIDATION-0.8.0.md).
+Desktop 0.9.0 / web 25.9: fixes for account sign-in, search-to-PDF navigation and citation evidence. ChatGPT now has official device-code fallback, login cancellation and explicit failure notifications. There are exactly three provider choices: ChatGPT, Gemini and Claude. The reader has a direct primary-model selector.
 
-Open **AI 模型** to configure connections. Gemini uses a key from [Google AI Studio](https://aistudio.google.com/apikey); Claude uses [Claude Console](https://platform.claude.com/settings/keys). These API connections use separate quotas from chat subscriptions. Select a primary model, optionally enable mixed synthesis and additional reviewers, then save. Each selected service receives the supplied paper excerpts/images; the primary receives their drafts for synthesis. No model is called merely by opening a paper or choosing settings.
+**Account mode is not uniform:** ChatGPT desktop uses the official Codex account flow. Gemini/Claude default to a manual official-website workflow: sign in on the provider website, copy the prepared question and images, then paste the complete answer back. This is explicitly **not automatic third-party subscription login**. Optional API automation remains in collapsed advanced settings. Mixed synthesis can combine these methods; manual steps wait for the user and do not inspect website cookies or tokens.
+
+Search PDF actions navigate to the reader, try alternate OpenAlex PDF sources and reject HTML login pages. Desktop retrieves public PDFs in the main process, avoiding browser CORS restrictions; web-only cross-origin restrictions and paywalls remain. PDFs are capped at 80 MB and requests time out. Failures preserve the current document and offer upload.
+
+Citation analysis automatically attempts up to 12 public PDFs with three concurrent workers. It binds numbered citations to the target reference, shows original passages and labels stance as inference. Remaining records can be fetched individually. “AI 解讀” uses the selected primary model to explain passages or abstract-only relevance; supporting/contrasting classifications require an exact matching passage quote. Missing full text is not described as verified evidence. See [verification scope](VALIDATION-0.9.0.md).
 
 Desktop keys are session-only by default; optional persistence uses the OS encryption facility and refuses an unencrypted fallback. Browser Gemini/Claude keys remain in session storage. Connection tests send a short prompt, with no paper. Keys are excluded from workspace backups. Model availability, API billing and CORS support depend on the provider; use the desktop app if browser cross-origin access is unavailable.
 
@@ -27,7 +31,7 @@ Runtime files: `index.html`, `styles.css`, `workspace.css`, `boot.js`, `app.js`,
 
 ## Verification
 
-Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION-0.8.0.md` for current verification. Optional real-file regression: `node tests/real-papers.cjs /absolute/paper.pdf [...]`; files stay local and no model service is called.
+Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION-0.9.0.md` for current verification. Optional real-file regression: `node tests/real-papers.cjs /absolute/paper.pdf [...]`; files stay local and no model service is called.
 
 ## Product limits and commercial readiness
 

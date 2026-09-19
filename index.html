@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="OpenScite v25.8 — Academic research workspace.">
-<title>OpenScite v25.8 — Research Workspace</title>
+<meta name="description" content="OpenScite v25.9 — Academic research workspace.">
+<title>OpenScite v25.9 — Research Workspace</title>
 <link rel="stylesheet" href="vendor/pdf_viewer.css">
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="workspace.css?v=25.8.1">
+<link rel="stylesheet" href="workspace.css?v=25.9.0">
 
 </head>
 <body>
 <a href="#view-search" class="skip-link">跳至主要內容</a>
 <nav class="topbar">
   <div class="shell nav-inner">
-    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v25.8</span></button>
+    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v25.9</span></button>
     <div class="nav-tabs" role="navigation">
       <button class="nav-tab active" data-view="search">學術搜尋</button>
       <button class="nav-tab" data-view="reader">PDF 閱讀器</button>
@@ -142,10 +142,10 @@
       <div class="row-actions"><button id="exportMd" class="btn">匯出 Markdown</button><button id="exportJson" class="btn">匯出 JSON</button></div>
     </div>
     <div class="evidence-layout">
-      <aside class="panel evidence-controls"><div class="panel-head"><h3>目標論文</h3><p>DOI / OpenAlex Work ID / 論文標題</p></div><div class="panel-body"><input id="targetQuery" class="control" placeholder="10.1038/... 或 W2741809807"><button id="analyzeCitations" class="btn primary full">開始分析</button><div id="targetInfo" class="target-info"><span class="placeholder">尚未設定目標論文。</span></div><div class="privacy-note">取得引用文獻不代表支持原論文。請加入合法取得的引用方 PDF，以參考文獻與引用編號綁定原文段落。支持／反駁僅為規則判讀候選，仍須人工核對；作者年份格式暫不自動綁定。</div></div></aside>
+      <aside class="panel evidence-controls"><div class="panel-head"><h3>目標論文</h3><p>DOI / OpenAlex Work ID / 論文標題</p></div><div class="panel-body"><input id="targetQuery" class="control" placeholder="10.1038/... 或 W2741809807"><button id="analyzeCitations" class="btn primary full">開始分析</button><div id="targetInfo" class="target-info"><span class="placeholder">尚未設定目標論文。</span></div><div class="privacy-note">會自動嘗試前 12 篇有公開 PDF 的引用文獻，其餘可逐篇取得全文。支持／反駁以定位的原文為依據並標為推論；也可按「AI 解讀」讓選定主模型分析。只有摘要時會說明可能關聯，不當成支持或反駁證據。作者年份格式暫不自動綁定。</div></div></aside>
       <section>
-        <div class="evidence-kpis"><div><b id="kpiTotal">0</b><span>引用文獻（最多 50 篇）</span></div><div><b id="kpiSupporting">0</b><span>可能支持（待核對）</span></div><div><b id="kpiContrasting">0</b><span>可能反駁（待核對）</span></div><div><b id="kpiMentioning">0</b><span>提及 / 未驗證</span></div></div>
-        <div class="result-toolbar"><input id="evidenceFilter" class="control" placeholder="結果關鍵字（同樣紅色 Highlight）"><select id="stanceFilter" class="control"><option value="all">全部 stance</option><option value="supporting">supporting</option><option value="contrasting">contrasting</option><option value="mentioning">mentioning</option><option value="unknown">unknown</option></select><select id="evidenceSort" class="control"><option value="rank">目前排名</option><option value="journal">期刊指標</option><option value="citations">引用次數</option><option value="year">年份</option><option value="evidence">全文證據數</option></select></div>
+        <div class="evidence-kpis"><div><b id="kpiTotal">0</b><span>引用文獻（最多 50 篇）</span></div><div><b id="kpiSupporting">0</b><span>支持（推論）</span></div><div><b id="kpiContrasting">0</b><span>反駁（推論）</span></div><div><b id="kpiMentioning">0</b><span>提及／方向未定</span></div></div>
+        <div class="result-toolbar"><input id="evidenceFilter" class="control" placeholder="結果關鍵字（同樣紅色 Highlight）"><select id="stanceFilter" class="control"><option value="all">全部判讀</option><option value="supporting">支持（推論）</option><option value="contrasting">反駁（推論）</option><option value="mentioning">引用／提及</option><option value="unknown">方向未定</option></select><select id="evidenceSort" class="control"><option value="rank">目前排名</option><option value="journal">期刊指標</option><option value="citations">引用次數</option><option value="year">年份</option><option value="evidence">全文證據數</option></select></div>
         <div id="evidenceResults" class="paper-list"><div class="empty-card"><span class="empty-icon">⌁</span><strong>選擇要追蹤的論文</strong><span>輸入 DOI、標題或 OpenAlex 識別碼。</span></div></div>
       </section>
     </div>
@@ -174,7 +174,7 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <footer><div class="shell">OpenScite · Research Workspace</div></footer>
-<script src="vendor/fflate.min.js?v=25.8.1"></script>
-<script type="module" src="boot.js?v=25.8.1"></script>
+<script src="vendor/fflate.min.js?v=25.9.0"></script>
+<script type="module" src="boot.js?v=25.9.0"></script>
 </body>
 </html>
