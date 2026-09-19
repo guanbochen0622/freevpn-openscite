@@ -24,7 +24,7 @@ async function askPaperQuestion(){
     setAssistant('Paper Q&A','處理中…');
     const answer=await DocumentUnderstanding.groundedAnswer(question,selected,previous);
     if(readerKey()!==key)return;
-    chatTurns.push({question,answer,evidence:DocumentUnderstanding.evidenceSnapshot()});chatTurns=chatTurns.slice(-20);
+    chatTurns.push({question,answer,models:window.AIConnections?.lastReport(),evidence:DocumentUnderstanding.evidenceSnapshot()});chatTurns=chatTurns.slice(-20);
     const all=loadJSON(CHAT_STORE,{});all[key]=chatTurns;saveJSON(CHAT_STORE,all);
     renderReaderHistory();setAssistant('Paper Q&A',answer);DocumentUnderstanding.appendEvidence();$('askInput').value='';
   }catch(e){if(readerKey()===key)setAssistant('問答未完成',aiErrorMessage(e));}

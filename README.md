@@ -4,7 +4,11 @@ A browser-based academic research workspace: discover papers, inspect PDFs, coll
 
 ## This release
 
-Reader revision 3 (desktop 0.7.0 / web 25.7): mobile full-screen reading and shared AI bottom sheet, a page-linked evidence map, durable OCR drafts/formula-table results, saved-answer source revalidation, Chinese-aware evidence retrieval and document-index retry. See [the verification scope](VALIDATION-0.7.0.md).
+Reader revision 4 (desktop 0.8.0 / web 25.8): Gemini and Claude API connections alongside the existing ChatGPT desktop sign-in and OpenAI API. Optional 2–3-provider synthesis, compact reader tools and Windows x64 installers. See [the verification scope](VALIDATION-0.8.0.md).
+
+Open **AI 模型** to configure connections. Gemini uses a key from [Google AI Studio](https://aistudio.google.com/apikey); Claude uses [Claude Console](https://platform.claude.com/settings/keys). These API connections use separate quotas from chat subscriptions. Select a primary model, optionally enable mixed synthesis and additional reviewers, then save. Each selected service receives the supplied paper excerpts/images; the primary receives their drafts for synthesis. No model is called merely by opening a paper or choosing settings.
+
+Desktop keys are session-only by default; optional persistence uses the OS encryption facility and refuses an unencrypted fallback. Browser Gemini/Claude keys remain in session storage. Connection tests send a short prompt, with no paper. Keys are excluded from workspace backups. Model availability, API billing and CORS support depend on the provider; use the desktop app if browser cross-origin access is unavailable.
 
 - Search: OpenAlex with Crossref fallback, validated year ranges, provider-side date/citation sorting, deduplication within a page, stale-request protection, recent searches, individual keyword highlighting including hyphenated words.
 - Compare up to three papers; inspect and export source metadata as BibTeX. The journal score sort is **within the current page**. Arbitrary metrics are never labeled official Q1–Q4 rankings.
@@ -23,7 +27,7 @@ Runtime files: `index.html`, `styles.css`, `workspace.css`, `boot.js`, `app.js`,
 
 ## Verification
 
-Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION-0.7.0.md` for current verification. Optional real-file regression: `node tests/real-papers.cjs /absolute/paper.pdf [...]`; files stay local and no model service is called.
+Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION-0.8.0.md` for current verification. Optional real-file regression: `node tests/real-papers.cjs /absolute/paper.pdf [...]`; files stay local and no model service is called.
 
 ## Product limits and commercial readiness
 

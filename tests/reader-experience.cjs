@@ -6,11 +6,11 @@ module.exports=async function testReaderExperience(page){
  await page.fill('#ocrTranscript','Unsaved adoption: draft only 985 nm.');
  await page.evaluate(()=>DocumentUnderstanding.flush());
  const scanKey=await page.evaluate(()=>readerKey());
- await page.reload();await page.waitForSelector('#knowledgeMapOpen',{state:'attached'});
+ await page.reload();await page.waitForFunction(()=>!!window.ReaderLayout);
  await page.click('.nav-tab[data-view="reader"]');await page.setInputFiles('#readerFile',scan);
  await page.waitForFunction(()=>state.reader.indexReady&&state.reader.fileName==='scanned.pdf');await page.evaluate(()=>DocumentUnderstanding.ready());
  assert.equal(await page.evaluate(()=>readerKey()),scanKey);
- if(!await page.locator('#documentTools').isVisible())await page.click('#documentToolsToggle');
+ if(!await page.locator('#documentTools').isVisible()){await page.evaluate(()=>ReaderLayout.openMore());await page.click('#documentToolsToggle');}
  assert.match(await page.locator('#readerProgress').textContent(),/全文索引完成/);
  assert.equal(await page.inputValue('#ocrTranscript'),'Unsaved adoption: draft only 985 nm.');
  assert.equal(await page.evaluate(()=>state.reader.pageTexts[0]),'Measured wavelength is 980 nm. Concentration is 10⁻¹⁴.');
@@ -33,7 +33,7 @@ module.exports=async function testReaderExperience(page){
  await page.locator('#knowledgeMapBody button[data-map-page]').first().click();await page.waitForSelector('#pagePreviewBody canvas');assert.equal(await page.evaluate(()=>state.reader.currentPage),1);await page.click('#closePagePreview');
  await page.fill('#knowledgeFilter','');await page.screenshot({path:'/tmp/openscite-knowledge-map.png'});await page.click('#closeKnowledgeMap');
  // Exercise actual mobile controls with the same assistant DOM, not a second copy.
- await page.setViewportSize({width:390,height:844});await page.click('#documentToolsToggle');await page.click('#mobileReading');
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>ReaderLayout.openMore());await page.click('#documentToolsToggle');await page.click('#mobileReading');
  await page.waitForFunction(()=>document.body.classList.contains('mobile-reading')&&parseFloat(document.querySelector('.pdf-page').style.width)<=document.querySelector('#pdfViewport').clientWidth);
  await page.waitForFunction(()=>document.querySelector('.pdf-page')?.dataset.ready==='1');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
@@ -56,11 +56,12 @@ module.exports=async function testReaderExperience(page){
  await page.click('#retryReaderIndex');await page.waitForFunction(()=>state.reader.indexErrors.length===0&&!document.querySelector('#retryReaderIndex').disabled);await page.evaluate(()=>DocumentUnderstanding.ready());
  assert.equal(await page.locator('#retryReaderIndex').isVisible(),false);assert.match(await page.evaluate(()=>state.reader.pageTexts[1]),/10⁻¹⁴/);
  await page.setViewportSize({width:390,height:844});await page.click('#mobileReading');await page.waitForFunction(()=>document.querySelector('.pdf-page')?.dataset.ready==='1');
+ await page.evaluate(async()=>{goPdfPage(1);await state.reader.paintPage(1);});
  await page.click('#mobileNextPage');assert.equal(await page.inputValue('#mobilePageJump'),'2');assert.equal(await page.locator('#mobileNextPage').isDisabled(),true);
  await page.click('#mobilePrevPage');assert.equal(await page.inputValue('#mobilePageJump'),'1');
  await page.evaluate(()=>showView('library'));assert.equal(await page.locator('body').evaluate(b=>b.classList.contains('mobile-reading')),false);
  await page.setViewportSize({width:1440,height:1000});await page.click('.nav-tab[data-view="reader"]');await page.setInputFiles('#readerFile',scan);
  await page.waitForFunction(()=>state.reader.indexReady&&state.reader.fileName==='scanned.pdf');await page.evaluate(()=>DocumentUnderstanding.ready());
- if(!await page.locator('#documentTools').isVisible())await page.click('#documentToolsToggle');await page.waitForSelector('#structureResults .katex');
+ if(!await page.locator('#documentTools').isVisible()){await page.evaluate(()=>ReaderLayout.openMore());await page.click('#documentToolsToggle');}await page.waitForSelector('#structureResults .katex');
  console.log('PASS mobile reading/navigation/sheet lifecycle, evidence map/filter/preview, persisted OCR drafts and structures, revalidated history, document isolation and failed-index recovery');
 };

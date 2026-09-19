@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict'),P=require('../ai-providers.js');
+const body={input:[{role:'system',content:[{type:'input_text',text:'Use original evidence.'}]},{role:'user',content:[{type:'input_text',text:'[Page 1] Concentration 10⁻¹⁴'},{type:'input_image',image_url:'data:image/png;base64,AAAA'}]}],text:{format:{schema:{type:'object',properties:{value:{type:'string'}},required:['value'],additionalProperties:false}}}};
+(async()=>{
+ const gemini=P.request('gemini','gemini-test','test-key',body),claude=P.request('claude','claude-test','test-key',body,true);
+ assert.equal(gemini.body.contents[0].parts[1].inlineData.mimeType,'image/png');assert.equal(gemini.body.generationConfig.responseJsonSchema,body.text.format.schema);assert.match(gemini.body.contents[0].parts[0].text,/10⁻¹⁴/);
+ assert.equal(claude.body.messages[0].content[1].source.data,'AAAA');assert.equal(claude.body.output_config.format.schema,body.text.format.schema);assert.equal(claude.headers['anthropic-dangerous-direct-browser-access'],'true');
+ assert.throws(()=>P.request('claude','model','key',{input:[{role:'user',content:[{type:'input_image',image_url:'https://external/image.png'}]}]}));
+ assert.throws(()=>P.request('claude','../evil?key=1','key',body));
+ assert.throws(()=>P.extract('gemini',{candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'partial'}]}}]}));
+ assert.throws(()=>P.extract('claude',{stop_reason:'max_tokens',content:[{type:'text',text:'partial'}]}));
+ assert.equal(P.extract('gemini',{candidates:[{finishReason:'STOP',content:{parts:[{thought:true,text:'private reasoning'},{text:'final'}]}}]}),'final');
+ let calls=[];const config={primary:'gemini',mixed:true,reviewers:['claude'],models:{gemini:'g-test',claude:'c-test'}};
+ const original=JSON.stringify(body),result=await P.run(body,config,async(provider,b)=>{calls.push({provider,body:b});return calls.length===3?'synthesis':provider+' answer';});
+ assert.deepEqual(calls.map(c=>c.provider),['gemini','claude','gemini']);assert.equal(result.text,'synthesis');assert.equal(result.report.mode,'mixed');assert.equal(JSON.stringify(body),original);assert.deepEqual(calls[2].body.text.format.schema,body.text.format.schema);assert.match(calls[2].body.input.at(-1).content[0].text,/never source evidence/);
+ calls=[];await assert.rejects(P.run(body,config,async p=>{calls.push(p);if(p==='claude')throw Error('quota');return 'ok';}),/只有一個模型/);assert.equal(calls.length,2);
+ calls=[];const controller=new AbortController();await assert.rejects(P.run(body,config,async p=>{calls.push(p);controller.abort();return 'ok';},{signal:controller.signal}),/abort/i);assert.equal(calls.length,1);
+ calls=[];await P.run(body,{...config,mixed:false},async p=>{calls.push(p);return 'one';});assert.deepEqual(calls,['gemini']);
+ let fetchOptions;await assert.rejects(P.send('claude','test','hidden-key',body,{fetchImpl:async(url,opts)=>{fetchOptions=opts;return {ok:false,status:401};}}),/金鑰或權限/);assert.equal(fetchOptions.redirect,'error');
+ const list=await P.models('gemini','key',{fetchImpl:async()=>({ok:true,json:async()=>({models:[{name:'models/embed',supportedGenerationMethods:['embedContent']},{name:'models/good',displayName:'Good',supportedGenerationMethods:['generateContent']}]})})});assert.deepEqual(list,[{id:'good',name:'Good'}]);
+ console.log('PASS provider image/schema adapters, scientific symbols, refusal/truncation, model listing, mixed/single synthesis, partial failures, cancellation and credential-safe errors');
+})().catch(e=>{console.error(e);process.exit(1)});

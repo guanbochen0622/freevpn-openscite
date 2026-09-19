@@ -1,7 +1,7 @@
 name: Verify installed reader and live website
 on:
   push:
-    paths: ['.github/workflows/verify-all.yml', 'workspace.css', 'app.js', 'boot.js', 'desktop/assistant.cjs', 'reader-*.js', 'workspace.js', 'index.html', 'locales/**', 'tests/**', 'i18n.js', 'pdf-text.js', 'document-*.js', 'vendor/**']
+    paths: ['.github/workflows/verify-all.yml', 'workspace.css', 'app.js', 'ai-*.js', 'boot.js', 'desktop/assistant.cjs', 'reader-*.js', 'workspace.js', 'index.html', 'locales/**', 'tests/**', 'i18n.js', 'pdf-text.js', 'document-*.js', 'vendor/**']
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run check && node --check reader-tools.js && node --check i18n.js
-      - run: npm run test:logic && node tests/reader-lifecycle.cjs && node tests/partial-index.cjs && node tests/locales.cjs && node tests/pdf-text.cjs && node tests/sources.cjs && node tests/document-core.cjs && node tests/reader-core.cjs
+      - run: npm run test:logic && node tests/reader-lifecycle.cjs && node tests/partial-index.cjs && node tests/locales.cjs && node tests/pdf-text.cjs && node tests/sources.cjs && node tests/document-core.cjs && node tests/reader-core.cjs && node tests/ai-providers.cjs && node --test desktop/providers.test.cjs
       - name: Test local website
         run: npm test
       - name: Wait for the tested stylesheet to reach GitHub Pages
@@ -30,7 +30,7 @@ jobs:
         run: |
           node - <<'JS'
           const fs=require('node:fs');
-          (async()=>{const assets=['workspace.css','app.js','index.html','reader-tools.js','workspace.js','i18n.js','locales/ui.tsv','pdf-text.js', 'document-core.js','document-understanding.js','reader-core.js','reader-experience.js','boot.js'],deadline=Date.now()+480000;
+          (async()=>{const assets=['workspace.css','app.js','index.html','reader-tools.js','workspace.js','i18n.js','locales/ui.tsv','pdf-text.js', 'document-core.js','document-understanding.js','reader-core.js','reader-experience.js','boot.js','ai-providers.js','ai-connections.js','reader-layout.js'],deadline=Date.now()+480000;
           while(Date.now()<deadline){const matches=await Promise.all(assets.map(async file=>{try{const r=await fetch('https://guanbochen0622.github.io/freevpn-openscite/'+file+'?verify='+Date.now(),{signal:AbortSignal.timeout(10000)});return r.ok&&(await r.text())===fs.readFileSync(file,'utf8');}catch{return false;}}));if(matches.every(Boolean)){console.log('Deployed assets match checked-out version');return;}await new Promise(r=>setTimeout(r,3000));}throw Error('GitHub Pages has not published the tested assets yet');})().catch(e=>{console.error(e);process.exit(1)});
           JS
       - name: Test deployed website with controlled source and AI responses
@@ -50,7 +50,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [macos-15, macos-15-intel]
+        runner: [macos-15, macos-15-intel, windows-latest]
         pass: [1, 2]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 10

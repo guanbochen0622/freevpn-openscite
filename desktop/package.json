@@ -7,7 +7,7 @@
     "electron-builder": "26.15.3"
   },
   "name": "openscite-desktop",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "description": "OpenScite desktop paper reader with personal ChatGPT authentication",
   "main": "main.cjs",
@@ -31,13 +31,15 @@
       "!test.cjs",
       "!prepare.cjs",
       "!test-*.cjs",
-      "!fixture.cjs"
+      "!fixture.cjs",
+      "!*.test.cjs"
     ],
     "directories": {
       "output": "dist"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "OpenScite-${version}-windows-${arch}-setup.${ext}"
     },
     "mac": {
       "target": "dmg",
@@ -49,6 +51,11 @@
     },
     "linux": {
       "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
     }
   }
 }

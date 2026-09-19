@@ -362,3 +362,50 @@ OCR 辨識草稿|OCR draft|OCR 识别草稿|OCR の下書き|OCR 초안
 重試文件解析|Retry document parsing|重试文档解析|文書解析を再試行|문서 분석 다시 시도
 頁碼|Page number|页码|ページ番号|페이지 번호
 PDF 解析逾時，請檢查檔案或重試|PDF parsing timed out. Check the file or try again.|PDF 解析超时，请检查文件或重试|PDF の解析がタイムアウトしました。ファイルを確認するか再試行してください。|PDF 분석 시간이 초과되었습니다. 파일을 확인하거나 다시 시도하세요.
+AI 模型|AI models|AI 模型|AI モデル|AI 모델
+AI 模型與連線|AI models and connections|AI 模型与连接|AI モデルと接続|AI 모델 및 연결
+選一個模型回答，或開啟混合統整比較多個模型。|Choose one model, or combine multiple model reviews.|选择一个模型回答，或开启混合整合比较多个模型。|1 つのモデル、または複数モデルの統合を選択します。|모델 하나를 선택하거나 여러 모델의 답변을 통합하세요.
+回答／統整模型|Answer / synthesis model|回答／整合模型|回答・統合モデル|답변 / 통합 모델
+混合模型統整|Combine model reviews|混合模型整合|複数モデルを統合|여러 모델 답변 통합
+一起分析的模型|Additional reviewers|一起分析的模型|追加の分析モデル|추가 분석 모델
+API 金鑰|API key|API 密钥|API キー|API 키
+前往官方取得金鑰 ↗|Get a key from the provider ↗|前往官方获取密钥 ↗|公式サイトでキーを取得 ↗|공식 사이트에서 키 받기 ↗
+貼上新金鑰；留白保留現有連線|Paste a new key; leave blank to keep the current connection|粘贴新密钥；留空保留现有连接|新しいキーを入力。空欄なら現在の接続を維持|새 키를 입력하세요. 비워두면 현재 연결 유지
+使用系統加密記住金鑰|Remember key with system encryption|使用系统加密记住密钥|システム暗号化でキーを保存|시스템 암호화로 키 저장
+新金鑰只保留於本次瀏覽工作階段。|New keys are kept only for this browser session.|新密钥仅保留在本次浏览会话。|新しいキーは今回のブラウザーセッションのみ保持されます。|새 키는 현재 브라우저 세션에만 저장됩니다.
+連線／更新金鑰|Connect / update key|连接／更新密钥|接続・キーを更新|연결 / 키 업데이트
+移除連線|Remove connection|移除连接|接続を削除|연결 삭제
+模型 ID|Model ID|模型 ID|モデル ID|모델 ID
+取得可用模型|Load available models|获取可用模型|利用可能なモデルを取得|사용 가능한 모델 불러오기
+儲存模型選擇|Save model selection|保存模型选择|モデル選択を保存|모델 선택 저장
+取消測試|Cancel test|取消测试|テストをキャンセル|테스트 취소
+OpenAI 進階設定|Advanced OpenAI settings|OpenAI 高级设置|OpenAI 詳細設定|OpenAI 고급 설정
+設定相容 API 與圖片模型|Configure compatible API and image model|设置兼容 API 与图片模型|互換 API と画像モデルを設定|호환 API 및 이미지 모델 설정
+使用現有 ChatGPT 帳號登入及模型設定。|Use the existing ChatGPT sign-in and model settings.|使用现有 ChatGPT 账号登录及模型设置。|既存の ChatGPT ログインとモデル設定を使用します。|기존 ChatGPT 로그인 및 모델 설정을 사용합니다.
+登入／管理 ChatGPT|Sign in / manage ChatGPT|登录／管理 ChatGPT|ChatGPT にログイン・管理|ChatGPT 로그인 / 관리
+模型執行紀錄|Model run details|模型执行记录|モデル実行記録|모델 실행 기록
+資料傳送至|Data sent to|数据发送至|データの送信先|데이터 전송 대상
+每次分析會各問一次，再由主模型統整；使用多次額度，模型同意不代表結論正確。|Each model reviews once, then the primary synthesizes. This uses multiple requests; agreement does not prove correctness.|每次分析会分别提问，再由主模型整合；使用多次额度，模型一致不代表结论正确。|各モデルに 1 回ずつ質問し、主モデルが統合します。複数回の利用枠を使い、一致は正しさの証明ではありません。|각 모델이 한 번씩 분석한 뒤 주 모델이 통합합니다. 여러 번의 사용량이 발생하며 일치가 정확성을 증명하지는 않습니다.
+每次只由選定模型回答。|Only the selected model answers each request.|每次只由选定模型回答。|選択したモデルのみが回答します。|선택한 모델만 답변합니다.
+API 額度與聊天訂閱分開；連線測試會發送簡短問題，不傳論文。|API usage is separate from chat subscriptions. Connection tests send a short question without the paper.|API 额度与聊天订阅分开；连接测试发送简短问题，不传论文。|API 利用枠はチャット契約と別です。接続テストでは論文を送らず、短い質問を送ります。|API 사용량은 채팅 구독과 별도입니다. 연결 테스트는 논문 없이 짧은 질문을 보냅니다.
+已設定連線；可測試模型回答|Connection configured; test an answer to verify|已设置连接；可测试模型回答|接続設定済み。回答テストで確認できます|연결 설정 완료. 답변 테스트로 확인하세요
+尚未連線|Not connected|尚未连接|未接続|연결되지 않음
+單一模型|Single model|单一模型|単一モデル|단일 모델
+混合統整完成|Synthesis complete|混合整合完成|統合完了|통합 완료
+回答完成|Answer complete|回答完成|回答完了|답변 완료
+部分模型未完成|Some models did not complete|部分模型未完成|一部のモデルが未完了|일부 모델이 완료하지 못함
+請先結束目前分析|Finish or cancel the current analysis first|请先结束当前分析|現在の分析を終了してください|현재 분석을 먼저 종료하세요
+混合統整需選擇 2–3 個不同服務|Choose 2–3 different services for synthesis|混合整合需选择 2–3 个不同服务|統合には異なるサービスを 2〜3 個選択してください|통합하려면 서로 다른 서비스 2–3개를 선택하세요
+請貼上 API 金鑰|Paste an API key|请粘贴 API 密钥|API キーを入力してください|API 키를 입력하세요
+連線已移除|Connection removed|连接已移除|接続を削除しました|연결이 삭제되었습니다
+金鑰已保存；請測試模型回答|Key saved; test a model answer|密钥已保存；请测试模型回答|キーを保存しました。回答テストを実行してください|키가 저장되었습니다. 모델 답변을 테스트하세요
+已取得模型清單|Model list loaded|已获取模型列表|モデル一覧を取得しました|모델 목록을 불러왔습니다
+正在測試連線…|Testing connection…|正在测试连接…|接続をテスト中…|연결 테스트 중…
+已收到模型真實回答|Received a model response|已收到模型真实回答|モデルの応答を受信しました|모델 응답을 받았습니다
+連線未完成|Connection failed|连接未完成|接続できませんでした|연결에 실패했습니다
+更多工具|More tools|更多工具|その他のツール|더 많은 도구
+1 開啟論文|1 Open a paper|1 打开论文|1 論文を開く|1 논문 열기
+2 選取文字或提問|2 Select text or ask|2 选择文字或提问|2 文章を選択・質問|2 텍스트 선택 또는 질문
+3 核對來源並存筆記|3 Check sources and save notes|3 核对来源并保存笔记|3 出典を確認しノートを保存|3 출처 확인 및 노트 저장
+文獻資料|Paper details|文献资料|文献情報|논문 정보
+先選模型，再針對論文提問；點引用可核對原文。|Choose a model and ask about the paper. Click citations to check the source.|先选模型，再针对论文提问；点击引用可核对原文。|モデルを選んで論文について質問します。引用から原文を確認できます。|모델을 선택하고 논문에 관해 질문하세요. 인용을 누르면 원문을 확인할 수 있습니다.

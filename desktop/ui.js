@@ -24,7 +24,7 @@ if (bridge) {
   status.className = 'ai-connection-status';
   status.setAttribute('role', 'status');
   status.textContent = 'ChatGPT：正在確認帳號…';
-  document.getElementById('assistantOutput').before(status);
+  el('desktopStatus').after(status);
   let models = [], poll, refreshing = false, testing = false, running = false;
   const cleanError = e => String(e.message || e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');
   const fail = e => { el('desktopStatus').textContent = cleanError(e); status.textContent = 'ChatGPT 連線錯誤：' + cleanError(e); };
@@ -49,7 +49,7 @@ if (bridge) {
       el('desktopStatus').textContent = loggedIn ? `帳號已登入：${s.account.email || 'ChatGPT'} · ${s.account.planType || ''}` : '尚未登入';
       el('desktopTest').disabled = !loggedIn;
       if (!loggedIn) {
-        status.textContent = 'ChatGPT 尚未登入：按右上「ChatGPT 帳號」登入。';
+        status.textContent = 'ChatGPT 尚未登入：按右上「AI 模型」→ ChatGPT 登入。';
         el('desktopModel').replaceChildren();el('desktopEffort').replaceChildren();
         return;
       }
@@ -68,14 +68,14 @@ if (bridge) {
     const text = (progress.model ? progress.model + ' · ' : '') + progress.message;
     status.textContent = window.I18n?.t(text)||text;
     if (testing) el('desktopTestResult').textContent = text + (progress.text ? '\n' + progress.text : '');
-    else if (progress.stage === 'answering' && progress.text && !state.reader.figureBusy) {
+    else if (progress.stage === 'answering' && progress.text && !state.reader.figureBusy && !window.AIConnections?.config().mixed) {
       const output = document.getElementById('assistantOutput');
       output.textContent = progress.text;
     }
   });
   const settings = document.getElementById('settingsBtn');
-  settings.textContent = 'ChatGPT 帳號';
-  settings.addEventListener('click', event => { event.stopImmediatePropagation();modal.showModal();refresh().catch(fail); }, {capture:true});
+  settings.textContent = 'AI 模型';
+  window.openChatGPTSettings = () => { modal.showModal();refresh().catch(fail); };
   el('desktopModel').onchange = effort;
   el('desktopEffort').onchange = save;
   el('desktopClose').onclick = () => modal.close();

@@ -815,13 +815,14 @@ function responseText(d){
   throw new Error(d?.error?.message || 'AI 未傳回可讀取的回答，請重試。');
 }
 async function responseRequest(body){
-  const s=aiSettings();if(!window.opensciteDesktop&&!s.key)throw new Error('NO_AI_KEY');
-  if(!window.opensciteDesktop&&(!safeUrl(s.endpoint)||new URL(s.endpoint).protocol!=='https:'))throw new Error('AI endpoint 必須使用 HTTPS');
+  const s=aiSettings();if(!window.AIConnections&&!window.opensciteDesktop&&!s.key)throw new Error('NO_AI_KEY');
+  if(!window.AIConnections&&!window.opensciteDesktop&&(!safeUrl(s.endpoint)||new URL(s.endpoint).protocol!=='https:'))throw new Error('AI endpoint 必須使用 HTTPS');
   if(state.aiBusy)throw new Error('AI 正在處理另一個請求，請稍候。');
   state.aiBusy=true;state.aiController=new AbortController();if($('cancelAi'))$('cancelAi').classList.remove('hidden');
   const ids=['askBtn','aiSummaryBtn','explainBtn','translateBtn','supportBtn','reanalyzeFigure'];
   const before=[...ids.map(id=>$(id)),...$$('#selectionToolbar button')].filter(Boolean).map(el=>({el,disabled:el.disabled}));before.forEach(x=>{if(x.el)x.el.disabled=true});
   try{
+    if(window.AIConnections)return await AIConnections.request(body,state.aiController.signal);
     if(window.opensciteDesktop){
       state.aiController.signal.addEventListener('abort',()=>window.opensciteDesktop.cancel().catch(()=>{}),{once:true});
       return await window.opensciteDesktop.ask({...body,desktopModel:localStorage.getItem('desktopModel'),desktopEffort:localStorage.getItem('desktopEffort')||'medium',language:window.I18n?.language||'zh-Hant'});

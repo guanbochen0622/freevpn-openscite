@@ -1,4 +1,4 @@
-name: Build Mac desktop
+name: Build Mac and Windows desktop
 on:
   workflow_dispatch:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - 'desktop/**'
       - 'app.js'
+      - 'ai-*.js'
       - 'pdf-text.js'
       - 'document-*.js'
       - 'boot.js'
@@ -33,7 +34,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run check
-      - run: npm run test:logic
+      - run: npm run test:logic && node tests/ai-providers.cjs && node --test desktop/providers.test.cjs
       - run: node tests/reader-lifecycle.cjs
       - run: node tests/partial-index.cjs
       - run: node tests/locales.cjs
@@ -50,6 +51,8 @@ jobs:
           - runner: macos-15
             arch: arm64
           - runner: macos-15-intel
+            arch: x64
+          - runner: windows-latest
             arch: x64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 25
@@ -68,21 +71,65 @@ jobs:
       - name: Verify reader window and official Codex connection
         run: npm run test:window
       - name: Build native Mac disk image
+        if: runner.os == 'macOS'
         run: npm run dist -- --mac dmg --${{ matrix.arch }} --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Check bundled Codex and application signature
+        if: runner.os == 'macOS'
         run: |
           APP=$(find dist -maxdepth 2 -name OpenScite.app -type d -print -quit)
           test -n "$APP"
           ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/OpenScite" "$APP/Contents/Resources/app/node_modules/@openai/codex/bin/codex.js" --version
           codesign --verify --deep --strict "$APP"
           shasum -a 256 dist/*.dmg > dist/SHA256-${{ matrix.arch }}.txt
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        run: npm run dist -- --win nsis --x64 --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Install Windows package and test the installed application
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist/*-setup.exe | Select-Object -First 1
+          if (-not $installer) { throw 'Windows installer missing' }
+          $installDir = Join-Path $env:RUNNER_TEMP 'OpenSciteInstalled'
+          $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S',"/D=$installDir" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
+          $exe = Join-Path $installDir 'OpenScite.exe'
+          if (-not (Test-Path $exe)) { throw 'Installed executable missing' }
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          $codexScript = Join-Path $installDir 'resources/app/node_modules/@openai/codex/bin/codex.js'
+          $codexCheck = Start-Process -FilePath $exe -ArgumentList $codexScript,'--version' -Wait -PassThru -RedirectStandardOutput codex-version.log
+          Get-Content codex-version.log
+          if ($codexCheck.ExitCode -ne 0) { throw 'Bundled Codex failed' }
+          Remove-Item Env:ELECTRON_RUN_AS_NODE
+          foreach ($asset in @('ai-providers.js','ai-connections.js','reader-layout.js','app.js')) {
+            $bundled = Join-Path $installDir "resources/app/web/$asset"
+            if ((Get-FileHash $bundled).Hash -ne (Get-FileHash "../$asset").Hash) {
+              throw "Installed asset mismatch: $asset"
+            }
+          }
+          $launched = Start-Process -FilePath $exe -PassThru
+          $deadline = (Get-Date).AddSeconds(45)
+          do {
+            Start-Sleep -Milliseconds 500
+            $launched.Refresh()
+            if ($launched.HasExited) { throw 'Installed app exited before opening' }
+          } while ($launched.MainWindowHandle -eq 0 -and (Get-Date) -lt $deadline)
+          if ($launched.MainWindowHandle -eq 0 -or -not $launched.Responding) { throw 'Installed window did not respond' }
+          Write-Output "PASS installed Windows application window: $($launched.MainWindowTitle)"
+          $launched.CloseMainWindow() | Out-Null
+          if (-not $launched.WaitForExit(15000)) { $launched.Kill(); throw 'Installed app did not close' }
+          $hash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($installer.Name)" | Set-Content dist/SHA256-windows-x64.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenScite-mac-${{ matrix.arch }}
+          name: OpenScite-${{ runner.os }}-${{ matrix.arch }}
           path: |
             desktop/dist/*.dmg
+            desktop/dist/*-setup.exe
             desktop/dist/SHA256-*.txt
           if-no-files-found: error
           retention-days: 30
@@ -94,24 +141,29 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: OpenScite-mac-*
+          pattern: OpenScite-*
           merge-multiple: true
           path: installers
-      - name: Publish tested Mac preview installers
+      - name: Publish tested desktop preview installers
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          BUILD_TAG: desktop-mac-${{ github.run_number }}
+          BUILD_TAG: desktop-${{ github.run_number }}
           BUILD_SHA: ${{ github.sha }}
         run: |
           cat > notes.md <<'NOTES'
-          Mac 預覽版。下載符合電腦晶片的 DMG，開啟後將 OpenScite 拖入 Applications（應用程式）。不需安裝 Node.js 或輸入指令。
+          OpenScite 0.8.0 桌面預覽版：多模型連線與混合統整。
+
+          Mac：下載符合晶片的 DMG，拖入 Applications。Windows：執行 windows-x64-setup.exe 安裝。不需安裝 Node.js 或輸入指令。
 
           - arm64：Apple 晶片（M 系列）
-          - x64：Intel 處理器
+          - x64.dmg：Intel Mac
+          - windows-x64-setup.exe：Windows 64 位元
 
-          已測試原生 Mac 視窗載入、PDF 引擎、帳號介面及未登入的官方 Codex 連線。登入與模型分析需使用自己的 ChatGPT 帳號及可用額度。
+          Gemini、Claude 使用自己的 API 金鑰，API 額度與聊天訂閱分開。混合模式會將所需資料送到選定服務並使用多次額度。
 
-          此預覽版僅有臨時簽章，尚未經 Apple 開發者簽章與公證，因此 macOS 可能阻擋首次開啟。這不是正式販售版本。
+          已測試 Mac / Windows 原生視窗與 Windows 安裝後的程式、原生 Mac 視窗載入、PDF 引擎、帳號介面及未登入的官方 Codex 連線。登入與模型分析需使用自己的 ChatGPT 帳號及可用額度。
+
+          此預覽版僅有臨時簽章，尚未經 Apple 開發者簽章與公證，因此 macOS 可能阻擋首次開啟。Windows 安裝檔尚未購買程式碼簽章憑證，系統可能提示未知發行者。這不是正式販售版本。
           NOTES
-          gh release create "$BUILD_TAG" installers/* --repo "$GH_REPO" --target "$BUILD_SHA" --prerelease --title "OpenScite Mac 預覽版 $BUILD_TAG" --notes-file notes.md
+          gh release create "$BUILD_TAG" installers/* --repo "$GH_REPO" --target "$BUILD_SHA" --prerelease --title "OpenScite 0.8.0 Mac / Windows 預覽版" --notes-file notes.md

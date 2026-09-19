@@ -13,7 +13,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await fs.writeFile('/tmp/openscite-fixture.pdf',await pdf.save());
  const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH,args:["--no-sandbox"]}:{})});const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',async d=>d.accept('Important measurement'));
  await page.route('https://api.openalex.org/**',async route=>{const u=new URL(route.request().url());if(u.pathname==='/works')return route.fulfill({json:{meta:{count:2},results:[{id:'https://openalex.org/W1',title:'Fiber-to-silicon coupling with evanescent waves',publication_year:2025,cited_by_count:42,doi:'https://doi.org/10.1234/test',authorships:[{author:{display_name:'A. Researcher'}}],abstract_inverted_index:{Evanescent:[0],wave:[1],coupling:[2],demonstrates:[3],improved:[4],efficiency:[5]},primary_location:{source:{display_name:'Optics Research'},landing_page_url:'https://doi.org/10.1234/test'},open_access:{is_oa:true}},{id:'https://openalex.org/W2',title:'Optical fiber sensor characterization',publication_year:2024,cited_by_count:10,primary_location:{source:{display_name:'Photonics Letters'}},abstract_inverted_index:{Sensor:[0],response:[1],is:[2],measured:[3]}}]}});return route.fulfill({json:{results:[]}});});
- await page.goto(testUrl);await page.waitForSelector('#knowledgeMapOpen',{state:'attached'});
+ await page.goto(testUrl);await page.waitForFunction(()=>!!window.ReaderLayout);
  assert.deepEqual(await page.evaluate(()=>queryTokens('Fiber-to–Silicon')),['silicon','fiber','to']);
  await page.fill('#searchQuery','Fiber-to-silicon');await page.click('#searchBtn');await page.waitForSelector('[data-compare]');assert.equal(await page.locator('.paper-card').count(),2);
  await page.locator('[data-compare]').first().click();await page.locator('[data-compare]').last().click();await page.click('#compareOpen');assert.equal(await page.locator('.comparison-table th').count()>0,true);await page.click('#dialogClose');
@@ -108,7 +108,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
    assert.equal(await page.locator('#askInput').inputValue(),'Keep my question 980 nm');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
  }
- await page.selectOption('#languageSelect','en');await page.reload();await page.waitForSelector('#knowledgeMapOpen',{state:'attached'});
+ await page.selectOption('#languageSelect','en');await page.reload();await page.waitForFunction(()=>!!window.ReaderLayout);
  assert.equal(await page.locator('#languageSelect').inputValue(),'en');
  assert.equal(await page.locator('.nav-tab[data-view="search"]').textContent(),'Academic search');
  await page.selectOption('#languageSelect','zh-Hant');await page.click('.nav-tab[data-view="reader"]');
@@ -154,5 +154,6 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  assert.equal(await page.locator('#ocrPage').isDisabled(),false);
  console.log('PASS real image-only OCR, searchable index, corrections, structured formulas/tables, CSV, exact evidence links, invalid citations and cancellation');
 
+ await require('./multi-model.cjs')(page);
  assert.deepEqual(errors,[]);console.log('PASS: failure paths, request races, mocked AI page links, backup roundtrip, library reopen,  search, comparison, library filters, PDF text, bounded canvases, find, navigation, bookmarks, zoom, stable annotations, citation binding, backup validation, mobile layout.');await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict');
+module.exports=async page=>{
+ await page.setViewportSize({width:1440,height:1000});await page.setInputFiles('#readerFile','/tmp/openscite-fixture.pdf');await page.waitForFunction(()=>state.reader.indexReady&&state.reader.pages===16);await page.evaluate(()=>DocumentUnderstanding.ready());
+ await page.evaluate(()=>{$('clearReaderChat').click();});
+ const answer={claims:[{text:'The wavelength is 980 nm.',kind:'observation',sources:[{id:'p1s1',quote:'The measured wavelength is 980 nm.'}]}]};
+ const calls=[];
+ await page.route('https://generativelanguage.googleapis.com/**',async route=>{const b=JSON.parse(route.request().postData());calls.push('gemini');assert.ok(b.contents[0].parts.some(p=>p.inlineData));assert.ok(b.generationConfig.responseJsonSchema);await route.fulfill({json:{candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(answer)}]}}]}});});
+ await page.route('https://api.anthropic.com/**',async route=>{const b=JSON.parse(route.request().postData());calls.push('claude');assert.ok(b.messages[0].content.some(p=>p.type==='image'));assert.ok(b.output_config.format.schema);await route.fulfill({json:{stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify(answer)}]}});});
+ await page.click('#settingsBtn');await page.waitForSelector('#modelConnections[open]');
+ for(const p of ['gemini','claude']){await page.evaluate(p=>document.querySelector(`[data-connection="${p}"]`).open=true,p);await page.fill(`[data-provider-key="${p}"]`,'test-key-not-real');await page.click(`[data-connect="${p}"]`);await page.waitForFunction(p=>document.querySelector(`[data-provider-key="${p}"]`).value==='',p);}
+ await page.selectOption('#primaryProvider','gemini');await page.click('#saveModelConfig');await page.click('#closeModelConnections');await page.evaluate(()=>goPdfPage(1));
+ await page.fill('#askInput','What wavelength?');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&!state.reader.understandingBusy&&chatTurns.length===1);assert.deepEqual(calls,['gemini']);assert.equal(await page.locator('[data-evidence-link]').count(),1);
+ await page.click('#settingsBtn');await page.check('#mixedModels');await page.check('[data-review-provider="claude"]');await page.click('#saveModelConfig');await page.click('#closeModelConnections');
+ await page.fill('#askInput','Compare the evidence.');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&!state.reader.understandingBusy&&chatTurns.length===2);assert.deepEqual(calls,['gemini','gemini','claude','gemini']);assert.equal(await page.evaluate(()=>chatTurns.at(-1).models.mode),'mixed');assert.match(await page.locator('#modelRunStatus').innerText(),/混合統整完成/);
+ await page.route('https://api.anthropic.com/**',r=>r.fulfill({status:429,json:{error:{message:'quota exhausted'}}}));await page.fill('#askInput','Failure path');await page.click('#askBtn');await page.waitForFunction(()=>!state.aiBusy&&!state.reader.understandingBusy);assert.match(await page.locator('#assistantOutput').innerText(),/只有一個模型/);assert.equal(await page.evaluate(()=>chatTurns.length),2);
+ // Stop a pending first review. A cancelled operation must not start synthesis.
+ let pending=false;await page.route('https://generativelanguage.googleapis.com/**',async route=>{pending=true;await new Promise(r=>setTimeout(r,800));await route.fulfill({json:{candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(answer)}]}}]}}).catch(()=>{});});
+ await page.fill('#askInput','Cancellation path');await page.click('#askBtn');await page.waitForFunction(()=>state.aiBusy);while(!pending)await page.waitForTimeout(20);await page.evaluate(()=>state.aiController.abort());await page.waitForFunction(()=>!state.aiBusy&&!state.reader.understandingBusy);assert.equal(await page.evaluate(()=>chatTurns.length),2);
+ // Provider secrets never enter the workspace backup or persistent browser preferences.
+ assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage}).includes('test-key-not-real')),false);
+ await page.click('#settingsBtn');await page.screenshot({path:'/tmp/openscite-model-connections.png',fullPage:true});await page.uncheck('#mixedModels');await page.selectOption('#primaryProvider','openai');await page.click('#saveModelConfig');await page.click('#closeModelConnections');
+ console.log('PASS Gemini/Claude real UI routing with controlled responses, image/schema payloads, mixed synthesis, exact citations, partial failure, cancellation and credential isolation');
+};
