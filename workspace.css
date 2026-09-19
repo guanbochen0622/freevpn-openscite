@@ -49,7 +49,7 @@ body.reader-focus .reader-grid{grid-template-columns:minmax(0,1fr)}
 /* Document understanding: bounded panels, safe formula/table overflow. */
 .document-tools{padding:16px;border-bottom:1px solid var(--line);background:var(--panel);font-size:13px;min-width:0}
 .document-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:end}.document-actions label{display:grid;gap:4px}.document-actions select{max-width:220px}
-#ocrReview textarea{display:block;width:100%;resize:vertical;min-height:100px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+#ocrReview textarea{display:block;width:100%;resize:vertical;min-height:100px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
 .structure-card{padding:12px;margin:12px 0;border:1px solid var(--line);border-radius:10px}.formula-display,.table-scroll{overflow:auto;max-width:100%}.formula-display{padding:8px}.table-scroll table{border-collapse:collapse;width:100%}.table-scroll th,.table-scroll td{padding:8px;border:1px solid var(--line);text-align:left;white-space:pre-wrap}.structure-warning{color:var(--muted);font-size:12px}
 .answer-evidence{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.evidence-claim{margin:10px 0}.evidence-claim .btn{margin:3px}.evidence-quote{white-space:pre-wrap;border-left:3px solid var(--accent);padding:12px;margin:8px 0;max-height:180px;overflow:auto}
 .ocr-text-layer{z-index:4;pointer-events:auto}.ocr-text-layer span{position:absolute;white-space:pre;color:transparent;cursor:text;user-select:text}.ocr-text-layer span::selection{background:rgba(80,130,255,.4)}
