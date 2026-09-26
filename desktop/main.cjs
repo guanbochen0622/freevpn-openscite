@@ -1,7 +1,7 @@
-const {app,BrowserWindow,protocol,net,ipcMain,shell,safeStorage}=require('electron');
+const {app,BrowserWindow,protocol,net,ipcMain,shell}=require('electron');
 const {spawn}=require('node:child_process');const fs=require('node:fs');const path=require('node:path');const {pathToFileURL}=require('node:url');
 const {AccountLogin}=require('./login.cjs');const {downloadPdf}=require('./pdf-download.cjs');
-const {ProviderAccounts}=require('./providers.cjs');
+const {GoogleAccount}=require('./google-account.cjs');
 const {Rpc}=require('./rpc.cjs');const {Assistant}=require('./assistant.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'openscite',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true,stream:true}}]);
 let rpc,assistant,win,ready;
@@ -15,9 +15,10 @@ app.whenReady().then(async()=>{
  const child=spawn(process.execPath,[path.join(__dirname,'node_modules/@openai/codex/bin/codex.js'),'app-server',...config.flatMap(c=>['-c',c])],{cwd,env,stdio:['pipe','pipe','pipe'],windowsHide:true});
  rpc=new Rpc(child);assistant=new Assistant(rpc,cwd,progress=>{if(win&&!win.isDestroyed())win.webContents.send('openscite:progress',progress);});ready=rpc.request('initialize',{clientInfo:{name:'openscite_desktop',title:'OpenScite Desktop',version:app.getVersion()}}).then(()=>rpc.send({method:'initialized',params:{}}));ready.catch(()=>{});
  const login=new AccountLogin(rpc,url=>shell.openExternal(url),value=>{if(win&&!win.isDestroyed())win.webContents.send('openscite:login',value);});
- const accounts=new ProviderAccounts(path.join(data,'provider-keys.json'),safeStorage);
- const handlers={status:()=>rpc.request('account/read'),models:()=>assistant.models(),ask:b=>assistant.ask(b),cancel:async()=>{accounts.cancel();await assistant.cancel();},logout:async()=>{await assistant.cancel();return rpc.request('account/logout');},login:options=>login.start(options),cancelLogin:()=>login.cancel()};
- const apiHandlers={downloadPdf:b=>downloadPdf(b?.url),providerStatus:()=>accounts.status(),providerSet:b=>accounts.set(b),providerModels:b=>accounts.models(b),providerAsk:b=>accounts.ask(b)};
+ const accounts=new ProviderAccounts(path.join(data,'provider-keys.json'));
+ const handlers={status:()=>rpc.request('account/read'),models:()=>assistant.models(),ask:b=>assistant.ask(b),cancel:async()=>{await assistant.cancel();},logout:async()=>{await assistant.cancel();return rpc.request('account/logout');},login:options=>login.start(options),cancelLogin:()=>login.cancel()};
+ const google=new GoogleAccount(require('./google-config.cjs'),url=>shell.openExternal(url));
+ const apiHandlers={googleStatus:()=>google.status(),googleLogin:()=>google.login(),googleCancel:()=>google.cancel(),googleLogout:()=>google.logout(),googleRequest:b=>google.request(b),downloadPdf:b=>downloadPdf(b?.url)};
  for(const [method,fn]of Object.entries({...handlers,...apiHandlers}))ipcMain.handle('openscite:'+method,async(event,arg)=>{if(event.sender!==win?.webContents||event.senderFrame!==win.webContents.mainFrame||!event.senderFrame.url.startsWith('openscite://app/'))throw new Error('不允許的來源');if(!apiHandlers[method]&&method!=='cancel')await ready;return fn(arg);});
  win=new BrowserWindow({width:1440,height:960,minWidth:860,minHeight:640,title:'OpenScite Desktop',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
  win.webContents.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));

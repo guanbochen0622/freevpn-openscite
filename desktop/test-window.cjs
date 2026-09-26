@@ -6,9 +6,9 @@ const timer=setTimeout(()=>{console.error('Desktop window smoke timed out');app.
 app.on('browser-window-created',(_e,win)=>{
  win.webContents.once('did-finish-load',async()=>{
  try{
- await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+30000;while(document.getElementById('settingsBtn')?.textContent!=='AI 模型'){if(Date.now()>end)throw Error('Desktop interface initialization timed out');await new Promise(r=>setTimeout(r,100));}})()`);
+ await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+30000;while(typeof window.openChatGPTSettings!=='function'){if(Date.now()>end)throw Error('Desktop interface initialization timed out');await new Promise(r=>setTimeout(r,100));}})()`);
  const result=await win.webContents.executeJavaScript(`(async()=>({button:document.getElementById('settingsBtn')?.textContent,bridge:typeof window.opensciteDesktop?.ask,status:await window.opensciteDesktop.status(),pdf:!!window.pdfjsLib}))()`);
- assert.equal(result.button,'AI 模型');assert.equal(result.bridge,'function');assert.equal(result.pdf,true);assert.equal(result.status.account,null);
+ assert.equal(result.button,'ChatGPT 帳號');assert.equal(result.bridge,'function');assert.equal(result.pdf,true);assert.equal(result.status.account,null);
  await win.webContents.executeJavaScript(`document.getElementById('settingsBtn').click()`);
  assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('dialog[open]')`),true);
  await win.webContents.executeJavaScript(`document.querySelector('dialog[open]').close();showView('reader')`);
@@ -38,6 +38,7 @@ app.on('browser-window-created',(_e,win)=>{
    if(state.reader.selectedText!=='980')throw Error('Selected text mismatch: '+state.reader.selectedText);
    await explainSelection();
  })()`);
+ assert.equal(request.desktopSpeed,'default');
  assert.ok(request.input[1].content[0].text.includes('SELECTED PASSAGE:\n980'));
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/TEST RESPONSE/);
  await win.webContents.executeJavaScript(`document.getElementById('askInput').value='What wavelength was measured?';document.getElementById('askBtn').click()`);
@@ -131,20 +132,10 @@ app.on('browser-window-created',(_e,win)=>{
  console.log('PASS native evidence history/map and durable OCR draft/formula/table recovery');
  console.log('PASS native offline English OCR, selectable scan text, formula rendering and structured table through account bridge');
  console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors five-language AI routing and two-stage figure requests without retry on failure');
- // Native provider credentials stay in main-process storage and routes bypass Codex.
- await win.webContents.executeJavaScript(`(async()=>{await opensciteDesktop.providerSet({provider:'gemini',key:'native-test-key',remember:true});await opensciteDesktop.providerSet({provider:'claude',key:'native-test-key',remember:false});})()`);
- const providers=await win.webContents.executeJavaScript(`opensciteDesktop.providerStatus()`);
- assert.equal(providers.gemini.configured,true);assert.equal(providers.gemini.persistent,true);assert.equal(providers.claude.configured,true);
- assert.equal(fs.readFileSync(path.join(profile,'provider-keys.json'),'utf8').includes('native-test-key'),false);
- let providerCalls=[];
- ipcMain.removeHandler('openscite:providerAsk');ipcMain.handle('openscite:providerAsk',(_event,body)=>{providerCalls.push(body.provider);assert.ok(body.body.input.some(m=>m.content.some(p=>p.type==='input_image')));return JSON.stringify({claims:[{text:'Verified scan.',kind:'observation',sources:[{id:'p1s1',quote:'Measured wavelength is 980 nm.'}]}]});});
- await win.webContents.executeJavaScript(`(async()=>{saveJSON('openscite_ai_connections_v1',{modes:{gemini:'api',claude:'api'},primary:'gemini',mixed:true,reviewers:['claude'],models:{gemini:'gemini-test',claude:'claude-test'}});document.getElementById('askInput').value='Compare model evidence';await askPaperQuestion();})()`);
- assert.deepEqual(providerCalls,['gemini','claude','gemini']);
- assert.equal(await win.webContents.executeJavaScript(`chatTurns.at(-1).models.mode`),'mixed');
- assert.match(await win.webContents.executeJavaScript(`document.getElementById('modelRunStatus').textContent`),/混合統整完成/);
- await win.webContents.executeJavaScript(`(async()=>{await opensciteDesktop.providerSet({provider:'gemini',key:''});await opensciteDesktop.providerSet({provider:'claude',key:''});})()`);
- assert.equal(await win.webContents.executeJavaScript(`(async()=>!(await opensciteDesktop.providerStatus()).gemini.configured)()`),true);
- console.log('PASS native encrypted/session provider accounts, Gemini/Claude mixed image requests, result provenance and credential removal');
+ assert.equal(await win.webContents.executeJavaScript(`typeof opensciteDesktop.providerAsk`),'undefined');
+ assert.equal(await win.webContents.executeJavaScript(`AIConnections.config().primary`),'chatgpt');
+ assert.equal(await win.webContents.executeJavaScript(`document.querySelector('#desktopSpeed').options.length`),2);
+ console.log('PASS GPT-only account surface and response speed control');
  // Exercise the real native reader route and device-login UI via isolated transport fixtures.
  ipcMain.removeHandler('openscite:downloadPdf');ipcMain.handle('openscite:downloadPdf',(_event,{url})=>{assert.equal(url,'https://papers.example/native.pdf');return new Uint8Array(bytes).buffer;});
  await win.webContents.executeJavaScript(`(async()=>{showView('search');await openRemotePaper({title:'Native search PDF',pdfUrl:'https://papers.example/native.pdf'});})()`);

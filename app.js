@@ -284,7 +284,7 @@ async function loadPdfBuffer(buffer,meta,fileName='',url=''){
   $('readerEmpty').classList.add('hidden'); $('pdfViewport').classList.remove('hidden'); $('pdfPages').innerHTML='<div class="empty-card">正在解析 PDF…</div>';
   try{
     state.reader.pages=pdf.numPages; $('pdfPageCount').textContent=`/ ${pdf.numPages}`; $('pageJump').value='1';
-    updateReaderMeta(); renderNotes(); await renderPdfPages(token); await indexPdfText(token); if(token!==state.reader.renderToken)return; updateCitationInfo(); document.dispatchEvent(new CustomEvent('research:document'));  toast(`PDF 已載入：${pdf.numPages} 頁`);
+    updateReaderMeta(); renderNotes(); await renderPdfPages(token); await indexPdfText(token,true); if(token!==state.reader.renderToken)return; updateCitationInfo(); document.dispatchEvent(new CustomEvent('research:document'));await window.DocumentUnderstanding?.ready();if(token!==state.reader.renderToken)return;state.reader.indexReady=true;document.dispatchEvent(new CustomEvent('research:index-updated'));  toast(`PDF 已載入：${pdf.numPages} 頁`);
   }catch(e){ if(token!==state.reader.renderToken)return;state.reader.indexReady=false; $('readerProgress').textContent=`全文索引未完成：${e.message}`; toast('PDF 部分內容處理失敗，請重新開啟文件'); }
 }
 function capturePdfScrollAnchor(){
@@ -361,7 +361,7 @@ async function renderPdfPages(token=state.reader.renderToken){
   entries.forEach(e=>state.reader.observer.observe(e.wrap));restorePdfScrollAnchor(anchor);
   await state.reader.paintPage(anchor.page||1);
 }
-async function indexPdfText(token){
+async function indexPdfText(token,deferReady=false){
   const pdf=state.reader.pdf;if(!pdf)return;
   const errors=[];state.reader.unmappedPages=[];
   for(let n=1;n<=pdf.numPages;n++){
@@ -374,7 +374,7 @@ async function indexPdfText(token){
     await new Promise(resolve=>setTimeout(resolve,0));
   }
   state.reader.indexErrors=errors;
-  state.reader.indexReady=true;
+  state.reader.indexReady=!deferReady;
   state.reader.fullText=state.reader.pageTexts.map((t,i)=>`[Page ${i+1}]\n${t}`).join('\n\n');
 }
 
@@ -825,7 +825,7 @@ function startSelectionChat(){
 }
 
 function aiSettings(){
-  const remember=!!localStorage.getItem(STORE.aiKey); return {key:localStorage.getItem(STORE.aiKey)||sessionStorage.getItem(STORE.aiKey)||'',model:localStorage.getItem(STORE.aiModel)||'gpt-5-mini',figureModel:localStorage.getItem(STORE.figureModel)||'gpt-5-mini',endpoint:localStorage.getItem(STORE.aiEndpoint)||'https://api.openai.com/v1/responses',remember};
+  return {key:'',model:localStorage.getItem('desktopModel')||'',figureModel:localStorage.getItem('desktopModel')||'',remember:false};
 }
 function figureModel(){ return aiSettings().figureModel||'gpt-5-mini'; }
 function responseText(d){
@@ -834,8 +834,7 @@ function responseText(d){
   throw new Error(d?.error?.message || 'AI 未傳回可讀取的回答，請重試。');
 }
 async function responseRequest(body){
-  const s=aiSettings();if(!window.AIConnections&&!window.opensciteDesktop&&!s.key)throw new Error('NO_AI_KEY');
-  if(!window.AIConnections&&!window.opensciteDesktop&&(!safeUrl(s.endpoint)||new URL(s.endpoint).protocol!=='https:'))throw new Error('AI endpoint 必須使用 HTTPS');
+
   if(state.aiBusy)throw new Error('AI 正在處理另一個請求，請稍候。');
   state.aiBusy=true;state.aiController=new AbortController();if($('cancelAi'))$('cancelAi').classList.remove('hidden');
   const ids=['askBtn','aiSummaryBtn','explainBtn','translateBtn','supportBtn','reanalyzeFigure'];
@@ -844,10 +843,9 @@ async function responseRequest(body){
     if(window.AIConnections)return await AIConnections.request(body,state.aiController.signal);
     if(window.opensciteDesktop){
       state.aiController.signal.addEventListener('abort',()=>window.opensciteDesktop.cancel().catch(()=>{}),{once:true});
-      return await window.opensciteDesktop.ask({...body,desktopModel:localStorage.getItem('desktopModel'),desktopEffort:localStorage.getItem('desktopEffort')||'medium',language:window.I18n?.language||'zh-Hant'});
+      return await window.opensciteDesktop.ask({...body,desktopModel:localStorage.getItem('desktopModel'),desktopEffort:localStorage.getItem('desktopEffort')||'medium',desktopSpeed:localStorage.getItem('desktopSpeed')||'default',language:window.I18n?.language||'zh-Hant'});
     }
-    const res=await fetch(s.endpoint,{signal:AbortSignal.any([state.aiController.signal,AbortSignal.timeout(120000)]),method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${s.key}`},body:JSON.stringify({...body,store:false})});
-    const d=await res.json();if(!res.ok)throw new Error(d.error?.message||`AI API ${res.status}`);return responseText(d);
+    throw new Error('請使用桌面版登入 ChatGPT 帳號');
   }finally{state.aiBusy=false;state.aiController=null;if($('cancelAi'))$('cancelAi').classList.add('hidden');before.forEach(x=>{if(x.el)x.el.disabled=x.disabled});}
 }
 async function askAI(system,user){
@@ -957,15 +955,15 @@ async function pdfTextFromFile(file){
 }
 function targetAnchors(target){const titleTokens=queryTokens(target.title).filter(x=>x.length>=5).slice(0,12), surname=(target.authors||'').split(',')[0].trim().split(/\s+/).pop()||'',year=String(target.year||'');return{titleTokens,surname,year};}
 function citationContexts(text,target){
-  const split=text.search(/\b(?:references|bibliography)\b/i);if(split<0)return [];
+  const split=(()=>{const matches=[...text.matchAll(/(?:^|\n)\s*(?:references|bibliography)\s*(?:\n|$)/gi)];return matches.at(-1)?.index??text.search(/\b(?:references|bibliography)\b/i);})();if(split<0)return [];
   const body=text.slice(0,split),refs=text.slice(split),doi=doiClean(target.doi||'').toLowerCase();
   const tokens=queryTokens(target.title).filter(t=>t.length>3);
   const entries=[...refs.matchAll(/(?:^|\n|\s)(?:\[(\d{1,4})\]|(\d{1,4})[.)])\s+([\s\S]*?)(?=(?:\n|\s)(?:\[\d{1,4}\]|\d{1,4}[.)])\s+|$)/g)];
   const matches=entries.filter(m=>{const t=m[3].toLowerCase();const at=doi?t.indexOf(doi):-1,after=at<0?'':t.slice(at+doi.length);const exactDoi=at>=0&&(!after||/^[\s,;)\]}]/.test(after)||/^\.(?:\s|$)/.test(after));return exactDoi||(tokens.length>=4&&tokens.filter(x=>t.includes(x)).length/tokens.length>=.85);});
   if(matches.length!==1)return [];
   const number=Number(matches[0][1]||matches[0][2]),hits=[];
-  for(const m of body.matchAll(/\[([\d\s,;–—-]+)\]/g)){
-    const includes=m[1].split(/[,;]/).some(part=>{const a=part.trim().split(/[-–—]/).map(Number);return a.length===1?a[0]===number:a.length===2&&a[0]<=number&&number<=a[1]});
+  for(const m of body.matchAll(/(?:\[([\d\s,;–—-]+)\]|\(([\d\s,;–—-]+)\))/g)){
+    const includes=(m[1]||m[2]).split(/[,;]/).some(part=>{const a=part.trim().split(/[-–—]/).map(Number);return a.length===1?a[0]===number:a.length===2&&a[0]<=number&&number<=a[1]});
     if(includes){const before=body.slice(0,m.index);const page=[...before.matchAll(/\[Page (\d+)\]/g)].at(-1)?.[1];hits.push(`${page?'[Page '+page+'] ':''}`+body.slice(Math.max(0,m.index-220),m.index+m[0].length+300).replace(/\s+/g,' '));}
   }
   return [...new Set(hits)].slice(0,12);
@@ -974,12 +972,13 @@ function citationContexts(text,target){
 function applyCitationText(w,text,target){
  const ctx=citationContexts(text,target);w.contexts=ctx;w.confidence=0;
  if(ctx.length){const cls=classifyStance(ctx.join(' '));w.stance=cls.stance;w.confidence=cls.confidence;
- w.evidenceBasis=`已定位 ${ctx.length} 個全文引用段落。`+(cls.stance==='supporting'?'推論：措辭傾向支持，非獨立證實。':cls.stance==='contrasting'?'推論：措辭傾向反駁，須比較實驗條件。':cls.stance==='unknown'?'推論：有歧義或同時出現不同立場，方向未定。':'該段落提及目標研究，沒有足夠措辭判定支持或反駁。');
+ w.evidenceBasis=`已定位 ${ctx.length} 個全文引用段落。`+(cls.stance==='supporting'?'推論：措辭傾向支持，非獨立證實。':cls.stance==='contrasting'?'推論：措辭傾向反駁，須比較實驗條件。':cls.stance==='unknown'?'推論：有歧義或同時出現不同立場，方向未定。':'判讀：背景引用／提及。此段没有明確支持或反駁主張，不能視為驗證結果。');
  }else{w.stance='mentioning';w.evidenceBasis='已讀取全文，但未可靠定位目標引用段落。推論：只能確認書目引用關係，支持／反駁方向未定。';}
 }
 async function verifyCitation(w,target){
  const active=()=>target===state.evidence.target&&state.evidence.works.includes(w);if(w.verifying||!active())return;w.verifying=true;
- const urls=pdfCandidates(w);if(!urls.length){w.evidenceBasis='沒有公開 PDF。推論僅基於引用關係'+(w.abstract?'與摘要':'')+'，方向未定；可加入引用論文 PDF 判讀。';w.verifying=false;renderEvidence();return;}
+ if(window.CitationSource&&w.doi){try{const full=await CitationSource.retrieve(w,target);if(!active()){w.verifying=false;return;}if(full){w.contexts=full.contexts;w.evidenceSource=full.source;const cls=classifyStance(full.contexts.join(' '));w.stance=cls.stance;w.confidence=cls.confidence;w.evidenceBasis=full.contexts.length?'已透過公開全文的參考文獻識別碼定位 '+full.contexts.length+' 個引用段落。'+(cls.stance==='mentioning'?'判讀：背景引用／提及。':'措辭判讀為推論，可用 ChatGPT 詳細比對研究條件。'):'公開全文已取得，但未可靠匹配目標引用。';w.verifying=false;renderEvidence();if(full.contexts.length)return;}}catch(e){w.fullTextError=String(e.message);}}
+ const urls=pdfCandidates(w);if(!urls.length){w.evidenceBasis='全文未取得：目前書目沒有可下載的 PDF。只能確認引用關係'+(w.abstract?'與摘要':'')+'；加入全文後才可判讀支持／反駁。';w.verifying=false;renderEvidence();return;}
  let error;try{for(const url of urls){if(!active())return;try{w.evidenceBasis='正在取得全文、比對参考文獻及引用段落…';renderEvidence();const bytes=await fetchPdfBytes(url);if(!active())return;const text=await pdfTextFromFile(new Blob([bytes]));if(!active())return;applyCitationText(w,text,target);return;}catch(e){error=e;}}
  if(active())w.evidenceBasis='全文未取得：'+String(error?.message||'來源無法使用')+'。推論只能確認引用關係，方向未定；可下載後加入 PDF。';
  }finally{w.verifying=false;if(active())renderEvidence();}
@@ -997,7 +996,7 @@ async function inferCitation(w,target){
 }
 async function autoVerifyCitations(works,target,request){
  // Bounded automatic work; remaining rows retain an explicit per-paper action.
- const queue=works.filter(w=>pdfCandidates(w).length).slice(0,12);let cursor=0;
+ const queue=works.filter(w=>pdfCandidates(w).length||w.doi).slice(0,12);let cursor=0;
  await Promise.all(Array.from({length:Math.min(3,queue.length)},async()=>{while(cursor<queue.length&&request===state.evidence.request){const w=queue[cursor++];await verifyCitation(w,target);}}));
 }
 async function analyzeCitingPdf(index,file){const w=state.evidence.works[index],target=state.evidence.target;if(!w)return;toast('正在定位全文引用段落…');try{const text=await pdfTextFromFile(file);if(target!==state.evidence.target||!state.evidence.works.includes(w))return;applyCitationText(w,text,target);renderEvidence();toast(w.contexts.length?'全文引用段落已定位':'全文已讀取；引用方向未定');}catch(e){toast(`PDF 解析失敗：${e.message}`);}}
@@ -1006,9 +1005,6 @@ $('exportMd').addEventListener('click',()=>{const t=state.evidence.target;let md
 
 $('reanalyzeFigure').addEventListener('click',()=>{ const f=state.reader.activeFigure; if(f) explainPdfFigure(f.pageNo,f.region,f.index); });
 
-// ---------------- AI modal ----------------
-$('settingsBtn').addEventListener('click',()=>{const s=aiSettings();$('aiKey').value=s.key;$('aiModel').value=s.model;$('figureModel').value=s.figureModel;$('aiEndpoint').value=s.endpoint;$('rememberAi').checked=s.remember;$('aiModal').classList.remove('hidden')}); $('closeModal').addEventListener('click',()=>$('aiModal').classList.add('hidden')); $('aiModal').addEventListener('click',e=>{if(e.target===$('aiModal'))$('aiModal').classList.add('hidden')});
-$('saveAi').addEventListener('click',()=>{const key=$('aiKey').value.trim(),remember=$('rememberAi').checked;if(remember){localStorage.setItem(STORE.aiKey,key);sessionStorage.removeItem(STORE.aiKey)}else{sessionStorage.setItem(STORE.aiKey,key);localStorage.removeItem(STORE.aiKey)}localStorage.setItem(STORE.aiModel,$('aiModel').value.trim()||'gpt-5-mini');localStorage.setItem(STORE.figureModel,$('figureModel').value.trim()||'gpt-5-mini');localStorage.setItem(STORE.aiEndpoint,$('aiEndpoint').value.trim()||'https://api.openai.com/v1/responses');$('aiModal').classList.add('hidden');toast('AI 設定已更新')}); $('clearAi').addEventListener('click',()=>{[localStorage,sessionStorage].forEach(s=>s.removeItem(STORE.aiKey));localStorage.removeItem(STORE.aiModel);localStorage.removeItem(STORE.figureModel);localStorage.removeItem(STORE.aiEndpoint);$('aiKey').value='';toast('AI 設定已清除')});
 
 function safeFile(s='file'){return s.replace(/[\\/:*?"<>|]+/g,'_').replace(/\s+/g,' ').trim().slice(0,80)||'file'}
 function downloadText(name,text,type='text/plain'){const blob=new Blob([text],{type:`${type};charset=utf-8`}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}

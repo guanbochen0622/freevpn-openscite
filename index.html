@@ -4,18 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark">
-<meta name="description" content="OpenScite v25.9 — Academic research workspace.">
-<title>OpenScite v25.9 — Research Workspace</title>
+<meta name="description" content="OpenScite v25.10 — Academic research workspace.">
+<title>OpenScite v25.10 — Research Workspace</title>
 <link rel="stylesheet" href="vendor/pdf_viewer.css">
 <link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="workspace.css?v=25.9.0">
+<link rel="stylesheet" href="workspace.css?v=25.10.0">
 
 </head>
 <body>
 <a href="#view-search" class="skip-link">跳至主要內容</a>
 <nav class="topbar">
   <div class="shell nav-inner">
-    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v25.9</span></button>
+    <button class="brand nav-view" data-view="search" aria-label="OpenScite 首頁"><span class="logo">O</span><span>OpenScite <b>Web</b></span><span class="version">v25.10</span></button>
     <div class="nav-tabs" role="navigation">
       <button class="nav-tab active" data-view="search">學術搜尋</button>
       <button class="nav-tab" data-view="reader">PDF 閱讀器</button>
@@ -157,24 +157,9 @@
   </section>
 </main>
 
-<div id="aiModal" class="modal hidden" role="dialog" aria-modal="true">
-  <div class="modal-card">
-    <div class="modal-head"><div><h3>AI 設定</h3><p>設定自己的模型與 API 連線。</p></div><button id="closeModal" class="icon-btn">×</button></div>
-    <div class="modal-body">
-      <label class="stack-label">OpenAI API key<input id="aiKey" class="control" type="password" autocomplete="off" placeholder="sk-..."></label>
-      <label class="stack-label">Text Model（文字模型）<input id="aiModel" class="control" value="gpt-5-mini"></label>
-      <label class="stack-label">Figure Model（圖表解釋模型，建議）<input id="figureModel" class="control" value="gpt-5-mini" placeholder="gpt-5-mini"></label>
-      <label class="stack-label">Responses API endpoint<input id="aiEndpoint" class="control" value="https://api.openai.com/v1/responses"></label>
-      <label class="switch-row"><input id="rememberAi" type="checkbox"><span>只在這台瀏覽器儲存 API key（不建議公用電腦勾選）</span></label>
-      <div class="modal-note">勾選後會將金鑰保存在此瀏覽器。AI 功能會將所需文字或圖片傳送至你設定的服務。</div>
-    </div>
-    <div class="modal-foot"><button id="clearAi" class="btn">清除設定</button><button id="saveAi" class="btn primary">儲存設定</button></div>
-  </div>
-</div>
-
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <footer><div class="shell">OpenScite · Research Workspace</div></footer>
-<script src="vendor/fflate.min.js?v=25.9.0"></script>
-<script type="module" src="boot.js?v=25.9.0"></script>
+<script src="vendor/fflate.min.js?v=25.10.0"></script>
+<script type="module" src="boot.js?v=25.10.0"></script>
 </body>
 </html>

@@ -11,3 +11,13 @@ more.addEventListener('keydown',e=>{if(e.key==='Escape'){more.open=false;more.qu
 document.addEventListener('click',e=>{if(!more.contains(e.target))more.open=false;});
 window.ReaderLayout={openMore:()=>{more.open=true;}};
 })();
+
+// Mouse and keyboard resizing share the saved width setting.
+(function(){
+ const panel=document.querySelector('.reader-right'),handle=document.createElement('button');handle.className='assistant-resize';handle.setAttribute('aria-label','拖曳調整閱讀助理寬度；左右方向鍵調整');handle.setAttribute('role','separator');handle.setAttribute('aria-orientation','vertical');panel.prepend(handle);
+ const set=width=>{const grid=document.querySelector('.reader-grid');const max=Math.max(360,Math.min(900,grid.clientWidth-(document.body.classList.contains('reader-tools-hidden')?350:565)));readerPrefs.width=Math.round(Math.max(360,Math.min(max,width)));applyReaderLayout();handle.setAttribute('aria-valuenow',readerPrefs.width);};
+ handle.addEventListener('pointerdown',e=>{if(e.button!==0)return;e.preventDefault();const x=e.clientX,width=panel.getBoundingClientRect().width;handle.setPointerCapture(e.pointerId);const move=m=>set(width+x-m.clientX);const end=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',end);handle.removeEventListener('pointercancel',end);saveJSON('openscite_reader_layout',readerPrefs);};handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);});
+ handle.onkeydown=e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();e.stopPropagation();set(panel.clientWidth+(e.key==='ArrowLeft'?20:-20));saveJSON('openscite_reader_layout',readerPrefs);};
+ if(readerPrefs.height)document.documentElement.style.setProperty('--assistant-height',Math.min(innerHeight-100,Math.max(360,readerPrefs.height))+'px');let height=panel.clientHeight;const observer=new ResizeObserver(()=>{if(innerWidth<=1250||Math.abs(panel.clientHeight-height)<2)return;height=panel.clientHeight;readerPrefs.height=height;saveJSON('openscite_reader_layout',readerPrefs);});observer.observe(panel);
+ const label=document.createElement('label');label.className='assistant-font-control';label.textContent='閱讀字級 ';const input=document.createElement('input');input.type='range';input.min='16';input.max='24';input.value=readerPrefs.font||18;input.setAttribute('aria-label','閱讀助理字級');label.append(input);$('askInput').before(label);const font=()=>{document.documentElement.style.setProperty('--assistant-font',input.value+'px');};input.oninput=()=>{readerPrefs.font=Number(input.value);font();saveJSON('openscite_reader_layout',readerPrefs);};font();
+})();

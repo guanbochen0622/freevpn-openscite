@@ -1,0 +1,11 @@
+# Google account deployment status
+
+Google web login is implemented but disabled because this repository has no registered OAuth client ID. Do not claim live Google login or desktop Google login is verified. Guest library/history/notes/bookmarks remain usable without login. ChatGPT sign-in is separate and uses its existing official desktop account flow.
+
+To activate the web flow, the application owner must register a Google OAuth **web application**, configure its consent screen and allowed JavaScript origin (`https://guanbochen0622.github.io`, plus any development origin), enable Google Drive API, and set the public client ID in `account-config.js`. No client secret belongs in this file. Configure scopes for `openid email profile` and `https://www.googleapis.com/auth/drive.appdata`. Complete Google's consent/publication requirements for the intended audience. Test with an authorized account before declaring availability.
+
+The app uses Google Identity Services' token model. Access tokens remain in memory only. Reauthorization occurs on explicit login/backup/restore actions. It verifies the subject using Google's userinfo response, isolates local records by that subject, and stores only a JSON snapshot in the user's app-data folder. PDF originals and AI credentials are not uploaded. Upload replaces one named cloud snapshot after confirmation; download merges records, preferring existing local entries on conflict. It is manual backup/merge, not realtime synchronization.
+
+Desktop uses a separate installed-application flow in `desktop/google-account.cjs`: the system browser, a random loopback port, state binding and S256 PKCE. Tokens remain only in main-process memory; renderer requests are restricted to userinfo and Drive endpoints. Configure a Google **Desktop app** registration in `desktop/google-config.cjs` (the installed-client ID and, if issued, its installed-client secret; never a confidential web-client secret). Both native OAuth and cloud operations must be verified with real authorized accounts before activation. No user API key entry is needed. The website Google Identity Services flow is never loaded in Electron.
+
+Tests use intercepted Google responses to validate identity switching, token exclusion, backup and guest restoration. These tests do not establish live OAuth approval or accessibility.

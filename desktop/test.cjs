@@ -15,3 +15,5 @@ test('structured analysis never streams internal JSON into reader progress',asyn
  await assistant.ask({...body,text:{format:{schema:{type:'object'}}}});
  assert.ok(events.some(e=>e.stage==='answering'));assert.ok(events.every(e=>!Object.hasOwn(e,'text')));
 });
+
+test('response speed routes real service tier without changing reasoning effort',async()=>{for(const speed of ['default','fast']){const rpc=new Fake(),a=new Assistant(rpc,'/empty');await a.ask({...body,desktopSpeed:speed});const turn=rpc.calls.find(c=>c.method==='turn/start').p;assert.equal(turn.serviceTierForTurn,speed);assert.equal(turn.effort,'medium');}const a=new Assistant(new Fake(),'/empty');await assert.rejects(a.ask({...body,desktopSpeed:'invented'}),/回應速度/);});

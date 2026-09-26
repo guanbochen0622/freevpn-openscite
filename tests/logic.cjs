@@ -49,3 +49,6 @@ assert.match(answer,/980 nm/);assert.doesNotMatch(answer,/"meaning"/);
 assert.throws(()=>ctx.readableFigureExplanation('{"panels":[]}'),/格式/);
 assert.throws(()=>ctx.readableFigureExplanation(JSON.stringify({meaning:'```python print(1)```',context:'c',evidence:'e',caveat:''})),/格式/);
 console.log('PASS: figure references distinguish Fig. 1, Fig. 10 and Table 1; readable prose only.');
+
+assert.equal(vm.runInContext(`citationContexts('Our result is consistent with previous measurements (7).\\nReferences\\n7. Smith. Exact target study. doi:10.1234/target', {title:'Exact target study',doi:'10.1234/target'}).length`,ctx),1);
+console.log('PASS Frontiers parenthesized reference binding');

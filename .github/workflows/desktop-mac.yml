@@ -34,7 +34,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run check
-      - run: npm run test:logic && node tests/ai-providers.cjs && node --test desktop/providers.test.cjs
+      - run: npm run test:logic
       - run: node tests/reader-lifecycle.cjs
       - run: node tests/partial-index.cjs
       - run: node tests/locales.cjs
@@ -105,7 +105,7 @@ jobs:
           Get-Content codex-version.log
           if ($codexCheck.ExitCode -ne 0) { throw 'Bundled Codex failed' }
           Remove-Item Env:ELECTRON_RUN_AS_NODE
-          foreach ($asset in @('ai-handoff.js','ai-providers.js','ai-connections.js','reader-layout.js','app.js')) {
+          foreach ($asset in @('reader-evidence.js','scientific-text.js','user-account.js','account-config.js','citation-source.js','ai-connections.js','reader-layout.js','app.js')) {
             $bundled = Join-Path $installDir "resources/app/web/$asset"
             if ((Get-FileHash $bundled).Hash -ne (Get-FileHash "../$asset").Hash) {
               throw "Installed asset mismatch: $asset"
@@ -152,7 +152,7 @@ jobs:
           BUILD_SHA: ${{ github.sha }}
         run: |
           cat > notes.md <<'NOTES'
-          OpenScite 0.9.0 桌面預覽版：多模型連線與混合統整。
+          OpenScite 0.10.0 桌面預覽版：ChatGPT 帳號、原文高亮與閱讀介面改版。
 
           Mac：下載符合晶片的 DMG，拖入 Applications。Windows：執行 windows-x64-setup.exe 安裝。不需安裝 Node.js 或輸入指令。
 
@@ -160,10 +160,11 @@ jobs:
           - x64.dmg：Intel Mac
           - windows-x64-setup.exe：Windows 64 位元
 
-          ChatGPT 桌面帳號登入提供裝置碼備援。Gemini、Claude 預設為官方網頁手動往返：登入官方網站後貼上問題，再貼回回答；不是自動帳號整合。API 自動分析仍可選用，額度與聊天訂閱分開。混合模式會將所需資料送到選定服務並使用多次額度。
+          只保留 ChatGPT 帳號登入，不需要 AI API 金鑰。新增回應速度、閱讀區拖曳與字級調整、引文原文高亮及詳細公式解釋。引用分類是有原文依據的推論，並非獨立驗證。訪客紀錄可在本機保存。Google 登入尚未啟用：網站與桌面版都缺少應用程式 OAuth 設定。
+
 
           已測試 Mac / Windows 原生視窗與 Windows 安裝後的程式、原生 Mac 視窗載入、PDF 引擎、帳號介面及未登入的官方 Codex 連線。登入與模型分析需使用自己的 ChatGPT 帳號及可用額度。
 
           此預覽版僅有臨時簽章，尚未經 Apple 開發者簽章與公證，因此 macOS 可能阻擋首次開啟。Windows 安裝檔尚未購買程式碼簽章憑證，系統可能提示未知發行者。這不是正式販售版本。
           NOTES
-          gh release create "$BUILD_TAG" installers/* --repo "$GH_REPO" --target "$BUILD_SHA" --prerelease --title "OpenScite 0.9.0 Mac / Windows 預覽版" --notes-file notes.md
+          gh release create "$BUILD_TAG" installers/* --repo "$GH_REPO" --target "$BUILD_SHA" --prerelease --title "OpenScite 0.10.0 Mac / Windows 預覽版" --notes-file notes.md

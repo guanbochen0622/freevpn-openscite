@@ -32,7 +32,7 @@ function validateAnswer(raw,evidence){
 function validateStructure(raw){
  const v=typeof raw==='string'?parseObject(raw):raw;
  if(!v||!Array.isArray(v.formulas)||!Array.isArray(v.tables)||typeof v.notes!=='string'||v.notes.length>10000||v.formulas.length>12||v.tables.length>6)throw Error('Invalid document structure');
- for(const f of v.formulas){if(!f||!['latex','meaning','uncertainty'].every(k=>typeof f[k]==='string'&&f[k].length<=5000))throw Error('Invalid formula');}
+ for(const f of v.formulas){if(!f||!['latex','meaning','uncertainty'].every(k=>typeof f[k]==='string'&&f[k].length<=5000))throw Error('Invalid formula');for(const key of ['name','physicalMeaning','paperRole','assumptions'])if(f[key]!==undefined&&(typeof f[key]!=='string'||f[key].length>8000))throw Error('Invalid formula explanation');if(f.symbols!==undefined&&(!Array.isArray(f.symbols)||f.symbols.length>80||!f.symbols.every(s=>s&&['symbol','meaning','unit','basis'].every(k=>typeof s[k]==='string'&&s[k].length<=3000))))throw Error('Invalid formula symbols');}
  for(const t of v.tables){if(!t||typeof t.title!=='string'||t.title.length>1000||typeof t.uncertainty!=='string'||t.uncertainty.length>5000||!Array.isArray(t.headers)||!t.headers.length||t.headers.length>30||!t.headers.every(x=>typeof x==='string'&&x.length<=1000)||!Array.isArray(t.rows)||t.rows.length>100||!t.rows.every(r=>Array.isArray(r)&&r.length===t.headers.length&&r.every(x=>typeof x==='string'&&x.length<=3000)))throw Error('Invalid table dimensions');}
  return v;
 }

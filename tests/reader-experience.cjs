@@ -15,7 +15,7 @@ module.exports=async function testReaderExperience(page){
  assert.equal(await page.inputValue('#ocrTranscript'),'Unsaved adoption: draft only 985 nm.');
  assert.equal(await page.evaluate(()=>state.reader.pageTexts[0]),'Measured wavelength is 980 nm. Concentration is 10⁻¹⁴.');
  await page.waitForSelector('#structureResults .katex');
- assert.equal(await page.locator('#structureResults tbody tr').count(),2);
+ assert.equal(await page.locator('#structureResults .table-scroll tbody tr').count(),2);
  assert.equal(await page.locator('[data-copy-formula]').count(),1);
  await page.evaluate(()=>{$('conversationHistory').open=true;document.querySelector('.chat-turn').open=true;});
  await page.click('[data-chat-restore="0"]');

@@ -12,6 +12,7 @@ if (bridge) {
     </div>
     <p id="desktopLoginHelp" role="status"></p><label class="stack-label">主模型（ChatGPT）<select class="control" id="desktopModel"></select></label>
     <label class="stack-label">推理強度<select class="control" id="desktopEffort"></select></label>
+    <label class="stack-label">回應速度<select class="control" id="desktopSpeed"><option value="default">標準</option><option value="fast">快速（依帳號與模型支援）</option></select></label><p>快速模式會要求服務優先處理，可能使用較多額度；不降低推理強度。若服務不支援，會顯示錯誤。</p>
     <button class="btn primary" id="desktopTest" style="margin-top:16px">測試模型回答</button>
     <button class="btn" id="desktopCancelTest">取消分析</button>
     <p id="desktopTestResult" role="status" style="white-space:pre-wrap">尚未測試。測試會發送一句簡短問題，使用少量帳號額度，不傳送論文。</p>
@@ -25,12 +26,16 @@ if (bridge) {
   status.setAttribute('role', 'status');
   status.textContent = 'ChatGPT：正在確認帳號…';
   el('desktopStatus').after(status);
+  let verified=null;
+  const signature=()=>[el('desktopModel').value,el('desktopEffort').value,el('desktopSpeed').value].join(':');
+  el('desktopSpeed').value=localStorage.getItem('desktopSpeed')==='fast'?'fast':'default';
   let models = [], poll, loginPending=false, refreshing = false, testing = false, running = false;
   const cleanError = e => String(e.message || e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');
   const fail = e => { el('desktopStatus').textContent = cleanError(e); status.textContent = 'ChatGPT 連線錯誤：' + cleanError(e); };
   function save() {
     localStorage.setItem('desktopModel', el('desktopModel').value);
     localStorage.setItem('desktopEffort', el('desktopEffort').value);
+    localStorage.setItem('desktopSpeed',el('desktopSpeed').value);
   }
   function effort() {
     const model = models.find(m => m.model === el('desktopModel').value);
@@ -38,7 +43,7 @@ if (bridge) {
     const saved = localStorage.getItem('desktopEffort') || 'medium';
     el('desktopEffort').value = [...el('desktopEffort').options].some(o => o.value === saved) ? saved : model?.defaultReasoningEffort || '';
     save();
-    status.textContent = `ChatGPT 已登入 · ${model?.displayName || '尚無可用模型'} · 尚未驗證本次模型連線`;
+    status.textContent = `ChatGPT 已登入 · ${model?.displayName || '尚無可用模型'} · ${verified===signature()?'模型回答已驗證':'尚未測試此設定'}`;
   }
   async function refresh() {
     if (refreshing || testing || running) return;
@@ -74,10 +79,11 @@ if (bridge) {
     }
   });
   const settings = document.getElementById('settingsBtn');
-  settings.textContent = 'AI 模型';
+  settings.textContent = 'ChatGPT 帳號';
   window.openChatGPTSettings = () => { modal.showModal();refresh().catch(fail); };
   el('desktopModel').onchange = effort;
-  el('desktopEffort').onchange = save;
+  el('desktopEffort').onchange = ()=>{verified=null;save();status.textContent='設定已更新，尚未測試';};
+  el('desktopSpeed').onchange = el('desktopEffort').onchange;
   el('desktopClose').onclick = () => modal.close();
   el('desktopRefresh').onclick = () => refresh().catch(fail);
   window.addEventListener('focus', () => { if (!testing) refresh().catch(fail); });
@@ -94,13 +100,14 @@ if (bridge) {
   el('desktopLogin').onclick=()=>startLogin(false);el('desktopDeviceLogin').onclick=()=>startLogin(true);
   el('desktopCancelLogin').onclick=async()=>{clearInterval(poll);loginPending=false;try{await bridge.cancelLogin();el('desktopLoginHelp').replaceChildren();await refresh();}catch(e){fail(e);}};
   bridge.onLogin?.(value=>{clearInterval(poll);loginPending=false;el('desktopLoginHelp').replaceChildren();if(value.success)refresh().catch(fail);else fail(Error(value.error||'登入未完成；可改用裝置碼登入'));});
-  el('desktopLogout').onclick = async () => { try { await bridge.logout();clearInterval(poll);await refresh(); } catch (e) { fail(e); } };
+  el('desktopLogout').onclick = async () => { try { verified=null;await bridge.logout();clearInterval(poll);await refresh(); } catch (e) { fail(e); } };
   el('desktopCancelTest').onclick = () => bridge.cancel().catch(fail);
   el('desktopTest').onclick = async () => {
     testing = true;el('desktopTest').disabled = true;save();
     try {
-      const answer = await bridge.ask({desktopModel:el('desktopModel').value,desktopEffort:el('desktopEffort').value,language:window.I18n?.language||'zh-Hant',input:[{role:'user',content:[{type:'input_text',text:'This is a connection test, not a paper question. Reply with exactly: OpenScite 連線成功'}]}]});
+      const answer = await bridge.ask({desktopModel:el('desktopModel').value,desktopEffort:el('desktopEffort').value,desktopSpeed:el('desktopSpeed').value,language:window.I18n?.language||'zh-Hant',input:[{role:'user',content:[{type:'input_text',text:'This is a connection test, not a paper question. Reply with exactly: OpenScite 連線成功'}]}]});
       el('desktopTestResult').textContent = '已收到模型真實回答：\n' + answer;
+      verified=signature();
       status.textContent = 'ChatGPT 模型回答已驗證 · ' + el('desktopModel').value;
     } catch (e) {
       const message = '模型測試失敗：\n' + cleanError(e);

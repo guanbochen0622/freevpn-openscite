@@ -4,24 +4,13 @@ A browser-based academic research workspace: discover papers, inspect PDFs, coll
 
 ## This release
 
-Desktop 0.9.0 / web 25.9: fixes for account sign-in, search-to-PDF navigation and citation evidence. ChatGPT now has official device-code fallback, login cancellation and explicit failure notifications. There are exactly three provider choices: ChatGPT, Gemini and Claude. The reader has a direct primary-model selector.
+Desktop 0.10.0 / web 25.10 restores **ChatGPT account login only**. No AI API keys, Gemini/Claude adapters or manual answer handoff remain. Desktop users select their available ChatGPT model, reasoning effort and standard/fast response tier. Fast mode requires service support and may consume more quota; unsupported requests surface the actual error.
 
-**Account mode is not uniform:** ChatGPT desktop uses the official Codex account flow. Gemini/Claude default to a manual official-website workflow: sign in on the provider website, copy the prepared question and images, then paste the complete answer back. This is explicitly **not automatic third-party subscription login**. Optional API automation remains in collapsed advanced settings. Mixed synthesis can combine these methods; manual steps wait for the user and do not inspect website cookies or tokens.
+The assistant defaults to larger text and a wider column, with a mouse/keyboard resize handle and font slider. Validated answer quotes are located in PDF text/OCR geometry and highlighted in both the reader and preview. Ambiguous or unlocatable quotes are explicitly reported. Formula analysis includes the name, every symbol, units, physical interpretation, paper-specific role and assumptions, with safe math rendering in prose.
 
-Search PDF actions navigate to the reader, try alternate OpenAlex PDF sources and reject HTML login pages. Desktop retrieves public PDFs in the main process, avoiding browser CORS restrictions; web-only cross-origin restrictions and paywalls remain. PDFs are capped at 80 MB and requests time out. Failures preserve the current document and offer upload.
+Citation lookup supports bracketed and parenthesized references plus Europe PMC full-text reference IDs. Stance remains an inference grounded in actual passages; unavailable full text is not reported as verified.
 
-Citation analysis automatically attempts up to 12 public PDFs with three concurrent workers. It binds numbered citations to the target reference, shows original passages and labels stance as inference. Remaining records can be fetched individually. “AI 解讀” uses the selected primary model to explain passages or abstract-only relevance; supporting/contrasting classifications require an exact matching passage quote. Missing full text is not described as verified evidence. See [verification scope](VALIDATION-0.9.0.md).
-
-Desktop keys are session-only by default; optional persistence uses the OS encryption facility and refuses an unencrypted fallback. Browser Gemini/Claude keys remain in session storage. Connection tests send a short prompt, with no paper. Keys are excluded from workspace backups. Model availability, API billing and CORS support depend on the provider; use the desktop app if browser cross-origin access is unavailable.
-
-- Search: OpenAlex with Crossref fallback, validated year ranges, provider-side date/citation sorting, deduplication within a page, stale-request protection, recent searches, individual keyword highlighting including hyphenated words.
-- Compare up to three papers; inspect and export source metadata as BibTeX. The journal score sort is **within the current page**. Arbitrary metrics are never labeled official Q1–Q4 rankings.
-- Reader: self-hosted PDF.js 5.6.205, lazy page rendering with a nine-canvas retention budget, independent full-text indexing, outline, full-document search, page navigation, bookmarks, resume position, focus mode, text selection, notes, four-color position-anchored highlights, figure analysis and original PDF download.
-- Identical local PDF bytes share a SHA-256 identity, so re-uploading keeps annotations. Existing v24 storage keys are retained.
-- Library: title/author/tag search, sort, tags, metadata/notes/highlight/bookmark backup and validated merge restore. Backups intentionally exclude API keys and PDF bytes; keep original PDFs separately.
-- AI: relevant-page excerpts for questions, distributed page excerpts for summary, clickable returned page markers, explicit document-as-untrusted-data instruction. No automatic AI requests or bundled API secrets. Duplicate AI requests are blocked, current requests can be canceled, and questions wait for the full text index. MyMemory translation requires confirmation.
-- Evidence: citing works start unverified. Numbered reference entries are matched to the target DOI or a strong title match before numeric citation markers are extracted. Any support/contrast classification is a **rule-based candidate for human review**, not validated semantic inference. Author–year and ambiguous bindings remain unresolved.
-- Dark/light themes, compact list mode, responsive layout, keyboard shortcuts, focus indicators, reduced-motion support and accessible status messages.
+Guest workspaces persist locally. Google web login and Drive app-data backup are implemented but **not activated**: the deployment has no Google OAuth client ID. Desktop Google OAuth uses the system browser with PKCE and a loopback callback; it also needs its own registered client ID. See [Google setup](GOOGLE-SETUP.md) and [verification scope](VALIDATION-0.10.0.md). PDF bytes are local and excluded from cloud backups.
 
 ## Run
 
@@ -31,7 +20,7 @@ Runtime files: `index.html`, `styles.css`, `workspace.css`, `boot.js`, `app.js`,
 
 ## Verification
 
-Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION-0.9.0.md` for current verification. Optional real-file regression: `node tests/real-papers.cjs /absolute/paper.pdf [...]`; files stay local and no model service is called.
+Run `npm install`, `npx playwright install chromium`, then `npm test` (the suite starts its own temporary local server). The browser smoke suite uses a generated 16-page PDF and intercepted bibliographic responses; it never sends real documents or paid AI requests. `CHROMIUM_PATH` may point to a preinstalled compatible Chromium. See `VALIDATION-0.10.0.md` for current verification. Optional real-file regression: `node tests/real-papers.cjs /absolute/paper.pdf [...]`; files stay local and no model service is called.
 
 ## Product limits and commercial readiness
 

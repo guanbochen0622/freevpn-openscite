@@ -43,7 +43,7 @@ let currentReaderAnswer=null,pendingReaderSource=null;
 function answerMarkup(text,verifiedPages=null){
   // Escape everything first. Only a small, non-executable formatting subset is supported.
   const inline=s=>esc(s).replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>').replace(/\[Page (\d+)\]/g,(m,n)=>Number(n)>=1&&Number(n)<=state.reader.pages&&(!verifiedPages||verifiedPages.includes(Number(n)))?`<button class="page-citation" data-page-link="${Number(n)}">${esc(readerText(`第 ${Number(n)} 頁`))} ↗</button>`:m);
-  return String(text).split(/\n\s*\n/).map(part=>`<p>${part.split('\n').map(line=>/^#{1,4}\s/.test(line)?`<strong>${inline(line.replace(/^#{1,4}\s+/,''))}</strong>`:inline(line)).join('<br>')}</p>`).join('');
+  return String(text).replace(/\[Page\s+([\d,\s]+)\]/g,(m,ns)=>ns.split(',').map(n=>'[Page '+n.trim()+']').join(' ')).split(/\n\s*\n/).map(part=>`<p>${part.split('\n').map(line=>/^#{1,4}\s/.test(line)?`<strong>${inline(line.replace(/^#{1,4}\s+/,''))}</strong>`:inline(line)).join('<br>')}</p>`).join('');
 }
 setAssistant=function(title,body,options={}){
   if(document.body.classList.contains('reader-focus')){document.body.classList.remove('reader-focus');$('focusReader').textContent=readerText('專注閱讀');}
@@ -75,26 +75,27 @@ function setTranslationResult(original,answer){setAssistant('Translation（翻�
 
 // A separate preview canvas leaves the reading position unchanged.
 insertTools('body','<dialog id="pagePreviewDialog"><div class="dialog-header"><strong id="pagePreviewTitle"></strong><button id="closePagePreview" class="icon-btn" aria-label="關閉">×</button></div><div id="pagePreviewBody"></div><button id="jumpPreviewPage" class="btn primary">前往此頁</button></dialog>');
-let previewTask=null,previewEpoch=0,previewPage=1;
+let previewTask=null,previewEpoch=0,previewPage=1,previewSources=[];
 function closePagePreview(){previewEpoch++;previewTask?.cancel();previewTask=null;$('pagePreviewDialog').close();}
-async function previewReaderPage(number){
+async function previewReaderPage(number,sources=window.ReaderEvidence?.sources(number)||[]){
+  previewSources=sources;
   const pdf=state.reader.pdf;if(!pdf||number<1||number>pdf.numPages)return;
   previewTask?.cancel();const epoch=++previewEpoch;previewPage=number;
   $('pagePreviewTitle').textContent=readerText(`第 ${number} 頁`);$('pagePreviewBody').textContent=readerText('處理中…');
   if(!$('pagePreviewDialog').open)$('pagePreviewDialog').showModal();
-  try{const page=await pdf.getPage(number);if(epoch!==previewEpoch)return;const base=page.getViewport({scale:1}),scale=Math.min(1.5,Math.max(240,innerWidth-72)/base.width,720/base.width),viewport=page.getViewport({scale});const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.setAttribute('aria-label',readerText(`第 ${number} 頁`));$('pagePreviewBody').replaceChildren(canvas);previewTask=page.render({canvasContext:canvas.getContext('2d'),viewport});await previewTask.promise;if(epoch===previewEpoch)previewTask=null;}catch(e){if(epoch===previewEpoch&&e.name!=='RenderingCancelledException')$('pagePreviewBody').textContent=String(e.message);}
+  try{const page=await pdf.getPage(number);if(epoch!==previewEpoch)return;const base=page.getViewport({scale:1}),scale=Math.min(1.5,Math.max(240,innerWidth-72)/base.width,720/base.width),viewport=page.getViewport({scale});const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);canvas.setAttribute('aria-label',readerText(`第 ${number} 頁`));const frame=document.createElement('div');frame.className='citation-preview-frame';frame.append(canvas);$('pagePreviewBody').replaceChildren(frame);previewTask=page.render({canvasContext:canvas.getContext('2d'),viewport});await previewTask.promise;if(epoch===previewEpoch){previewTask=null;const found=await window.ReaderEvidence?.paint(frame,number,sources);if(epoch===previewEpoch){const note=document.createElement('p');note.className='citation-location-status';note.textContent=found?'黃色標注為回答用到的原文。':'沒有可唯一定位的引文；本預覽只顯示頁面。';$('pagePreviewBody').append(note);}}}catch(e){if(epoch===previewEpoch&&e.name!=='RenderingCancelledException')$('pagePreviewBody').textContent=String(e.message);}
 }
 $('closePagePreview').onclick=closePagePreview;
 $('pagePreviewDialog').addEventListener('cancel',e=>{e.preventDefault();closePagePreview();});
 $('pagePreviewDialog').addEventListener('click',e=>{if(e.target===$('pagePreviewDialog'))closePagePreview();});
-$('jumpPreviewPage').onclick=()=>{const page=previewPage;closePagePreview();goPdfPage(page);};
+$('jumpPreviewPage').onclick=()=>{const page=previewPage;const sources=previewSources;closePagePreview();window.ReaderEvidence?ReaderEvidence.show(page,sources):goPdfPage(page);};
 $('assistantOutput').addEventListener('click',e=>{const b=e.target.closest('[data-preview-page]');if(b)previewReaderPage(Number(b.dataset.previewPage));});
 document.addEventListener('research:document',closePagePreview);
 
 // Keep tools optional and make the response column adjustable on a desktop.
-insertTools('.reader-commandbar','<button id="toggleReaderTools" class="btn small" aria-pressed="false">收合文件工具</button><label class="assistant-width-control"><span>助理寬度</span><input id="assistantWidth" type="range" min="280" max="520" step="20" aria-label="助理寬度"></label>');
+insertTools('.reader-commandbar','<button id="toggleReaderTools" class="btn small" aria-pressed="false">收合文件工具</button><label class="assistant-width-control"><span>助理寬度</span><input id="assistantWidth" type="range" min="360" max="900" step="20" aria-label="助理寬度"></label>');
 const readerPrefs=loadJSON('openscite_reader_layout',{});
-function applyReaderLayout(){document.body.classList.toggle('reader-tools-hidden',!!readerPrefs.hideTools);document.documentElement.style.setProperty('--assistant-width',Math.max(280,Math.min(520,Number(readerPrefs.width)||360))+'px');$('assistantWidth').value=Number(readerPrefs.width)||360;$('toggleReaderTools').setAttribute('aria-pressed',String(!!readerPrefs.hideTools));$('toggleReaderTools').textContent=readerText(readerPrefs.hideTools?'展開文件工具':'收合文件工具');}
+function applyReaderLayout(){document.body.classList.toggle('reader-tools-hidden',!!readerPrefs.hideTools);document.documentElement.style.setProperty('--assistant-width',Math.max(360,Math.min(900,Number(readerPrefs.width)||500))+'px');$('assistantWidth').value=Number(readerPrefs.width)||500;$('toggleReaderTools').setAttribute('aria-pressed',String(!!readerPrefs.hideTools));$('toggleReaderTools').textContent=readerText(readerPrefs.hideTools?'展開文件工具':'收合文件工具');}
 $('toggleReaderTools').onclick=()=>{readerPrefs.hideTools=!readerPrefs.hideTools;saveJSON('openscite_reader_layout',readerPrefs);applyReaderLayout();};
 $('assistantWidth').oninput=e=>{readerPrefs.width=Number(e.target.value);saveJSON('openscite_reader_layout',readerPrefs);applyReaderLayout();};
 document.addEventListener('research:language',applyReaderLayout);applyReaderLayout();
