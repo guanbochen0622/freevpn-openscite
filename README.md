@@ -1,10 +1,10 @@
-# OpenScite 25 — Research Workspace
+# PaperLume 25 — Research Workspace
 
 A browser-based academic research workspace: discover papers, inspect PDFs, collect notes, and trace citation passages. No account or installation is required for readers. The existing `freevpn/` directory is unrelated and is not used by the website.
 
 ## This release
 
-Desktop 0.10.0 / web 25.10 restores **ChatGPT account login only**. No AI API keys, Gemini/Claude adapters or manual answer handoff remain. Desktop users select their available ChatGPT model, reasoning effort and standard/fast response tier. Fast mode requires service support and may consume more quota; unsupported requests surface the actual error.
+Desktop 0.11.0 / web 25.11 restores **ChatGPT account login only**. No AI API keys, Gemini/Claude adapters or manual answer handoff remain. Desktop users select their available ChatGPT model, reasoning effort and standard/fast response tier. Fast mode requires service support and may consume more quota; unsupported requests surface the actual error.
 
 The assistant defaults to larger text and a wider column, with a mouse/keyboard resize handle and font slider. Validated answer quotes are located in PDF text/OCR geometry and highlighted in both the reader and preview. Ambiguous or unlocatable quotes are explicitly reported. Formula analysis includes the name, every symbol, units, physical interpretation, paper-specific role and assumptions, with safe math rendering in prose.
 
@@ -43,4 +43,8 @@ This is a local-first browser application, not a hosted multi-tenant subscriptio
 
 ## 電腦版：使用自己的 ChatGPT 帳號
 
-[電腦版預覽與啟動說明](desktop/README.md)。包含官方 Codex 登入、帳號可用模型選擇、PDF 問答與圖表分析整合；不需填 API 金鑰。Mac 使用者可從 [預覽版下載頁](https://github.com/guanbochen0622/freevpn-openscite/releases) 下載 DMG，無須安裝 Node.js。Apple 晶片與 Intel 的 Mac 啟動測試已通過；個人帳號登入後的分析仍待使用者實機驗證。
+[電腦版預覽與啟動說明](desktop/README.md)。包含官方 Codex 登入、帳號可用模型選擇、PDF 問答與圖表分析整合；不需填 API 金鑰。Mac 使用者可從 [預覽版下載頁](https://github.com/guanbochen0622/paperlume/releases) 下載 DMG，無須安裝 Node.js。Apple 晶片與 Intel 的 Mac 啟動測試已通過；個人帳號登入後的分析仍待使用者實機驗證。
+
+## PaperLume rename and existing data
+
+The display name, npm packages, desktop executables, installer assets, connection messages and developer bridge now use PaperLume. The repository target is `guanbochen0622/paperlume`. Existing storage keys, IndexedDB name, backup formats, cloud-backup filename, desktop application ID, custom origin and profile directory deliberately retain legacy identifiers. These are compatibility identifiers, not displayed product names. Keeping them preserves libraries, notes, OAuth sessions and Windows upgrade identity. Browser storage remains on the same GitHub Pages origin when only the repository path changes. Old exported workspace backups remain supported.

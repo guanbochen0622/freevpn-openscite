@@ -42,7 +42,7 @@ jobs:
       - run: npm test
       - run: npm test
         env:
-          TEST_BASE: /freevpn-openscite
+          TEST_BASE: /paperlume
   build:
     strategy:
       fail-fast: false
@@ -78,9 +78,9 @@ jobs:
       - name: Check bundled Codex and application signature
         if: runner.os == 'macOS'
         run: |
-          APP=$(find dist -maxdepth 2 -name OpenScite.app -type d -print -quit)
+          APP=$(find dist -maxdepth 2 -name PaperLume.app -type d -print -quit)
           test -n "$APP"
-          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/OpenScite" "$APP/Contents/Resources/app/node_modules/@openai/codex/bin/codex.js" --version
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/PaperLume" "$APP/Contents/Resources/app/node_modules/@openai/codex/bin/codex.js" --version
           codesign --verify --deep --strict "$APP"
           shasum -a 256 dist/*.dmg > dist/SHA256-${{ matrix.arch }}.txt
       - name: Build Windows installer
@@ -94,10 +94,10 @@ jobs:
         run: |
           $installer = Get-ChildItem dist/*-setup.exe | Select-Object -First 1
           if (-not $installer) { throw 'Windows installer missing' }
-          $installDir = Join-Path $env:RUNNER_TEMP 'OpenSciteInstalled'
+          $installDir = Join-Path $env:RUNNER_TEMP 'PaperLumeInstalled'
           $process = Start-Process -FilePath $installer.FullName -ArgumentList '/S',"/D=$installDir" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
-          $exe = Join-Path $installDir 'OpenScite.exe'
+          $exe = Join-Path $installDir 'PaperLume.exe'
           if (-not (Test-Path $exe)) { throw 'Installed executable missing' }
           $env:ELECTRON_RUN_AS_NODE = '1'
           $codexScript = Join-Path $installDir 'resources/app/node_modules/@openai/codex/bin/codex.js'
@@ -126,7 +126,7 @@ jobs:
           "$hash  $($installer.Name)" | Set-Content dist/SHA256-windows-x64.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: OpenScite-${{ runner.os }}-${{ matrix.arch }}
+          name: PaperLume-${{ runner.os }}-${{ matrix.arch }}
           path: |
             desktop/dist/*.dmg
             desktop/dist/*-setup.exe
@@ -141,7 +141,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: OpenScite-*
+          pattern: PaperLume-*
           merge-multiple: true
           path: installers
       - name: Publish tested desktop preview installers
@@ -152,7 +152,7 @@ jobs:
           BUILD_SHA: ${{ github.sha }}
         run: |
           cat > notes.md <<'NOTES'
-          OpenScite 0.10.0 桌面預覽版：ChatGPT 帳號、原文高亮與閱讀介面改版。
+          PaperLume 0.11.0 桌面預覽版：ChatGPT 帳號、原文高亮與閱讀介面改版。
 
           Mac：下載符合晶片的 DMG，拖入 Applications。Windows：執行 windows-x64-setup.exe 安裝。不需安裝 Node.js 或輸入指令。
 
@@ -167,4 +167,4 @@ jobs:
 
           此預覽版僅有臨時簽章，尚未經 Apple 開發者簽章與公證，因此 macOS 可能阻擋首次開啟。Windows 安裝檔尚未購買程式碼簽章憑證，系統可能提示未知發行者。這不是正式販售版本。
           NOTES
-          gh release create "$BUILD_TAG" installers/* --repo "$GH_REPO" --target "$BUILD_SHA" --prerelease --title "OpenScite 0.10.0 Mac / Windows 預覽版" --notes-file notes.md
+          gh release create "$BUILD_TAG" installers/* --repo "$GH_REPO" --target "$BUILD_SHA" --prerelease --title "PaperLume 0.11.0 Mac / Windows 預覽版" --notes-file notes.md

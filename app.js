@@ -246,7 +246,7 @@ function pdfCandidates(w={}){
 }
 async function fetchPdfBytes(url){
  if(!safeUrl(url))throw Error('僅支援 HTTP / HTTPS PDF 網址');
- if(window.opensciteDesktop?.downloadPdf)return window.opensciteDesktop.downloadPdf({url});
+ if(window.paperlumeDesktop?.downloadPdf)return window.paperlumeDesktop.downloadPdf({url});
  const res=await fetch(url,{signal:AbortSignal.timeout(20000),credentials:'omit'});if(!res.ok)throw Error('HTTP '+res.status);
  const limit=80*1024*1024;if(Number(res.headers.get('content-length'))>limit){await res.body?.cancel();throw Error('PDF 超過 80 MB');}
  const reader=res.body.getReader(),parts=[];let size=0;
@@ -262,7 +262,7 @@ async function openPdfUrl(url,meta={}){
  $('pdfUrl').value=url;toast('正在取得 PDF…');let failure;
  for(const candidate of candidates){if(request!==remotePdfRequest)return;try{const buf=await fetchPdfBytes(candidate);if(request!==remotePdfRequest)return;const loaded=await loadPdfBuffer(buf,{...meta,pdfUrl:candidate},meta.title||'Remote PDF',candidate);if(loaded===false)throw Error('PDF 格式損毀或無法解析');return;}catch(e){failure=e;}}
  if(request!==remotePdfRequest)return;
- const hint=window.opensciteDesktop?'來源可能需要登入或限制下載。':'此來源可能限制瀏覽器跨網域讀取；桌面版可直接下載公開 PDF。';
+ const hint=window.paperlumeDesktop?'來源可能需要登入或限制下載。':'此來源可能限制瀏覽器跨網域讀取；桌面版可直接下載公開 PDF。';
  $('assistantOutput').innerHTML=`<h4>PDF 尚未載入</h4><p>${esc(hint)} ${esc(failure?.message||'沒有可用來源')}</p><p>原文件已保留。可下載原始 PDF，再按「上傳 PDF」開啟。</p><p><a class="btn small" href="${esc(safeUrl(url))}" target="_blank" rel="noreferrer">開啟原始 PDF ↗</a> <button class="btn small" id="retryPdfUpload">上傳 PDF</button></p>`;
  $('retryPdfUpload').onclick=()=>$('readerFile').click();toast('PDF 未載入，詳見閱讀區的原因與替代方式');
 }
@@ -841,9 +841,9 @@ async function responseRequest(body){
   const before=[...ids.map(id=>$(id)),...$$('#selectionToolbar button')].filter(Boolean).map(el=>({el,disabled:el.disabled}));before.forEach(x=>{if(x.el)x.el.disabled=true});
   try{
     if(window.AIConnections)return await AIConnections.request(body,state.aiController.signal);
-    if(window.opensciteDesktop){
-      state.aiController.signal.addEventListener('abort',()=>window.opensciteDesktop.cancel().catch(()=>{}),{once:true});
-      return await window.opensciteDesktop.ask({...body,desktopModel:localStorage.getItem('desktopModel'),desktopEffort:localStorage.getItem('desktopEffort')||'medium',desktopSpeed:localStorage.getItem('desktopSpeed')||'default',language:window.I18n?.language||'zh-Hant'});
+    if(window.paperlumeDesktop){
+      state.aiController.signal.addEventListener('abort',()=>window.paperlumeDesktop.cancel().catch(()=>{}),{once:true});
+      return await window.paperlumeDesktop.ask({...body,desktopModel:localStorage.getItem('desktopModel'),desktopEffort:localStorage.getItem('desktopEffort')||'medium',desktopSpeed:localStorage.getItem('desktopSpeed')||'default',language:window.I18n?.language||'zh-Hant'});
     }
     throw new Error('請使用桌面版登入 ChatGPT 帳號');
   }finally{state.aiBusy=false;state.aiController=null;if($('cancelAi'))$('cancelAi').classList.add('hidden');before.forEach(x=>{if(x.el)x.el.disabled=x.disabled});}
@@ -866,9 +866,9 @@ async function freeTranslate(text){
   if(!confirm('將選取文字的前 480 字元傳給 MyMemory 第三方翻譯服務？'))throw new Error('已取消外部翻譯');
   const clipped=text.slice(0,480); const url=new URL('https://api.mymemory.translated.net/get'); url.searchParams.set('q',clipped); url.searchParams.set('langpair','en|'+({'en':'en','zh-Hant':'zh-TW','zh-Hans':'zh-CN','ja':'ja','ko':'ko'}[window.I18n?.language||'zh-Hant'])); const res=await fetch(url); if(!res.ok) throw new Error('Free translation unavailable'); const d=await res.json(); return d.responseData?.translatedText||'';
 }
-function aiErrorMessage(e){const tr=text=>window.I18n?.t(text)||text;let message=String(e?.message||e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');message=e?.name==='AbortError'?'已取消 AI 分析。':message==='NO_AI_KEY'?'尚未設定 AI 連線。':message;return tr(message)+(window.opensciteDesktop?'\n\n'+tr('請開啟右上「ChatGPT 帳號」，按「測試模型回答」。該測試會實際發送一句話，顯示連線是否成功。'):'');}
+function aiErrorMessage(e){const tr=text=>window.I18n?.t(text)||text;let message=String(e?.message||e).replace(/^Error invoking remote method '[^']+': (?:Error: )?/, '');message=e?.name==='AbortError'?'已取消 AI 分析。':message==='NO_AI_KEY'?'尚未設定 AI 連線。':message;return tr(message)+(window.paperlumeDesktop?'\n\n'+tr('請開啟右上「ChatGPT 帳號」，按「測試模型回答」。該測試會實際發送一句話，顯示連線是否成功。'):'');}
 function setAssistant(title,body){ title=window.I18n?.t(title)||title; if(body==='處理中…')body=window.I18n?.t(body)||body; $('assistantOutput').innerHTML=`<h4>${esc(title)}</h4><div>${esc(body).replace(/\n/g,'<br>')}</div>`; $$('.reader-tab').forEach(b=>b.classList.toggle('active',b.dataset.readerTab==='assistant')); $$('.reader-tabpane').forEach(p=>p.classList.toggle('active',p.id==='readerTab-assistant')); }
-async function translateSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取 PDF 文字');return;} setAssistant('Translation（翻譯）','處理中…'); try{let out; try{out=await askAI('Translate the selected academic text into Traditional Chinese. Preserve technical terms in English followed by Traditional Chinese in parentheses when helpful. Do not add unrelated commentary.',t);}catch(e){if(window.opensciteDesktop||e.name==='AbortError')throw e;if(e.message!=='NO_AI_KEY')console.warn(e);out=await freeTranslate(t);}setTranslationResult(t,out||'無翻譯結果');}catch(e){setAssistant('翻譯未完成',aiErrorMessage(e))} }
+async function translateSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取 PDF 文字');return;} setAssistant('Translation（翻譯）','處理中…'); try{let out; try{out=await askAI('Translate the selected academic text into Traditional Chinese. Preserve technical terms in English followed by Traditional Chinese in parentheses when helpful. Do not add unrelated commentary.',t);}catch(e){if(window.paperlumeDesktop||e.name==='AbortError')throw e;if(e.message!=='NO_AI_KEY')console.warn(e);out=await freeTranslate(t);}setTranslationResult(t,out||'無翻譯結果');}catch(e){setAssistant('翻譯未完成',aiErrorMessage(e))} }
 function localExplain(text){ const nums=[...text.matchAll(/\b\d+(?:\.\d+)?(?:\s?(?:nm|μm|um|mM|µM|nM|pM|dB|Hz|kHz|MHz|GHz|%))?\b/g)].map(m=>m[0]).slice(0,10); const caps=[...new Set((text.match(/\b[A-Z][A-Z0-9-]{2,}\b/g)||[]))].slice(0,12); return `這段文字的主旨：${text.slice(0,320)}${text.length>320?'…':''}\n\n關鍵縮寫 / 技術詞：${caps.length?caps.join(', '):'未明顯辨識'}\n數值 / 條件：${nums.length?nums.join(', '):'未明顯辨識'}\n\n要得到更精準、結合整篇上下文的解釋，可在「AI 設定」加入自己的 API key。`; }
 async function explainSelection(){ const t=state.reader.selectedText;if(!t){toast('請先選取 PDF 文字');return;}if(state.aiBusy||state.reader.understandingBusy)return;const token=state.reader.renderToken;setAssistant('Explanation（解釋）','處理中…');try{const out=await DocumentUnderstanding.groundedAnswer('Explain this passage and its role in the surrounding paper argument.',t);if(token!==state.reader.renderToken)return;setAssistant('Explanation（解釋）',out);DocumentUnderstanding.appendEvidence();}catch(e){if(token===state.reader.renderToken)setAssistant('解釋未完成',aiErrorMessage(e));} }
 
@@ -888,7 +888,7 @@ function renderSavedHighlights(wrap,page){
 }
 function addNote(){ const t=state.reader.selectedText;if(!t)return; const note=window.prompt('這段要記什麼？',''); if(note===null)return; const all=loadJSON(STORE.notes,[]); all.push({id:Date.now(),paperKey:readerKey(),quote:t,note:note.trim(),created:new Date().toISOString()}); saveJSON(STORE.notes,all); state.reader.notes=all.filter(x=>x.paperKey===readerKey()); renderNotes(); toast('筆記已儲存'); }
 function renderNotes(){ const list=state.reader.notes||[]; $('notesList').innerHTML=list.length?list.slice().reverse().map(n=>`<div class="note-card"><q>${esc(n.quote)}</q><p>${esc(n.note||'（無文字註記）')}</p><small>${n.page?`Page ${n.page} · `:''}${new Date(n.created).toLocaleString()}</small></div>`).join(''):'<div class="placeholder">尚無筆記。</div>'; }
-$('exportNotes').addEventListener('click',()=>{const m=state.reader.meta||{};const txt=`# ${m.title||'OpenScite Notes'}\n\n`+(state.reader.notes||[]).map((n,i)=>`## ${i+1}${n.page?' · Page '+n.page:''}\n> ${n.quote}\n\n${n.note}\n`).join('\n');downloadText(`${safeFile(m.title||'notes')}.md`,txt,'text/markdown')}); $('clearNotes').addEventListener('click',()=>{if(!confirm('清空這篇論文的所有筆記？'))return;const key=readerKey();const all=loadJSON(STORE.notes,[]).filter(x=>x.paperKey!==key);saveJSON(STORE.notes,all);state.reader.notes=[];renderNotes()});
+$('exportNotes').addEventListener('click',()=>{const m=state.reader.meta||{};const txt=`# ${m.title||'PaperLume Notes'}\n\n`+(state.reader.notes||[]).map((n,i)=>`## ${i+1}${n.page?' · Page '+n.page:''}\n> ${n.quote}\n\n${n.note}\n`).join('\n');downloadText(`${safeFile(m.title||'notes')}.md`,txt,'text/markdown')}); $('clearNotes').addEventListener('click',()=>{if(!confirm('清空這篇論文的所有筆記？'))return;const key=readerKey();const all=loadJSON(STORE.notes,[]).filter(x=>x.paperKey!==key);saveJSON(STORE.notes,all);state.reader.notes=[];renderNotes()});
 
 $$('.reader-tab').forEach(b=>b.addEventListener('click',()=>{const t=b.dataset.readerTab;$$('.reader-tab').forEach(x=>x.classList.toggle('active',x===b));$$('.reader-tabpane').forEach(p=>p.classList.toggle('active',p.id===`readerTab-${t}`));}));
 function sectionBetween(text,startNames,endNames,max=9000){ const lower=text.toLowerCase(); let start=-1; for(const n of startNames){const i=lower.indexOf(n.toLowerCase());if(i>=0&&(start<0||i<start))start=i;} if(start<0)return''; let end=text.length; for(const n of endNames){const i=lower.indexOf(n.toLowerCase(),start+10);if(i>start&&i<end)end=i;} return text.slice(start,Math.min(end,start+max)).replace(/\s+/g,' ').trim(); }
@@ -1000,8 +1000,8 @@ async function autoVerifyCitations(works,target,request){
  await Promise.all(Array.from({length:Math.min(3,queue.length)},async()=>{while(cursor<queue.length&&request===state.evidence.request){const w=queue[cursor++];await verifyCitation(w,target);}}));
 }
 async function analyzeCitingPdf(index,file){const w=state.evidence.works[index],target=state.evidence.target;if(!w)return;toast('正在定位全文引用段落…');try{const text=await pdfTextFromFile(file);if(target!==state.evidence.target||!state.evidence.works.includes(w))return;applyCitationText(w,text,target);renderEvidence();toast(w.contexts.length?'全文引用段落已定位':'全文已讀取；引用方向未定');}catch(e){toast(`PDF 解析失敗：${e.message}`);}}
-$('exportJson').addEventListener('click',()=>{downloadText(`openscite-${safeFile(state.evidence.target?.title||'report')}.json`,JSON.stringify({target:state.evidence.target,works:state.evidence.works,exportedAt:new Date().toISOString()},null,2),'application/json')});
-$('exportMd').addEventListener('click',()=>{const t=state.evidence.target;let md=`# OpenScite Citation Evidence Report\n\n## Target\n${t?`**${t.title}**\n\n${t.authors||''} · ${t.source||''} · ${t.year||''}\n\n`:''}`;for(const w of state.evidence.works){md+=`## ${w.stance.toUpperCase()} — ${w.title}\n\n- Year: ${w.year||''}\n- Venue: ${w.source||''}\n- Citations: ${w.citations||0}\n- Estimated quartile: ${w.q||'Q?'}\n- DOI: ${w.doi||''}\n\n${w.abstract||''}\n\n`;if(w.contexts?.length)md+=w.contexts.map(c=>`> ${c}`).join('\n\n')+'\n\n';}downloadText(`openscite-${safeFile(t?.title||'report')}.md`,md,'text/markdown')});
+$('exportJson').addEventListener('click',()=>{downloadText(`paperlume-${safeFile(state.evidence.target?.title||'report')}.json`,JSON.stringify({target:state.evidence.target,works:state.evidence.works,exportedAt:new Date().toISOString()},null,2),'application/json')});
+$('exportMd').addEventListener('click',()=>{const t=state.evidence.target;let md=`# PaperLume Citation Evidence Report\n\n## Target\n${t?`**${t.title}**\n\n${t.authors||''} · ${t.source||''} · ${t.year||''}\n\n`:''}`;for(const w of state.evidence.works){md+=`## ${w.stance.toUpperCase()} — ${w.title}\n\n- Year: ${w.year||''}\n- Venue: ${w.source||''}\n- Citations: ${w.citations||0}\n- Estimated quartile: ${w.q||'Q?'}\n- DOI: ${w.doi||''}\n\n${w.abstract||''}\n\n`;if(w.contexts?.length)md+=w.contexts.map(c=>`> ${c}`).join('\n\n')+'\n\n';}downloadText(`paperlume-${safeFile(t?.title||'report')}.md`,md,'text/markdown')});
 
 $('reanalyzeFigure').addEventListener('click',()=>{ const f=state.reader.activeFigure; if(f) explainPdfFigure(f.pageNo,f.region,f.index); });
 

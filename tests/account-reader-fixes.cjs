@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),{PDFDocument,StandardFonts}=require('pdf-lib');
 module.exports=async page=>{
  // The real result-card click must move to the reader and load the bytes.
- const bytes=await fs.readFile('/tmp/openscite-fixture.pdf');
+ const bytes=await fs.readFile('/tmp/paperlume-fixture.pdf');
  await page.route('https://papers.example/**',r=>r.fulfill({contentType:'application/pdf',body:bytes}));
  await page.evaluate(()=>{state.search.works=[{title:'Direct PDF',pdfUrl:'https://papers.example/direct.pdf',raw:{}}];$('searchResults').innerHTML=paperCard(state.search.works[0],'','search',0);showView('search');});
  await page.click('[data-action="read"]');await page.waitForFunction(()=>state.reader.meta.title==='Direct PDF'&&state.reader.indexReady);assert.equal(await page.locator('#pdfViewport').isVisible(),true);
@@ -21,7 +21,7 @@ module.exports=async page=>{
  await page.evaluate(()=>inferCitation(state.evidence.works[0],state.evidence.target));assert.equal(await page.evaluate(()=>state.evidence.works[0].stance),'unknown');assert.match(await page.locator('#evidenceResults').innerText(),/未能匹配/);
  assert.equal(await page.evaluate(()=>AIConnections.config().primary),'chatgpt');
  // Native login UI: exercise official completion/failure events without entering user credentials.
- await page.evaluate(()=>{window.loginEvents=[];window.opensciteDesktop={status:async()=>({account:null}),models:async()=>[],login:async({device})=>({url:'https://auth.openai.com/codex/device',userCode:device?'TEST-1234':'',opened:true}),cancelLogin:async()=>{},onLogin:cb=>window.testLoginNotification=cb,onProgress:()=>{},cancel:async()=>{},logout:async()=>{}};});
+ await page.evaluate(()=>{window.loginEvents=[];window.paperlumeDesktop={status:async()=>({account:null}),models:async()=>[],login:async({device})=>({url:'https://auth.openai.com/codex/device',userCode:device?'TEST-1234':'',opened:true}),cancelLogin:async()=>{},onLogin:cb=>window.testLoginNotification=cb,onProgress:()=>{},cancel:async()=>{},logout:async()=>{}};});
  await page.addScriptTag({path:require('node:path').resolve('desktop/ui.js')});await page.evaluate(()=>openChatGPTSettings());await page.click('#desktopDeviceLogin');assert.match(await page.locator('#desktopLoginHelp').innerText(),/TEST-1234/);await page.evaluate(()=>testLoginNotification({success:false,error:'Login denied test'}));assert.match(await page.locator('#desktopStatus').innerText(),/Login denied test/);await page.click('#desktopClose');
  console.log('PASS direct PDF result click, alternate source, HTML rejection, automatic full-text citation inference, GPT-only account mode, device login UI failure notification');
 };

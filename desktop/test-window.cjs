@@ -1,13 +1,13 @@
 // Developer smoke check: no account login or model requests.
 const {app,ipcMain}=require('electron');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');
-const profile=fs.mkdtempSync(path.join(os.tmpdir(),'openscite-window-'));app.setPath('userData',profile);
+const profile=fs.mkdtempSync(path.join(os.tmpdir(),'paperlume-window-'));app.setPath('userData',profile);
 require('./main.cjs');
 const timer=setTimeout(()=>{console.error('Desktop window smoke timed out');app.exit(1);},180000);
 app.on('browser-window-created',(_e,win)=>{
  win.webContents.once('did-finish-load',async()=>{
  try{
  await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+30000;while(typeof window.openChatGPTSettings!=='function'){if(Date.now()>end)throw Error('Desktop interface initialization timed out');await new Promise(r=>setTimeout(r,100));}})()`);
- const result=await win.webContents.executeJavaScript(`(async()=>({button:document.getElementById('settingsBtn')?.textContent,bridge:typeof window.opensciteDesktop?.ask,status:await window.opensciteDesktop.status(),pdf:!!window.pdfjsLib}))()`);
+ const result=await win.webContents.executeJavaScript(`(async()=>({button:document.getElementById('settingsBtn')?.textContent,bridge:typeof window.paperlumeDesktop?.ask,status:await window.paperlumeDesktop.status(),pdf:!!window.pdfjsLib}))()`);
  assert.equal(result.button,'ChatGPT 帳號');assert.equal(result.bridge,'function');assert.equal(result.pdf,true);assert.equal(result.status.account,null);
  await win.webContents.executeJavaScript(`document.getElementById('settingsBtn').click()`);
  assert.equal(await win.webContents.executeJavaScript(`!!document.querySelector('dialog[open]')`),true);
@@ -29,8 +29,8 @@ app.on('browser-window-created',(_e,win)=>{
    assert.ok(Math.abs(result.font-12*scale)<0.5,JSON.stringify(result));
  }
  let request;
- ipcMain.removeHandler('openscite:ask');
- ipcMain.handle('openscite:ask',(_event,body)=>{request=body;return body.text?.format?.name==='evidence_answer'?JSON.stringify({claims:[{text:'TEST RESPONSE: wavelength is 980 nm.',kind:'observation',sources:[{id:'p1s1',quote:'Precise selection 980 nm'}]}]}):'TEST RESPONSE: wavelength is 980 nm [Page 1]';});
+ ipcMain.removeHandler('paperlume:ask');
+ ipcMain.handle('paperlume:ask',(_event,body)=>{request=body;return body.text?.format?.name==='evidence_answer'?JSON.stringify({claims:[{text:'TEST RESPONSE: wavelength is 980 nm.',kind:'observation',sources:[{id:'p1s1',quote:'Precise selection 980 nm'}]}]}):'TEST RESPONSE: wavelength is 980 nm [Page 1]';});
  await win.webContents.executeJavaScript(`(async()=>{
    const span=[...document.querySelectorAll('.textLayer span')].find(s=>s.textContent==='Precise selection 980 nm');
    const range=document.createRange();range.setStart(span.firstChild,18);range.setEnd(span.firstChild,21);
@@ -71,11 +71,11 @@ app.on('browser-window-created',(_e,win)=>{
  assert.match(request.input[1].content[0].text,/What wavelength was measured/);
  assert.match(request.input[1].content[0].text,/PREVIOUS CONVERSATION/);
  assert.equal(await win.webContents.executeJavaScript(`chatTurns.length`),2);
- ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',async(_event,body)=>{request=body;await win.webContents.executeJavaScript(`state.reader.selectedText='A different selection'`);return 'Translated measurement';});
+ ipcMain.removeHandler('paperlume:ask');ipcMain.handle('paperlume:ask',async(_event,body)=>{request=body;await win.webContents.executeJavaScript(`state.reader.selectedText='A different selection'`);return 'Translated measurement';});
  await win.webContents.executeJavaScript(`state.reader.selectedText='Original measurement 980 nm';translateSelection()`);
  assert.equal(await win.webContents.executeJavaScript(`document.querySelector('.translation-original').textContent`),'Original measurement 980 nm');
  let figureCalls=[];
- ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',async(_event,body)=>{figureCalls.push(body);win.webContents.send('openscite:progress',{stage:'answering',message:'Testing',text:'INTERNAL_JSON_SHOULD_NOT_APPEAR'});await new Promise(r=>setTimeout(r,30));assert.doesNotMatch(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/INTERNAL_JSON_SHOULD_NOT_APPEAR/);return body.text?.format?.name==='scientific_figure_extraction'?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':JSON.stringify({meaning:'TEST FIGURE RESPONSE',context:'The nearby paragraph discusses the control [Page 1].',evidence:'A measured wavelength of 980 nm.',caveat:''});});
+ ipcMain.removeHandler('paperlume:ask');ipcMain.handle('paperlume:ask',async(_event,body)=>{figureCalls.push(body);win.webContents.send('paperlume:progress',{stage:'answering',message:'Testing',text:'INTERNAL_JSON_SHOULD_NOT_APPEAR'});await new Promise(r=>setTimeout(r,30));assert.doesNotMatch(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/INTERNAL_JSON_SHOULD_NOT_APPEAR/);return body.text?.format?.name==='scientific_figure_extraction'?'{"panels":[],"unreadable_or_ambiguous":["Synthetic test image"]}':JSON.stringify({meaning:'TEST FIGURE RESPONSE',context:'The nearby paragraph discusses the control [Page 1].',evidence:'A measured wavelength of 980 nm.',caveat:''});});
  await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
  assert.equal(figureCalls.length,2);assert.ok(figureCalls[0].text.format.schema);assert.equal(figureCalls[1].text.format.name,'reader_figure_explanation');assert.match(figureCalls[1].input[0].content[0].text,/at most 150 English words/);
  for(const call of figureCalls)assert.equal(call.input[1].content.filter(p=>p.type==='input_image'&&p.image_url.startsWith('data:image/png;base64,')).length,2);
@@ -84,11 +84,11 @@ app.on('browser-window-created',(_e,win)=>{
  await win.webContents.executeJavaScript(`document.getElementById('figureDetail').value='detailed';explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
  assert.match(figureCalls.at(-1).input[0].content[0].text,/at most 350 English words/);
  let failedCalls=0;
- ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',()=>{failedCalls++;throw Error('TEST: cancelled figure');});
+ ipcMain.removeHandler('paperlume:ask');ipcMain.handle('paperlume:ask',()=>{failedCalls++;throw Error('TEST: cancelled figure');});
  await win.webContents.executeJavaScript(`explainPdfFigure(1,{left:30,top:30,right:450,bottom:200,width:420,height:170,source:'test'})`);
  assert.equal(failedCalls,1);assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/cancelled figure/);
  await win.webContents.executeJavaScript(`state.reader.selectedText='980'`);
- ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',()=>{throw Error('TEST: model quota exhausted');});
+ ipcMain.removeHandler('paperlume:ask');ipcMain.handle('paperlume:ask',()=>{throw Error('TEST: model quota exhausted');});
  await win.webContents.executeJavaScript(`explainSelection()`);
  assert.match(await win.webContents.executeJavaScript(`document.getElementById('assistantOutput').textContent`),/model quota exhausted/);
  await win.webContents.executeJavaScript(`loadPdfBuffer(new Uint8Array(${JSON.stringify(bytes)}).buffer,{id:'another-paper'},'another.pdf')`);
@@ -120,7 +120,7 @@ app.on('browser-window-created',(_e,win)=>{
  const scan=await win.webContents.executeJavaScript(`({text:state.reader.pageTexts[0],status:document.getElementById('documentStatus').textContent})`);
  assert.match(scan.text,/980\s*nm/i,JSON.stringify(scan));
  assert.ok(await win.webContents.executeJavaScript(`document.querySelectorAll('.ocr-text-layer span').length>5`));
- ipcMain.removeHandler('openscite:ask');ipcMain.handle('openscite:ask',(_event,body)=>{assert.equal(body.text.format.name,'document_structure');assert.ok(body.input[1].content.some(x=>x.type==='input_image'));return JSON.stringify({formulas:[{latex:'10^{-14}',meaning:'Exponent',uncertainty:''}],tables:[{title:'Results',headers:['Sample','nm'],rows:[['Control','980']],uncertainty:''}],notes:''});});
+ ipcMain.removeHandler('paperlume:ask');ipcMain.handle('paperlume:ask',(_event,body)=>{assert.equal(body.text.format.name,'document_structure');assert.ok(body.input[1].content.some(x=>x.type==='input_image'));return JSON.stringify({formulas:[{latex:'10^{-14}',meaning:'Exponent',uncertainty:''}],tables:[{title:'Results',headers:['Sample','nm'],rows:[['Control','980']],uncertainty:''}],notes:''});});
  await win.webContents.executeJavaScript(`DocumentUnderstanding.analyzeStructure()`);
  assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('#structureResults .katex').length`),1);
  assert.equal(await win.webContents.executeJavaScript(`document.querySelectorAll('#structureResults tbody tr').length`),1);
@@ -132,19 +132,19 @@ app.on('browser-window-created',(_e,win)=>{
  console.log('PASS native evidence history/map and durable OCR draft/formula/table recovery');
  console.log('PASS native offline English OCR, selectable scan text, formula rendering and structured table through account bridge');
  console.log('PASS desktop window, PDF geometry at 3 zoom levels, exact selection, explanation/Q&A IPC visible model errors five-language AI routing and two-stage figure requests without retry on failure');
- assert.equal(await win.webContents.executeJavaScript(`typeof opensciteDesktop.providerAsk`),'undefined');
+ assert.equal(await win.webContents.executeJavaScript(`typeof paperlumeDesktop.providerAsk`),'undefined');
  assert.equal(await win.webContents.executeJavaScript(`AIConnections.config().primary`),'chatgpt');
  assert.equal(await win.webContents.executeJavaScript(`document.querySelector('#desktopSpeed').options.length`),2);
  console.log('PASS GPT-only account surface and response speed control');
  // Exercise the real native reader route and device-login UI via isolated transport fixtures.
- ipcMain.removeHandler('openscite:downloadPdf');ipcMain.handle('openscite:downloadPdf',(_event,{url})=>{assert.equal(url,'https://papers.example/native.pdf');return new Uint8Array(bytes).buffer;});
+ ipcMain.removeHandler('paperlume:downloadPdf');ipcMain.handle('paperlume:downloadPdf',(_event,{url})=>{assert.equal(url,'https://papers.example/native.pdf');return new Uint8Array(bytes).buffer;});
  await win.webContents.executeJavaScript(`(async()=>{showView('search');await openRemotePaper({title:'Native search PDF',pdfUrl:'https://papers.example/native.pdf'});})()`);
  assert.equal(await win.webContents.executeJavaScript(`state.reader.meta.title`),'Native search PDF');
  assert.equal(await win.webContents.executeJavaScript(`document.getElementById('pdfViewport').getBoundingClientRect().height>0`),true);
- ipcMain.removeHandler('openscite:login');ipcMain.handle('openscite:login',(_event,b)=>{assert.equal(b.device,true);return {url:'https://auth.openai.com/codex/device',userCode:'TEST-1234',opened:true};});
+ ipcMain.removeHandler('paperlume:login');ipcMain.handle('paperlume:login',(_event,b)=>{assert.equal(b.device,true);return {url:'https://auth.openai.com/codex/device',userCode:'TEST-1234',opened:true};});
  await win.webContents.executeJavaScript(`openChatGPTSettings();document.getElementById('desktopDeviceLogin').click()`);
  await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+5000;while(!document.getElementById('desktopLoginHelp').textContent.includes('TEST-1234')){if(Date.now()>end)throw Error('Device code missing');await new Promise(r=>setTimeout(r,30));}})()`);
- win.webContents.send('openscite:login',{success:false,error:'Native login failure fixture'});
+ win.webContents.send('paperlume:login',{success:false,error:'Native login failure fixture'});
  await win.webContents.executeJavaScript(`(async()=>{const end=Date.now()+5000;while(!document.getElementById('desktopStatus').textContent.includes('Native login failure fixture')){if(Date.now()>end)throw Error('Login failure missing');await new Promise(r=>setTimeout(r,30));}})()`);
  console.log('PASS native search-to-PDF IPC, official device code UI and login failure notification');
  clearTimeout(timer);app.quit();

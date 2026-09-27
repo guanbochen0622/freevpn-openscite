@@ -1,4 +1,4 @@
-const bridge = window.opensciteDesktop;
+const bridge = window.paperlumeDesktop;
 if (bridge) {
   const modal = document.createElement('dialog');
   modal.style.cssText = 'max-width:620px;width:90%;max-height:90vh;overflow:auto;border:1px solid #646b86;border-radius:20px;padding:28px;background:#151a28;color:#f5f6ff';
@@ -105,7 +105,7 @@ if (bridge) {
   el('desktopTest').onclick = async () => {
     testing = true;el('desktopTest').disabled = true;save();
     try {
-      const answer = await bridge.ask({desktopModel:el('desktopModel').value,desktopEffort:el('desktopEffort').value,desktopSpeed:el('desktopSpeed').value,language:window.I18n?.language||'zh-Hant',input:[{role:'user',content:[{type:'input_text',text:'This is a connection test, not a paper question. Reply with exactly: OpenScite 連線成功'}]}]});
+      const answer = await bridge.ask({desktopModel:el('desktopModel').value,desktopEffort:el('desktopEffort').value,desktopSpeed:el('desktopSpeed').value,language:window.I18n?.language||'zh-Hant',input:[{role:'user',content:[{type:'input_text',text:'This is a connection test, not a paper question. Reply with exactly: PaperLume 連線成功'}]}]});
       el('desktopTestResult').textContent = '已收到模型真實回答：\n' + answer;
       verified=signature();
       status.textContent = 'ChatGPT 模型回答已驗證 · ' + el('desktopModel').value;

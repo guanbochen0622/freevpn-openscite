@@ -10,17 +10,17 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await new Promise(r=>server.listen(8765,'127.0.0.1',r));
  const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
  for(let i=1;i<=16;i++){let p=pdf.addPage([595,842]);p.drawText(`Research document - Page ${i}`,{x:50,y:790,size:20,font});p.drawText(`Evanescent wave evidence on page ${i}. Fiber-to-silicon coupling.`,{x:50,y:740,size:12,font});p.drawText('The measured wavelength is 980 nm. Controls are required.',{x:50,y:715,size:12,font});p.drawText('Figure 1. Sensor response with baseline correction.',{x:50,y:380,size:12,font});p.drawRectangle({x:60,y:420,width:400,height:200,borderWidth:2});}
- await fs.writeFile('/tmp/openscite-fixture.pdf',await pdf.save());
+ await fs.writeFile('/tmp/paperlume-fixture.pdf',await pdf.save());
  const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH,args:["--no-sandbox"]}:{})});const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE ERROR:',e.message);});page.on('dialog',async d=>d.accept('Important measurement'));
  await page.route('https://api.openalex.org/**',async route=>{const u=new URL(route.request().url());if(u.pathname==='/works')return route.fulfill({json:{meta:{count:2},results:[{id:'https://openalex.org/W1',title:'Fiber-to-silicon coupling with evanescent waves',publication_year:2025,cited_by_count:42,doi:'https://doi.org/10.1234/test',authorships:[{author:{display_name:'A. Researcher'}}],abstract_inverted_index:{Evanescent:[0],wave:[1],coupling:[2],demonstrates:[3],improved:[4],efficiency:[5]},primary_location:{source:{display_name:'Optics Research'},landing_page_url:'https://doi.org/10.1234/test'},open_access:{is_oa:true}},{id:'https://openalex.org/W2',title:'Optical fiber sensor characterization',publication_year:2024,cited_by_count:10,primary_location:{source:{display_name:'Photonics Letters'}},abstract_inverted_index:{Sensor:[0],response:[1],is:[2],measured:[3]}}]}});return route.fulfill({json:{results:[]}});});
- await page.addInitScript(()=>{window.opensciteDesktop={cancel:async()=>{},ask:async body=>{const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,store:false})});const d=await r.json();if(!r.ok)throw Error(d.error?.message||'Test response failed');return d.output_text||d.output?.flatMap(x=>x.content||[]).map(x=>x.text||'').join('')||'';}};});
+ await page.addInitScript(()=>{window.paperlumeDesktop={cancel:async()=>{},ask:async body=>{const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,store:false})});const d=await r.json();if(!r.ok)throw Error(d.error?.message||'Test response failed');return d.output_text||d.output?.flatMap(x=>x.content||[]).map(x=>x.text||'').join('')||'';}};});
  await page.goto(testUrl);await page.waitForFunction(()=>!!window.ReaderLayout);
  assert.deepEqual(await page.evaluate(()=>queryTokens('Fiber-to–Silicon')),['silicon','fiber','to']);
  await page.fill('#searchQuery','Fiber-to-silicon');await page.click('#searchBtn');await page.waitForSelector('[data-compare]');assert.equal(await page.locator('.paper-card').count(),2);
  await page.locator('[data-compare]').first().click();await page.locator('[data-compare]').last().click();await page.click('#compareOpen');assert.equal(await page.locator('.comparison-table th').count()>0,true);await page.click('#dialogClose');
  await page.locator('[data-action="library"]').first().click();await page.click('.nav-tab[data-view="library"]');await page.waitForSelector('.library-card');await page.fill('#libraryQuery','no match');await page.waitForTimeout(250);assert.equal(await page.locator('.library-card:visible').count(),0);await page.fill('#libraryQuery','fiber');await page.waitForTimeout(250);assert.equal(await page.locator('.library-card:visible').count(),1);
- await page.click('.nav-tab[data-view="search"]');await page.screenshot({path:'/tmp/openscite-search.png',fullPage:true});
- await page.click('.nav-tab[data-view="reader"]');await page.setInputFiles('#readerFile','/tmp/openscite-fixture.pdf');await page.waitForFunction(()=>state.reader.pageTexts.length===16&&document.querySelector('#readerProgress').textContent.includes('全文索引完成'),{timeout:30000});
+ await page.click('.nav-tab[data-view="search"]');await page.screenshot({path:'/tmp/paperlume-search.png',fullPage:true});
+ await page.click('.nav-tab[data-view="reader"]');await page.setInputFiles('#readerFile','/tmp/paperlume-fixture.pdf');await page.waitForFunction(()=>state.reader.pageTexts.length===16&&document.querySelector('#readerProgress').textContent.includes('全文索引完成'),{timeout:30000});
  await page.waitForSelector('.textLayer span');assert.ok(await page.locator('.pdf-page canvas').count()<16);
  await page.fill('#pdfFind','980');await page.waitForTimeout(500);assert.match(await page.locator('#findCount').textContent(),/16/);await page.click('#findNext');assert.equal(await page.evaluate(()=>state.reader.currentPage),2);
  await page.fill('#pageJump','12');await page.dispatchEvent('#pageJump','change');await page.waitForFunction(()=>document.querySelector('.pdf-page[data-page="12"]').dataset.ready==='1');
@@ -28,9 +28,9 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await page.click('#zoomIn');await page.waitForFunction(()=>document.querySelector('.pdf-page[data-page="12"]')?.dataset.ready==='1');assert.equal(await page.evaluate(()=>state.reader.pageTexts.length),16);
  await page.selectOption('#highlightColor','green');await page.evaluate(()=>{const span=[...document.querySelectorAll('.pdf-page[data-page="12"] .textLayer span')].find(s=>s.textContent.includes('The measured'));const range=document.createRange();range.setStart(span.firstChild,0);range.setEnd(span.firstChild,16);state.reader.selectionRange=range;state.reader.selectedText=range.toString();state.reader.selectionPage=12;addHighlight();});assert.ok(await page.locator('.saved-highlight.green').count()>0);assert.ok(await page.evaluate(()=>state.reader.highlights[0].rects.length>0));
  await page.click('#zoomOut');await page.waitForSelector('.saved-highlight.green');await page.click('#readerSaveLibrary');await page.waitForTimeout(400);const key=await page.evaluate(()=>readerKey());
- await page.screenshot({path:'/tmp/openscite-reader.png',fullPage:true});
+ await page.screenshot({path:'/tmp/paperlume-reader.png',fullPage:true});
  // Reopening identical bytes must reuse document identity and saved annotations.
- await page.setInputFiles('#readerFile','/tmp/openscite-fixture.pdf');await page.waitForFunction(()=>document.querySelector('#readerProgress').textContent.includes('全文索引完成')&&state.reader.highlights.length===1);assert.equal(await page.evaluate(()=>readerKey()),key);
+ await page.setInputFiles('#readerFile','/tmp/paperlume-fixture.pdf');await page.waitForFunction(()=>document.querySelector('#readerProgress').textContent.includes('全文索引完成')&&state.reader.highlights.length===1);assert.equal(await page.evaluate(()=>readerKey()),key);
 
  // Library reopening must preserve the hash-based annotation identity.
  await page.click('.nav-tab[data-view="library"]');await page.fill('#libraryQuery','');await page.waitForTimeout(200);const previousDocumentToken=await page.evaluate(()=>state.reader.renderToken);await page.locator('[data-lib-action="open"]').first().click();
@@ -76,10 +76,10 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await page.route('https://api.openai.com/v1/responses',figureRoute);
  await page.evaluate(()=>explainPdfFigure(12,{left:50,top:350,right:600,bottom:750,width:550,height:400,source:'test'}));
  assert.equal(figureRequests.length,2);assert.match(await page.locator('#assistantOutput').textContent(),/nearby text/);assert.doesNotMatch(await page.locator('#assistantOutput').textContent(),/"meaning"|"panels"/);
- await page.screenshot({path:'/tmp/openscite-figure.png',fullPage:true});await page.unroute('https://api.openai.com/v1/responses',figureRoute);
+ await page.screenshot({path:'/tmp/paperlume-figure.png',fullPage:true});await page.unroute('https://api.openai.com/v1/responses',figureRoute);
  // Export contains persisted notes/metadata but no credentials, restore merges safely.
  await page.click('.nav-tab[data-view="library"]');const dlPromise=page.waitForEvent('download');await page.click('#backupWorkspace');const dl=await dlPromise;const backup=JSON.parse(await fs.readFile(await dl.path(),'utf8'));assert.equal(backup.includesPdfFiles,false);assert.equal(backup.data.openscite_chat_v1[key].length,2);assert.ok(!JSON.stringify(backup).includes('test-key-not-a-real-credential'));
- await fs.writeFile('/tmp/openscite-backup.json',JSON.stringify(backup));await page.setInputFiles('#backupFile','/tmp/openscite-backup.json');await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已合併'));assert.equal(await page.evaluate(()=>state.library.length),2);
+ await fs.writeFile('/tmp/paperlume-backup.json',JSON.stringify(backup));await page.setInputFiles('#backupFile','/tmp/paperlume-backup.json');await page.waitForFunction(()=>document.querySelector('#toast').textContent.includes('已合併'));assert.equal(await page.evaluate(()=>state.library.length),2);
  // Invalid year ranges never send a search request.
  await page.click('.nav-tab[data-view="search"]');await page.fill('#yearFrom','2026');await page.fill('#yearTo','2020');await page.click('#searchBtn');assert.match(await page.locator('#toast').textContent(),/起始年/);await page.fill('#yearFrom','');await page.fill('#yearTo','');
  // Older results must never replace a newer query.
@@ -95,8 +95,8 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  assert.equal(await page.evaluate(()=>citationContexts('Smith 2020 observed a sensor.\nReferences\n[7] Unrelated paper',{title:'Special optical fiber sensor study',authors:'Smith',year:2020}).length),0);
  assert.equal(await page.evaluate(()=>safeUrl('javascript:alert(1)')),'');
  assert.equal(await page.evaluate(()=>{try{validateBackup({format:'openscite-workspace',version:1,data:{openscite_library_v24:[{}]}});return false}catch{return true}}),true);
- await page.setViewportSize({width:390,height:844});await page.click('.nav-tab[data-view="search"]');await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.screenshot({path:'/tmp/openscite-mobile.png',fullPage:true});
- await page.click('#themeToggle');assert.ok(await page.evaluate(()=>{const style=getComputedStyle(document.getElementById('languageSelect'));const lum=rgb=>{const c=rgb.match(/[\d.]+/g).slice(0,3).map(x=>{const v=Number(x)/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};const a=lum(style.color),b=lum(style.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5;}),'Language selector text contrast');await page.screenshot({path:'/tmp/openscite-light.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});await page.click('.nav-tab[data-view="search"]');await page.waitForTimeout(150);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await page.screenshot({path:'/tmp/paperlume-mobile.png',fullPage:true});
+ await page.click('#themeToggle');assert.ok(await page.evaluate(()=>{const style=getComputedStyle(document.getElementById('languageSelect'));const lum=rgb=>{const c=rgb.match(/[\d.]+/g).slice(0,3).map(x=>{const v=Number(x)/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return c[0]*.2126+c[1]*.7152+c[2]*.0722};const a=lum(style.color),b=lum(style.backgroundColor);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5;}),'Language selector text contrast');await page.screenshot({path:'/tmp/paperlume-light.png',fullPage:true});
  // Language changes preserve research data, typed input, behavior and persistence.
  await page.evaluate(()=>{const paper=document.createElement('div');paper.id='languagePaper';paper.className='paper-title';paper.textContent='搜尋論文';document.body.append(paper);$('assistantOutput').textContent='搜尋論文';$('askInput').value='Keep my question 980 nm';});
  for(const [locale,label] of [['en','Academic search'],['zh-Hant','學術搜尋'],['zh-Hans','学术搜索'],['ja','論文検索'],['ko','논문 검색']]){
@@ -123,7 +123,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
   const selected=await page.evaluate(()=>{const layer=document.querySelector('.textLayer[data-page="2"]'),spans=[...layer.querySelectorAll('span[data-reader-line]')];const first=spans.find(s=>s.textContent.startsWith('Concentration:')),last=spans.find(s=>s.dataset.readerScript==='super');const range=document.createRange();range.setStart(first.firstChild,0);range.setEnd(last.firstChild,last.textContent.length);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);syncPdfSelection();return state.reader.selectedText;});
   assert.equal(selected,'Concentration: 10⁻¹⁴');
  }
- await page.screenshot({path:'/tmp/openscite-scientific.png',fullPage:true});
+ await page.screenshot({path:'/tmp/paperlume-scientific.png',fullPage:true});
  // Real local OCR on an image-only PDF: no mocked recognition service.
  await page.setViewportSize({width:1440,height:1000});
  await page.setInputFiles('#readerFile',path.join(__dirname,'fixtures/scanned.pdf'));
@@ -145,7 +145,7 @@ const server=http.createServer(async(req,res)=>{try{const file=path.resolve(__di
  await page.fill('#askInput','What does the scan show?');await page.evaluate(()=>askPaperQuestion());
  await page.locator('.answer-evidence summary').click();assert.equal(await page.locator('[data-evidence-link]').count(),1);
  await page.click('[data-evidence-link]');assert.match(await page.locator('.evidence-quote').textContent(),/980 nm/);await page.click('#closePagePreview');
- await page.screenshot({path:'/tmp/openscite-understanding.png',fullPage:true});
+ await page.screenshot({path:'/tmp/paperlume-understanding.png',fullPage:true});
  await require('./reader-experience.cjs')(page);
  // Original text is recoverable and model JSON errors never become prose.
  await page.click('#restoreNativeText');assert.equal(await page.evaluate(()=>state.reader.pageTexts[0]),'');

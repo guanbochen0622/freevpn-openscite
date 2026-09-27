@@ -3,6 +3,9 @@ const {spawn}=require('node:child_process');const fs=require('node:fs');const pa
 const {AccountLogin}=require('./login.cjs');const {downloadPdf}=require('./pdf-download.cjs');
 const {GoogleAccount}=require('./google-account.cjs');
 const {Rpc}=require('./rpc.cjs');const {Assistant}=require('./assistant.cjs');
+// Keep the existing profile and origin so renaming never drops saved papers or login.
+const defaultProfile=path.join(app.getPath('appData'),app.getName());
+if(app.getPath('userData')===defaultProfile){const profile=path.join(app.getPath('appData'),'OpenScite');app.setPath('userData',profile);app.setPath('sessionData',profile);}
 protocol.registerSchemesAsPrivileged([{scheme:'openscite',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true,stream:true}}]);
 let rpc,assistant,win,ready;
 app.whenReady().then(async()=>{
@@ -13,14 +16,14 @@ app.whenReady().then(async()=>{
  const env={...process.env,CODEX_HOME:codexHome,ELECTRON_RUN_AS_NODE:'1'};delete env.OPENAI_API_KEY;delete env.CODEX_API_KEY;
  const config=['forced_login_method="chatgpt"','features.shell_tool=false','features.unified_exec=false','features.shell_snapshot=false','features.remote_plugin=false','web_search="disabled"','history.persistence="none"'];
  const child=spawn(process.execPath,[path.join(__dirname,'node_modules/@openai/codex/bin/codex.js'),'app-server',...config.flatMap(c=>['-c',c])],{cwd,env,stdio:['pipe','pipe','pipe'],windowsHide:true});
- rpc=new Rpc(child);assistant=new Assistant(rpc,cwd,progress=>{if(win&&!win.isDestroyed())win.webContents.send('openscite:progress',progress);});ready=rpc.request('initialize',{clientInfo:{name:'openscite_desktop',title:'OpenScite Desktop',version:app.getVersion()}}).then(()=>rpc.send({method:'initialized',params:{}}));ready.catch(()=>{});
- const login=new AccountLogin(rpc,url=>shell.openExternal(url),value=>{if(win&&!win.isDestroyed())win.webContents.send('openscite:login',value);});
+ rpc=new Rpc(child);assistant=new Assistant(rpc,cwd,progress=>{if(win&&!win.isDestroyed())win.webContents.send('paperlume:progress',progress);});ready=rpc.request('initialize',{clientInfo:{name:'paperlume_desktop',title:'PaperLume Desktop',version:app.getVersion()}}).then(()=>rpc.send({method:'initialized',params:{}}));ready.catch(()=>{});
+ const login=new AccountLogin(rpc,url=>shell.openExternal(url),value=>{if(win&&!win.isDestroyed())win.webContents.send('paperlume:login',value);});
  fs.rmSync(path.join(data,'provider-keys.json'),{force:true});
  const handlers={status:()=>rpc.request('account/read'),models:()=>assistant.models(),ask:b=>assistant.ask(b),cancel:async()=>{await assistant.cancel();},logout:async()=>{await assistant.cancel();return rpc.request('account/logout');},login:options=>login.start(options),cancelLogin:()=>login.cancel()};
  const google=new GoogleAccount(require('./google-config.cjs'),url=>shell.openExternal(url));
  const apiHandlers={googleStatus:()=>google.status(),googleLogin:()=>google.login(),googleCancel:()=>google.cancel(),googleLogout:()=>google.logout(),googleRequest:b=>google.request(b),downloadPdf:b=>downloadPdf(b?.url)};
- for(const [method,fn]of Object.entries({...handlers,...apiHandlers}))ipcMain.handle('openscite:'+method,async(event,arg)=>{if(event.sender!==win?.webContents||event.senderFrame!==win.webContents.mainFrame||!event.senderFrame.url.startsWith('openscite://app/'))throw new Error('不允許的來源');if(!apiHandlers[method]&&method!=='cancel')await ready;return fn(arg);});
- win=new BrowserWindow({width:1440,height:960,minWidth:860,minHeight:640,title:'OpenScite Desktop',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
+ for(const [method,fn]of Object.entries({...handlers,...apiHandlers}))ipcMain.handle('paperlume:'+method,async(event,arg)=>{if(event.sender!==win?.webContents||event.senderFrame!==win.webContents.mainFrame||!event.senderFrame.url.startsWith('openscite://app/'))throw new Error('不允許的來源');if(!apiHandlers[method]&&method!=='cancel')await ready;return fn(arg);});
+ win=new BrowserWindow({width:1440,height:960,minWidth:860,minHeight:640,title:'PaperLume Desktop',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
  win.webContents.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));
  win.webContents.setWindowOpenHandler(({url})=>{if(/^https?:/.test(url))shell.openExternal(url);return {action:'deny'};});
  win.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith('openscite://app/')){event.preventDefault();if(/^https?:/.test(url))shell.openExternal(url);}});

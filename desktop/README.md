@@ -10,20 +10,20 @@ Gemini／Claude 預設為官方網站手動往返：登入官方網站、貼上�
 
 PDF 透過本機程序取得公開來源，引用分析自動定位全文段落並區分推論與原文依據。需要登入或付費的出版商 PDF 仍須合法下載後匯入。
 
-# OpenScite 電腦版（預覽版）
+# PaperLume 電腦版（預覽版）
 
 使用自己的 ChatGPT 帳號登入 Codex，從 PDF 閱讀器進行摘要、選取文字解釋、翻譯、論文問答與圖片分析。不需要填 API 金鑰。這是獨立電腦程式；GitHub Pages 網址仍是網頁版，iPhone 無法安裝此電腦版本。
 
 ## Mac 直接安裝（不需指令）
 
-到 [Mac 預覽版下載頁](https://github.com/guanbochen0622/freevpn-openscite/releases) 選擇 DMG：
+到 [Mac 預覽版下載頁](https://github.com/guanbochen0622/paperlume/releases) 選擇 DMG：
 
 - `mac-arm64.dmg`：Apple 晶片（M 系列）。
 - `mac-x64.dmg`：Intel 處理器。
 
 不確定晶片型號時，可從 Mac 左上角蘋果選單開啟「關於這台 Mac」查看。
 
-打開 DMG，將 OpenScite 拖入 Applications（應用程式），再從應用程式開啟。按右上「ChatGPT 帳號」登入並選擇模型。安裝包已包含執行環境，不需要另外安裝 Node.js。
+打開 DMG，將 PaperLume 拖入 Applications（應用程式），再從應用程式開啟。按右上「ChatGPT 帳號」登入並選擇模型。安裝包已包含執行環境，不需要另外安裝 Node.js。
 
 此預覽版使用臨時簽章，尚未有 Apple 開發者簽章或公證。首次開啟可能被 macOS 阻擋；若你確認來源是本儲存庫，可以依 [Apple 官方說明](https://support.apple.com/zh-tw/guide/mac-help/mh40616/mac)，在「系統設定 → 隱私權與安全性」允許這個 App 開啟。不需要關閉整台電腦的安全保護。
 

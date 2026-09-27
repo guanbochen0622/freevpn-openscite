@@ -6,12 +6,12 @@
     "electron": "44.4.1",
     "electron-builder": "26.15.3"
   },
-  "name": "openscite-desktop",
-  "version": "0.10.0",
+  "name": "paperlume-desktop",
+  "version": "0.11.0",
   "private": true,
-  "description": "OpenScite desktop paper reader with personal ChatGPT authentication",
+  "description": "PaperLume desktop paper reader with personal ChatGPT authentication",
   "main": "main.cjs",
-  "author": "OpenScite",
+  "author": "PaperLume",
   "scripts": {
     "prepare:web": "node prepare.cjs",
     "start": "node prepare.cjs && electron .",
@@ -22,7 +22,7 @@
   },
   "build": {
     "appId": "io.github.guanbochen0622.openscite",
-    "productName": "OpenScite",
+    "productName": "PaperLume",
     "asar": false,
     "files": [
       "*.cjs",
@@ -39,7 +39,7 @@
     },
     "win": {
       "target": "nsis",
-      "artifactName": "OpenScite-${version}-windows-${arch}-setup.${ext}"
+      "artifactName": "PaperLume-${version}-windows-${arch}-setup.${ext}"
     },
     "mac": {
       "target": "dmg",
@@ -47,7 +47,7 @@
       "hardenedRuntime": false,
       "notarize": false,
       "category": "public.app-category.education",
-      "artifactName": "OpenScite-${version}-mac-${arch}.${ext}"
+      "artifactName": "PaperLume-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": "AppImage"

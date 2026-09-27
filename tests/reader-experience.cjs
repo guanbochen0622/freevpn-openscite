@@ -31,16 +31,16 @@ module.exports=async function testReaderExperience(page){
  await page.click('#knowledgeMapOpen');assert.match(await page.locator('#knowledgeMapBody').innerText(),/原文片段已匹配/);assert.match(await page.locator('#knowledgeMapBody').innerText(),/筆記 · 需核對原文/);
  await page.fill('#knowledgeFilter','Local measurement');assert.equal(await page.locator('.knowledge-card').count(),1);
  await page.locator('#knowledgeMapBody button[data-map-page]').first().click();await page.waitForSelector('#pagePreviewBody canvas');assert.equal(await page.evaluate(()=>state.reader.currentPage),1);await page.click('#closePagePreview');
- await page.fill('#knowledgeFilter','');await page.screenshot({path:'/tmp/openscite-knowledge-map.png'});await page.click('#closeKnowledgeMap');
+ await page.fill('#knowledgeFilter','');await page.screenshot({path:'/tmp/paperlume-knowledge-map.png'});await page.click('#closeKnowledgeMap');
  // Exercise actual mobile controls with the same assistant DOM, not a second copy.
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>ReaderLayout.openMore());await page.click('#documentToolsToggle');await page.click('#mobileReading');
  await page.waitForFunction(()=>document.body.classList.contains('mobile-reading')&&parseFloat(document.querySelector('.pdf-page').style.width)<=document.querySelector('#pdfViewport').clientWidth);
  await page.waitForFunction(()=>document.querySelector('.pdf-page')?.dataset.ready==='1');
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
- await page.screenshot({path:'/tmp/openscite-mobile-reading.png'});
+ await page.screenshot({path:'/tmp/paperlume-mobile-reading.png'});
  await page.click('#mobileAsk');await page.fill('#askInput','Keep this unsent question');
  assert.equal(await page.locator('#mobileAssistant .reader-right').count(),1);assert.equal(await page.locator('#askInput').count(),1);
- await page.screenshot({path:'/tmp/openscite-mobile-assistant.png'});
+ await page.screenshot({path:'/tmp/paperlume-mobile-assistant.png'});
  await page.keyboard.press('Escape');assert.equal(await page.locator('#mobileAssistant').evaluate(d=>d.open),false);
  // Closing/reopening in one turn queues an old close event; it must not steal the panel.
  await page.evaluate(()=>{ReaderExperience.openSheet();ReaderExperience.closeSheet();ReaderExperience.openSheet();});

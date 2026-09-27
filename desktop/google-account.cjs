@@ -12,11 +12,11 @@ class GoogleAccount{
    const server=http.createServer(async(req,res)=>{const url=new URL(req.url,'http://127.0.0.1');res.setHeader('Content-Type','text/plain; charset=utf-8');res.setHeader('Cache-Control','no-store');res.setHeader('Content-Security-Policy',"default-src 'none'");
     if(req.method!=='GET'||url.pathname!=='/'||url.searchParams.get('state')!==state){res.writeHead(400);res.end('Invalid login response');return;}
     if(exchanging){res.writeHead(409);res.end('Login already processing');return;}exchanging=true;
-    if(url.searchParams.has('error')||!url.searchParams.get('code')){res.end('Google login was not completed. Return to OpenScite.');finish(Error('Google 授權未完成'));return;}
+    if(url.searchParams.has('error')||!url.searchParams.get('code')){res.end('Google login was not completed. Return to PaperLume.');finish(Error('Google 授權未完成'));return;}
     try{const body=new URLSearchParams({client_id:this.config.clientId,code:url.searchParams.get('code'),code_verifier:verifier,grant_type:'authorization_code',redirect_uri:redirect});if(this.config.clientSecret)body.set('client_secret',this.config.clientSecret);
      const response=await this.transport('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body.toString(),signal:AbortSignal.any([controller.signal,AbortSignal.timeout(30000)]),redirect:'error'});const data=await response.json();if(!response.ok||typeof data.access_token!=='string'||!Number.isFinite(Number(data.expires_in)))throw Error('Google 授權交換失敗，請重新登入');if(settled)return;
-     this.token=data.access_token;this.expires=Date.now()+Number(data.expires_in)*1000;res.end('Google login completed. Return to OpenScite.');finish();
-    }catch(e){res.end('Google login failed. Return to OpenScite.');finish(Error(e.name==='AbortError'?'Google 登入已取消':e.message));}
+     this.token=data.access_token;this.expires=Date.now()+Number(data.expires_in)*1000;res.end('Google login completed. Return to PaperLume.');finish();
+    }catch(e){res.end('Google login failed. Return to PaperLume.');finish(Error(e.name==='AbortError'?'Google 登入已取消':e.message));}
    });let redirect;this.pending={reject:finish};timer=setTimeout(()=>finish(Error('Google 登入等待逾時')),180000);server.on('error',()=>finish(Error('無法開啟本機登入回傳連線')));server.listen(0,'127.0.0.1',()=>{redirect='http://127.0.0.1:'+server.address().port+'/';const url=new URL('https://accounts.google.com/o/oauth2/v2/auth');url.search=new URLSearchParams({client_id:this.config.clientId,redirect_uri:redirect,response_type:'code',scope:'openid email profile https://www.googleapis.com/auth/drive.appdata',code_challenge:challenge,code_challenge_method:'S256',state,prompt:'select_account'}).toString();Promise.resolve(this.openExternal(url.href)).catch(()=>finish(Error('無法開啟瀏覽器登入')));});
   });
  }
