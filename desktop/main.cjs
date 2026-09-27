@@ -15,7 +15,7 @@ app.whenReady().then(async()=>{
  const child=spawn(process.execPath,[path.join(__dirname,'node_modules/@openai/codex/bin/codex.js'),'app-server',...config.flatMap(c=>['-c',c])],{cwd,env,stdio:['pipe','pipe','pipe'],windowsHide:true});
  rpc=new Rpc(child);assistant=new Assistant(rpc,cwd,progress=>{if(win&&!win.isDestroyed())win.webContents.send('openscite:progress',progress);});ready=rpc.request('initialize',{clientInfo:{name:'openscite_desktop',title:'OpenScite Desktop',version:app.getVersion()}}).then(()=>rpc.send({method:'initialized',params:{}}));ready.catch(()=>{});
  const login=new AccountLogin(rpc,url=>shell.openExternal(url),value=>{if(win&&!win.isDestroyed())win.webContents.send('openscite:login',value);});
- const accounts=new ProviderAccounts(path.join(data,'provider-keys.json'));
+ fs.rmSync(path.join(data,'provider-keys.json'),{force:true});
  const handlers={status:()=>rpc.request('account/read'),models:()=>assistant.models(),ask:b=>assistant.ask(b),cancel:async()=>{await assistant.cancel();},logout:async()=>{await assistant.cancel();return rpc.request('account/logout');},login:options=>login.start(options),cancelLogin:()=>login.cancel()};
  const google=new GoogleAccount(require('./google-config.cjs'),url=>shell.openExternal(url));
  const apiHandlers={googleStatus:()=>google.status(),googleLogin:()=>google.login(),googleCancel:()=>google.cancel(),googleLogout:()=>google.logout(),googleRequest:b=>google.request(b),downloadPdf:b=>downloadPdf(b?.url)};
