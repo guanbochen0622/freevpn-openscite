@@ -8,4 +8,4 @@ Google OAuth configuration is missing and live sign-in is not verified. The nati
 
 Citation support is verified using actual PDF parsing of target-bound references and XML reference-ID fixtures. External coverage and available full text vary. A direction classification is inference from located passages, never a claim of independent scientific replication. Unmatched quotes are not highlighted.
 
-Build and native test results will be recorded after CI completion. The macOS build is ad-hoc signed, not notarized; Windows is unsigned.
+Validated commit: `298bc0523e0cc3a051d7ee5941571a432e47ab2a`. Build run `36331936819` passed root/subpath browser gates and macOS arm64, macOS x64 and Windows x64 packaging, including installation and launch of the Windows package. Verification run `36331936782` passed all eight jobs: two website jobs (local and deployed browser tests plus real bibliographic services) and two native runs for each of the three platforms. Live paid ChatGPT responses and live Google OAuth were not tested. The macOS build is ad-hoc signed, not notarized; Windows is unsigned.
